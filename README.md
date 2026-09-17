@@ -55,7 +55,7 @@ flowchart TB
     subgraph outcomes["Turn outcomes"]
       finish(["Finish"])
       clarify(["Clarify"])
-      stop(["Stop"])
+      stop(["User Requested Stop"])
     end
     decide --> finish
     decide --> clarify
