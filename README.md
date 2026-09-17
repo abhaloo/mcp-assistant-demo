@@ -72,7 +72,7 @@ flowchart TB
 
   decide -.->|During the turn| sse
   finish --> persist
-  clarify --> persist
+  clarify --> decide
 
   classDef entry fill:#eff6ff,stroke:#2563eb,color:#172554
   classDef coordinator fill:#f5f3ff,stroke:#7c3aed,color:#2e1065,stroke-width:2px
