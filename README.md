@@ -15,7 +15,7 @@ This repository is the Ask API. The [record-links replay](docs/replays/demo-s2-w
 ```mermaid
 flowchart TB
   you[You]
-  recCtx[Selected invoice]
+  recCtx[finance user account]
   api["POST /api/ask"]
   you --> recCtx --> api
 
@@ -40,10 +40,10 @@ flowchart TB
     subgraph bqLine [ ]
       direction LR
       bqTool["tool: sql_query_business_records"]
-      maria[MariaDB]
       cube[Cube compiler]
+      maria[MariaDb + views]
       results[Results]
-      bqTool --> maria --> cube --> results
+      bqTool --> cube --> maria --> results
     end
 
     subgraph docLine [ ]
