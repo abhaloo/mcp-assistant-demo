@@ -1,0 +1,7 @@
+* text=auto
+
+*.sh   text eol=lf
+*.bash text eol=lf
+
+/app/policy/manifest/** text eol=lf
+graphify-out/graph.json merge=graphify

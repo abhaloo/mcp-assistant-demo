@@ -1,0 +1,36 @@
+# Checked-in model eligibility matrix — purpose × environment × credential_source.
+# OpenRouter production rows additionally require wire-level controls (Slice 4).
+
+version: 1
+
+base_credentials:
+  - entra
+  - openrouter
+
+environments:
+  production:
+    additional_credentials:
+      - openai
+  development:
+    additional_credentials:
+      - deepseek_direct
+      - openai
+
+purposes:
+  classify:
+    credentials: null
+  rag_answer:
+    credentials: null
+  sql_agent:
+    credentials: null
+  conversation:
+    credentials: null
+  record_reasoning:
+    credentials: null
+  eval:
+    credentials:
+      - entra
+      - openrouter
+
+openrouter:
+  production_requires_controls: true

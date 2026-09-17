@@ -1,0 +1,379 @@
+{
+  "schema_version": 1,
+  "source": "multicolor-billing-prod-wire-eval:app/Authorization/BusinessQuery/SemanticViews.php",
+  "views": {
+    "ai_v1_bq_bill_fact": {
+      "id": {
+        "table": "bills",
+        "column": "id"
+      },
+      "invoice_number": {
+        "table": "bills",
+        "column": "invoice_number"
+      },
+      "customer_id": {
+        "table": "bills",
+        "column": "customer_id"
+      },
+      "customer_name": {
+        "table": "customers",
+        "column": "name"
+      },
+      "customer_order_id": {
+        "table": "bills",
+        "column": "customer_order_id"
+      },
+      "customer_order_number": {
+        "table": "customer_orders",
+        "column": "order_number"
+      },
+      "type": {
+        "table": "bills",
+        "column": "type"
+      },
+      "payable": {
+        "table": "bills",
+        "column": "payable"
+      },
+      "status": {
+        "table": "bills",
+        "column": "status"
+      },
+      "created_at": {
+        "table": "bills",
+        "column": "created_at"
+      },
+      "due_date": {
+        "table": "bills",
+        "column": "due_date"
+      },
+      "currency_code": {
+        "table": "currencies",
+        "column": "currency_code"
+      },
+      "items_total": {
+        "derived": true
+      },
+      "cash_received": {
+        "derived": true
+      },
+      "receivable_settlement": {
+        "derived": true
+      },
+      "outstanding": {
+        "derived": true
+      },
+      "days_past_due": {
+        "derived": true
+      },
+      "entity_id": {
+        "table": "bills",
+        "column": "entity_id"
+      }
+    },
+    "ai_v1_bq_order_fact": {
+      "id": {
+        "table": "customer_orders",
+        "column": "id"
+      },
+      "order_number": {
+        "table": "customer_orders",
+        "column": "order_number"
+      },
+      "description": {
+        "table": "customer_orders",
+        "column": "description"
+      },
+      "customer_id": {
+        "table": "customer_orders",
+        "column": "customer_id"
+      },
+      "customer_name": {
+        "table": "customers",
+        "column": "name"
+      },
+      "status": {
+        "table": "customer_orders",
+        "column": "status"
+      },
+      "computed_status": {
+        "derived": true
+      },
+      "created_at": {
+        "table": "customer_orders",
+        "column": "created_at"
+      },
+      "entity_id": {
+        "table": "customer_orders",
+        "column": "entity_id"
+      }
+    },
+    "ai_v1_bq_job_fact": {
+      "id": {
+        "table": "work_orders",
+        "column": "id"
+      },
+      "customer_order_id": {
+        "table": "work_orders",
+        "column": "customer_order_id"
+      },
+      "customer_order_number": {
+        "table": "customer_orders",
+        "column": "order_number"
+      },
+      "customer_id": {
+        "table": "work_orders",
+        "column": "customer_id"
+      },
+      "customer_name": {
+        "table": "customers",
+        "column": "name"
+      },
+      "title": {
+        "table": "work_orders",
+        "column": "title"
+      },
+      "work_number": {
+        "table": "work_orders",
+        "column": "work_number"
+      },
+      "ordered_qty": {
+        "table": "work_orders",
+        "column": "ordered_qty"
+      },
+      "effective_bill_id": {
+        "derived": true
+      },
+      "status": {
+        "table": "work_orders",
+        "column": "status"
+      },
+      "department_id": {
+        "table": "work_orders",
+        "column": "department_id"
+      },
+      "department_name": {
+        "table": "departments",
+        "column": "name"
+      },
+      "created_at": {
+        "table": "work_orders",
+        "column": "created_at"
+      },
+      "entity_id": {
+        "table": "work_orders",
+        "column": "entity_id"
+      }
+    },
+    "ai_v1_bq_customer_fact": {
+      "id": {
+        "table": "customers",
+        "column": "id"
+      },
+      "name": {
+        "table": "customers",
+        "column": "name"
+      },
+      "has_orders": {
+        "derived": true
+      },
+      "created_at": {
+        "table": "customers",
+        "column": "created_at"
+      },
+      "entity_id": {
+        "table": "customers",
+        "column": "entity_id"
+      }
+    },
+    "ai_v1_bq_supplier_fact": {
+      "id": {
+        "table": "suppliers",
+        "column": "id"
+      },
+      "name": {
+        "table": "suppliers",
+        "column": "name"
+      },
+      "created_at": {
+        "table": "suppliers",
+        "column": "created_at"
+      },
+      "entity_id": {
+        "table": "suppliers",
+        "column": "entity_id"
+      }
+    },
+    "ai_v1_bq_ledger_entry": {
+      "id": {
+        "table": "journals",
+        "column": "id"
+      },
+      "bill_id": {
+        "table": "journals",
+        "column": "bill_id"
+      },
+      "currency_code": {
+        "table": "currencies",
+        "column": "currency_code"
+      },
+      "account_type": {
+        "table": "accounts",
+        "column": "account_type"
+      },
+      "debit": {
+        "table": "journals",
+        "column": "debit"
+      },
+      "credit": {
+        "table": "journals",
+        "column": "credit"
+      },
+      "post_date": {
+        "table": "journals",
+        "column": "post_date"
+      },
+      "entity_id": {
+        "table": "journals",
+        "column": "entity_id"
+      }
+    },
+    "ai_v1_bq_bill_item_fact": {
+      "id": {
+        "table": "bill_items",
+        "column": "id"
+      },
+      "bill_id": {
+        "table": "bill_items",
+        "column": "bill_id"
+      },
+      "product_id": {
+        "table": "bill_items",
+        "column": "product_id"
+      },
+      "product_name": {
+        "table": "products",
+        "column": "name"
+      },
+      "quantity": {
+        "table": "bill_items",
+        "column": "quantity"
+      },
+      "invoice_number": {
+        "table": "bills",
+        "column": "invoice_number"
+      },
+      "price": {
+        "table": "bill_items",
+        "column": "price"
+      },
+      "discount": {
+        "table": "bill_items",
+        "column": "discount"
+      },
+      "tax": {
+        "table": "bill_items",
+        "column": "tax"
+      },
+      "item_revenue": {
+        "derived": true
+      },
+      "currency_code": {
+        "table": "currencies",
+        "column": "currency_code"
+      },
+      "bill_type": {
+        "table": "bills",
+        "column": "type"
+      },
+      "bill_payable": {
+        "table": "bills",
+        "column": "payable"
+      },
+      "bill_created_at": {
+        "table": "bills",
+        "column": "created_at"
+      },
+      "entity_id": {
+        "table": "bills",
+        "column": "entity_id"
+      }
+    },
+    "ai_v1_bq_inventory_fact": {
+      "id": {
+        "table": "inventories",
+        "column": "id"
+      },
+      "supplier_id": {
+        "table": "inventories",
+        "column": "supplier_id"
+      },
+      "job_id": {
+        "table": "inventories",
+        "column": "work_order_id"
+      },
+      "type": {
+        "table": "inventories",
+        "column": "type"
+      },
+      "status": {
+        "table": "inventories",
+        "column": "status"
+      },
+      "inventory_date": {
+        "table": "inventories",
+        "column": "inventory_date"
+      },
+      "created_at": {
+        "table": "inventories",
+        "column": "created_at"
+      },
+      "supplier_name": {
+        "table": "suppliers",
+        "column": "name"
+      },
+      "warehouse_name": {
+        "table": "ware_houses",
+        "column": "name"
+      },
+      "entity_id": {
+        "table": "inventories",
+        "column": "entity_id"
+      }
+    },
+    "ai_v1_bq_work_order_item_fact": {
+      "id": {
+        "table": "work_order_items",
+        "column": "id"
+      },
+      "work_order_id": {
+        "table": "work_order_items",
+        "column": "work_order_id"
+      },
+      "product_id": {
+        "table": "work_order_items",
+        "column": "product_id"
+      },
+      "product_name": {
+        "table": "products",
+        "column": "name"
+      },
+      "quantity": {
+        "table": "work_order_items",
+        "column": "quantity"
+      },
+      "used_at": {
+        "table": "work_order_items",
+        "column": "created_at"
+      },
+      "department_id": {
+        "table": "work_orders",
+        "column": "department_id"
+      },
+      "entity_id": {
+        "table": "work_orders",
+        "column": "entity_id"
+      }
+    }
+  }
+}

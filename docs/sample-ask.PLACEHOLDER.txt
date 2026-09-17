@@ -1,0 +1,9 @@
+PLACEHOLDER — PII-free /api/ask screenshot not captured yet.
+
+Expected content after smoke:
+- JSON or SSE response from POST /api/ask
+- Citations visible
+- Fictional Bloomfield / handbook content only
+- No billing UI, no real customer names
+
+Do not replace with fabricated PII.

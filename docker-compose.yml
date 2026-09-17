@@ -1,0 +1,96 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: query_records
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  mariadb:
+    image: mariadb:10.11
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: mcp_demo
+      MARIADB_USER: demo
+      MARIADB_PASSWORD: demo
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./data/mcp_demo_v2.sql.gz:/docker-entrypoint-initdb.d/mcp_demo_v2.sql.gz:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -uroot -proot --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 120s
+
+  migrate:
+    build: .
+    image: mcp-assistant-demo-api
+    env_file:
+      - .env
+    environment:
+      QUERY_RECORD_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/query_records
+    command: ["python", "scripts/deploy/migrate_query_records.py"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build: .
+    image: mcp-assistant-demo-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/app/data/chroma
+      - ./data/corpus:/app/data/corpus:ro
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      QUERY_RECORD_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/query_records
+      MCP_RECORD_DATABASE_URL: mysql+pymysql://demo:demo@mariadb:3306/mcp_demo
+      BUSINESS_QUERY_MODE: "enabled"
+      CONVERSATION_ENABLED: "true"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      mariadb:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz')",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
+
+volumes:
+  chroma_data:
+  postgres_data:
+  mariadb_data:

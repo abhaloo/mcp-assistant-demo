@@ -1,0 +1,138 @@
+{
+  "version": 1,
+  "generated_from_commit": "38eb06263ebe0ddff52c769151648e556cde9db2",
+  "derived_from": "docs/superpowers/module-map.json (version 1) via python scripts/check_dependency_direction.py",
+  "violations": [
+    {
+      "rule": "1",
+      "importer": "app/health/checks.py",
+      "imported": "app.rag.retrieval.chroma_retriever",
+      "lines": "112",
+      "note": "Ingress importing a State adapter implementation directly. Pre-seeded in docs/superpowers/module-map.json's violations array (Task 1, rule 1). ChromaConnectivityCheck.run() reaches into the Chroma storage adapter from the health-readiness surface. Fix: give health checks a ping-style port instead of the concrete adapter (Workstream 3).",
+      "owner": "abhaloo",
+      "expires": "2026-11-22"
+    },
+    {
+      "rule": "2-state",
+      "importer": "app/business_query/plan/attempts.py",
+      "imported": "app.query_records.model",
+      "lines": "22",
+      "note": "Business module importing a State-assigned module directly instead of through a typed port. Not pre-seeded in module-map.json's violations array -- Task 1 explicitly deferred this clause ('State ports don't exist yet ... building them is Workstream 3's job'); this checker enforces the letter of plan \u00a75.5 rule 2's second clause and found the current, real instances. Fix: build the State ports (Workstream 3) and route through them.",
+      "owner": "abhaloo",
+      "expires": "2026-11-22"
+    },
+    {
+      "rule": "2-state",
+      "importer": "app/business_query/case_repeats.py",
+      "imported": "app.query_records.model",
+      "lines": "22",
+      "note": "Business module importing a State-assigned module directly instead of through a typed port. Not pre-seeded in module-map.json's violations array -- Task 1 explicitly deferred this clause ('State ports don't exist yet ... building them is Workstream 3's job'); this checker enforces the letter of plan \u00a75.5 rule 2's second clause and found the current, real instances. Fix: build the State ports (Workstream 3) and route through them.",
+      "owner": "abhaloo",
+      "expires": "2026-11-22"
+    },
+    {
+      "rule": "2-state",
+      "importer": "app/business_query/seal/events/store_postgres.py",
+      "imported": "app.query_records.model",
+      "lines": "25",
+      "note": "Business module importing a State-assigned module directly instead of through a typed port. Not pre-seeded in module-map.json's violations array -- Task 1 explicitly deferred this clause ('State ports don't exist yet ... building them is Workstream 3's job'); this checker enforces the letter of plan \u00a75.5 rule 2's second clause and found the current, real instances. Fix: build the State ports (Workstream 3) and route through them.",
+      "owner": "abhaloo",
+      "expires": "2026-11-22"
+    },
+    {
+      "rule": "2-state",
+      "importer": "app/business_query/compile/adapter.py",
+      "imported": "app.telemetry.invocation_ledger",
+      "lines": "92",
+      "note": "Business module importing a State-assigned module directly instead of through a typed port. Not pre-seeded in module-map.json's violations array -- Task 1 explicitly deferred this clause ('State ports don't exist yet ... building them is Workstream 3's job'); this checker enforces the letter of plan \u00a75.5 rule 2's second clause and found the current, real instances. Fix: build the State ports (Workstream 3) and route through them.",
+      "owner": "abhaloo",
+      "expires": "2026-11-22"
+    },
+    {
+      "rule": "2-state",
+      "importer": "app/business_query/compile/pagination/plan_store.py",
+      "imported": "app.query_records.model",
+      "lines": "81,120",
+      "note": "Business module importing a State-assigned module directly instead of through a typed port. Not pre-seeded in module-map.json's violations array -- Task 1 explicitly deferred this clause ('State ports don't exist yet ... building them is Workstream 3's job'); this checker enforces the letter of plan \u00a75.5 rule 2's second clause and found the current, real instances. Fix: build the State ports (Workstream 3) and route through them.",
+      "owner": "abhaloo",
+      "expires": "2026-11-22"
+    },
+    {
+      "rule": "2-state",
+      "importer": "app/providers/factory.py",
+      "imported": "app.telemetry.invocation_ledger",
+      "lines": "149",
+      "note": "Business module importing a State-assigned module directly instead of through a typed port. Not pre-seeded in module-map.json's violations array -- Task 1 explicitly deferred this clause ('State ports don't exist yet ... building them is Workstream 3's job'); this checker enforces the letter of plan \u00a75.5 rule 2's second clause and found the current, real instances. Fix: build the State ports (Workstream 3) and route through them.",
+      "owner": "abhaloo",
+      "expires": "2026-11-22"
+    },
+    {
+      "rule": "2-state",
+      "importer": "app/query_records/wiring.py",
+      "imported": "app.query_records.dispatch",
+      "lines": "12",
+      "note": "Business module importing a State-assigned module directly instead of through a typed port. Not pre-seeded in module-map.json's violations array -- Task 1 explicitly deferred this clause ('State ports don't exist yet ... building them is Workstream 3's job'); this checker enforces the letter of plan \u00a75.5 rule 2's second clause and found the current, real instances. Fix: build the State ports (Workstream 3) and route through them.",
+      "owner": "abhaloo",
+      "expires": "2026-11-22"
+    },
+    {
+      "rule": "2-state",
+      "importer": "app/rag/retrieval/retriever_factory.py",
+      "imported": "app.rag.retrieval.azure_search_retriever, app.rag.retrieval.chroma_retriever",
+      "lines": "27,31",
+      "note": "Business module importing a State-assigned module directly instead of through a typed port. Not pre-seeded in module-map.json's violations array -- Task 1 explicitly deferred this clause ('State ports don't exist yet ... building them is Workstream 3's job'); this checker enforces the letter of plan \u00a75.5 rule 2's second clause and found the current, real instances. Fix: build the State ports (Workstream 3) and route through them.",
+      "owner": "abhaloo",
+      "expires": "2026-11-22"
+    },
+    {
+      "rule": "2-state",
+      "importer": "app/services/business_query_rich_answer.py",
+      "imported": "app.telemetry.invocation_ledger",
+      "lines": "22",
+      "note": "Business module importing a State-assigned module directly instead of through a typed port. Not pre-seeded in module-map.json's violations array -- Task 1 explicitly deferred this clause ('State ports don't exist yet ... building them is Workstream 3's job'); this checker enforces the letter of plan \u00a75.5 rule 2's second clause and found the current, real instances. Fix: build the State ports (Workstream 3) and route through them.",
+      "owner": "abhaloo",
+      "expires": "2026-11-22"
+    },
+    {
+      "rule": "2-state",
+      "importer": "app/services/business_query_service.py",
+      "imported": "app.db.postgres",
+      "lines": "132",
+      "note": "Business module importing a State-assigned module directly instead of through a typed port. Not pre-seeded in module-map.json's violations array -- Task 1 explicitly deferred this clause ('State ports don't exist yet ... building them is Workstream 3's job'); this checker enforces the letter of plan \u00a75.5 rule 2's second clause and found the current, real instances. Fix: build the State ports (Workstream 3) and route through them.",
+      "owner": "abhaloo",
+      "expires": "2026-11-22"
+    },
+    {
+      "rule": "2-state",
+      "importer": "app/services/feedback_service.py",
+      "imported": "app.query_records.late_writes",
+      "lines": "13",
+      "note": "Business module importing a State-assigned module directly instead of through a typed port. Not pre-seeded in module-map.json's violations array -- Task 1 explicitly deferred this clause ('State ports don't exist yet ... building them is Workstream 3's job'); this checker enforces the letter of plan \u00a75.5 rule 2's second clause and found the current, real instances. Fix: build the State ports (Workstream 3) and route through them.",
+      "owner": "abhaloo",
+      "expires": "2026-11-22"
+    },
+    {
+      "rule": "2-state",
+      "importer": "app/services/query_record_timing_service.py",
+      "imported": "app.query_records.late_writes",
+      "lines": "10",
+      "note": "Business module importing a State-assigned module directly instead of through a typed port. Not pre-seeded in module-map.json's violations array -- Task 1 explicitly deferred this clause ('State ports don't exist yet ... building them is Workstream 3's job'); this checker enforces the letter of plan \u00a75.5 rule 2's second clause and found the current, real instances. Fix: build the State ports (Workstream 3) and route through them.",
+      "owner": "abhaloo",
+      "expires": "2026-11-22"
+    }
+  ],
+  "counters": {
+    "settings_reads_outside_composition_root": {
+      "count": 408,
+      "owner": "abhaloo",
+      "expires": "2026-11-22",
+      "description": "AST attribute-access reads on a name `settings` bound via any import statement, in any file NOT assigned composition_root. Derived via: python scripts/check_dependency_direction.py --show-counts"
+    },
+    "ingress_services_symbols": {
+      "count": 8,
+      "owner": "abhaloo",
+      "expires": "2026-11-22",
+      "description": "Distinct (module, symbol) pairs imported from app.services* by ingress-assigned files. Count 8 is v1 clamp_turn_budget plus AskV2Service and new_expiry_event on POST /api/ask/v2, plus stream_ask_frames on the SSE facade. Derived via: python scripts/check_dependency_direction.py --show-counts"
+    }
+  }
+}

@@ -1,0 +1,460 @@
+# Production model route catalog — deployment targets, named routes, purpose bindings.
+# Active defaults preserve today's mini/Luna topology; inactive entries for later slices.
+
+version: 1
+
+targets:
+  azure-mini:
+    provider: azure
+    model_id: gpt-4o-mini
+    credential_source: entra
+    capabilities: [text, streaming, tools, structured_output]
+    supported_reasoning_efforts: []
+    supports_streaming: true
+    supports_streamed_usage: true
+    data_boundary: azure
+    allowed_actual_model_ids: []
+    context_window_tokens: 128000
+    counting_profile: openai-tiktoken
+
+  azure-luna:
+    provider: azure
+    model_id: gpt-5.6-luna
+    credential_source: entra
+    capabilities: [text, streaming, tools, structured_output]
+    supported_reasoning_efforts: [low, high]
+    supports_streaming: true
+    supports_streamed_usage: true
+    data_boundary: azure
+    allowed_actual_model_ids: []
+    context_window_tokens: 128000
+    counting_profile: openai-tiktoken
+
+  azure-nano:
+    provider: azure
+    model_id: gpt-5-nano
+    credential_source: entra
+    capabilities: [text, structured_output]
+    supported_reasoning_efforts: [low]
+    supports_streaming: true
+    supports_streamed_usage: true
+    data_boundary: azure
+    allowed_actual_model_ids: []
+
+  openrouter-deepseek:
+    provider: openrouter
+    model_id: deepseek/deepseek-v4-flash-0731
+    credential_source: openrouter
+    capabilities: [text, streaming, tools]
+    supported_reasoning_efforts: [low, high]
+    supports_streaming: true
+    supports_streamed_usage: false
+    data_boundary: external
+    allowed_actual_model_ids: []
+
+  deepseek-direct:
+    provider: deepseek_direct
+    model_id: deepseek-v4-flash
+    credential_source: deepseek_direct
+    capabilities: [text, streaming, tools]
+    supported_reasoning_efforts: [low, high, max]
+    supports_streaming: true
+    supports_streamed_usage: false
+    data_boundary: external
+    allowed_actual_model_ids: []
+
+  # Direct api.openai.com GPT-5.6 Luna (not the Azure deployment). Official
+  # ladder includes xhigh/max; Azure gpt-5.6-luna still tops out at high.
+  openai-luna:
+    provider: openai
+    model_id: gpt-5.6-luna
+    credential_source: openai
+    capabilities: [text, streaming, tools, structured_output]
+    supported_reasoning_efforts: [none, low, medium, high, xhigh, max]
+    supports_streaming: true
+    supports_streamed_usage: true
+    data_boundary: external
+    allowed_actual_model_ids: [gpt-5.6-luna]
+    context_window_tokens: 128000
+    counting_profile: openai-tiktoken
+
+  openai-mini:
+    provider: openai
+    model_id: gpt-4o-mini
+    credential_source: openai
+    capabilities: [text, streaming, tools, structured_output]
+    supported_reasoning_efforts: []
+    supports_streaming: true
+    supports_streamed_usage: true
+    data_boundary: external
+    allowed_actual_model_ids: [gpt-4o-mini]
+    context_window_tokens: 128000
+    counting_profile: openai-tiktoken
+
+  openai-nano:
+    provider: openai
+    model_id: gpt-5-nano
+    credential_source: openai
+    capabilities: [text, streaming, tools, structured_output]
+    supported_reasoning_efforts: [minimal, low, medium, high]
+    supports_streaming: true
+    supports_streamed_usage: true
+    data_boundary: external
+    allowed_actual_model_ids: [gpt-5-nano]
+    context_window_tokens: 128000
+    counting_profile: openai-tiktoken
+
+routes:
+  azure-mini:
+    target_id: azure-mini
+    purpose: classify
+    structured_output_mode: none
+    reasoning_effort: null
+    verbosity: null
+    temperature: null
+    max_output_tokens: null
+    request_timeout_s: null
+    max_retries: null
+    provider_controls: null
+    fallback_route_ids: []
+
+  azure-mini-plan:
+    target_id: azure-mini
+    purpose: record_reasoning
+    structured_output_mode: json_schema
+    reasoning_effort: null
+    verbosity: null
+    temperature: null
+    max_output_tokens: null
+    request_timeout_s: null
+    max_retries: null
+    provider_controls: null
+    fallback_route_ids: []
+
+  azure-luna:
+    target_id: azure-luna
+    purpose: sql_agent
+    structured_output_mode: none
+    reasoning_effort: null
+    verbosity: null
+    temperature: null
+    max_output_tokens: null
+    request_timeout_s: null
+    max_retries: null
+    provider_controls: null
+    fallback_route_ids: []
+
+  azure-nano-classify:
+    target_id: azure-nano
+    purpose: classify
+    structured_output_mode: none
+    reasoning_effort: low
+    verbosity: low
+    temperature: null
+    max_output_tokens: null
+    request_timeout_s: 8.0
+    max_retries: null
+    provider_controls: null
+    fallback_route_ids: []
+
+  openrouter-deepseek-flash:
+    target_id: openrouter-deepseek
+    purpose: classify
+    structured_output_mode: none
+    reasoning_effort: low
+    verbosity: null
+    temperature: null
+    max_output_tokens: null
+    request_timeout_s: null
+    max_retries: null
+    provider_controls:
+      zdr: true
+      data_collection: deny
+      allow_fallbacks: false
+      require_parameters: true
+      order: ["DeepInfra"]
+      only: ["DeepInfra"]
+    fallback_route_ids: []
+
+  deepseek-direct-flash:
+    target_id: deepseek-direct
+    purpose: classify
+    structured_output_mode: none
+    reasoning_effort: low
+    verbosity: null
+    temperature: null
+    max_output_tokens: null
+    request_timeout_s: null
+    max_retries: null
+    provider_controls: {}
+    fallback_route_ids: []
+
+  # Planner arms for the Business Query model comparison. Each reasoning model uses
+  # the maximum effort declared by its target; mini has no reasoning effort.
+  # Reached by ASK_MODEL_ROUTE_RECORD_REASONING; the purpose default is the
+  # purpose-specific mini route above.
+  azure-luna-plan:
+    target_id: azure-luna
+    purpose: record_reasoning
+    structured_output_mode: json_schema
+    reasoning_effort: high
+    verbosity: null
+    temperature: null
+    max_output_tokens: null
+    request_timeout_s: 120.0
+    max_retries: null
+    provider_controls: null
+    fallback_route_ids: []
+
+  azure-nano-plan:
+    target_id: azure-nano
+    purpose: record_reasoning
+    structured_output_mode: json_schema
+    reasoning_effort: low
+    verbosity: null
+    temperature: null
+    max_output_tokens: null
+    request_timeout_s: 120.0
+    max_retries: null
+    provider_controls: null
+    fallback_route_ids: []
+
+  deepseek-direct-plan:
+    target_id: deepseek-direct
+    purpose: record_reasoning
+    structured_output_mode: json_object
+    reasoning_effort: max
+    verbosity: null
+    temperature: null
+    max_output_tokens: null
+    request_timeout_s: 120.0
+    max_retries: null
+    provider_controls:
+      thinking_enabled: true
+    fallback_route_ids: []
+
+  # The DeepSeek side of the Luna-vs-DeepSeek comparison. Only the reasoning
+  # effort label is held equal; provider, model, structured-output mode
+  # (json_object vs Luna's json_schema) and provider_controls all differ,
+  # because each is the only setting its target supports. A result gap is
+  # therefore not attributable to reasoning alone — read planner_schema_invalid
+  # and repair counts first. "high" is a per-provider label, not a unit.
+  deepseek-direct-plan-high:
+    target_id: deepseek-direct
+    purpose: record_reasoning
+    structured_output_mode: json_object
+    reasoning_effort: high
+    verbosity: null
+    temperature: null
+    max_output_tokens: null
+    request_timeout_s: 120.0
+    max_retries: null
+    provider_controls:
+      thinking_enabled: true
+    fallback_route_ids: []
+
+  openai-luna-plan:
+    target_id: openai-luna
+    purpose: record_reasoning
+    structured_output_mode: json_schema
+    reasoning_effort: xhigh
+    verbosity: null
+    temperature: null
+    max_output_tokens: null
+    request_timeout_s: 120.0
+    max_retries: null
+    provider_controls: {}
+    fallback_route_ids: []
+
+  # The one-variable counterpart to openai-luna-plan: same target, purpose,
+  # output mode and timeout, differing ONLY in reasoning_effort. Measuring
+  # effort against azure-luna-plan instead would move provider and effort
+  # together, because Azure gpt-5.6-luna tops out at high (see openai-luna).
+  openai-luna-plan-high:
+    target_id: openai-luna
+    purpose: record_reasoning
+    structured_output_mode: json_schema
+    reasoning_effort: high
+    verbosity: null
+    temperature: null
+    max_output_tokens: null
+    request_timeout_s: 120.0
+    max_retries: null
+    provider_controls: {}
+    fallback_route_ids: []
+
+  openai-luna-sql-high:
+    target_id: openai-luna
+    purpose: sql_agent
+    structured_output_mode: none
+    reasoning_effort: high
+    verbosity: null
+    temperature: null
+    max_output_tokens: null
+    request_timeout_s: 120.0
+    max_retries: null
+    provider_controls: {}
+    fallback_route_ids: []
+
+  # Reasoning route uses Responses; effort is an owner call. No probe counts.
+  openai-luna-coordinator-high:
+    target_id: openai-luna
+    purpose: coordinator
+    structured_output_mode: none
+    reasoning_effort: high
+    verbosity: null
+    temperature: null
+    max_output_tokens: null
+    request_timeout_s: 120.0
+    max_retries: null
+    provider_controls: {}
+    fallback_route_ids: []
+
+  openai-mini-classify:
+    target_id: openai-mini
+    purpose: classify
+    structured_output_mode: none
+    reasoning_effort: null
+    verbosity: null
+    temperature: null
+    max_output_tokens: null
+    request_timeout_s: null
+    max_retries: null
+    provider_controls: {}
+    fallback_route_ids: []
+
+  openai-mini-rag:
+    target_id: openai-mini
+    purpose: rag_answer
+    structured_output_mode: none
+    reasoning_effort: null
+    verbosity: null
+    temperature: null
+    max_output_tokens: null
+    request_timeout_s: null
+    max_retries: null
+    provider_controls: {}
+    fallback_route_ids: []
+
+  openai-mini-conversation:
+    target_id: openai-mini
+    purpose: conversation
+    structured_output_mode: none
+    reasoning_effort: null
+    verbosity: null
+    temperature: null
+    max_output_tokens: null
+    request_timeout_s: null
+    max_retries: null
+    provider_controls: {}
+    fallback_route_ids: []
+
+  openai-nano-classify:
+    target_id: openai-nano
+    purpose: classify
+    structured_output_mode: none
+    reasoning_effort: low
+    verbosity: low
+    temperature: null
+    max_output_tokens: null
+    request_timeout_s: 8.0
+    max_retries: null
+    provider_controls: {}
+    fallback_route_ids: []
+
+  openai-nano-rag:
+    target_id: openai-nano
+    purpose: rag_answer
+    structured_output_mode: none
+    reasoning_effort: low
+    verbosity: low
+    temperature: null
+    max_output_tokens: null
+    request_timeout_s: null
+    max_retries: null
+    provider_controls: {}
+    fallback_route_ids: []
+
+  openai-nano-conversation:
+    target_id: openai-nano
+    purpose: conversation
+    structured_output_mode: none
+    reasoning_effort: low
+    verbosity: low
+    temperature: null
+    max_output_tokens: null
+    request_timeout_s: null
+    max_retries: null
+    provider_controls: {}
+    fallback_route_ids: []
+
+  openai-nano-coordinator:
+    target_id: openai-nano
+    purpose: coordinator
+    structured_output_mode: none
+    reasoning_effort: low
+    verbosity: low
+    temperature: null
+    max_output_tokens: null
+    request_timeout_s: null
+    max_retries: null
+    provider_controls: {}
+    fallback_route_ids: []
+
+  openai-mini-coordinator:
+    target_id: openai-mini
+    purpose: coordinator
+    structured_output_mode: none
+    reasoning_effort: null
+    verbosity: null
+    temperature: null
+    max_output_tokens: null
+    request_timeout_s: null
+    max_retries: null
+    provider_controls: {}
+    fallback_route_ids: []
+
+purpose_defaults:
+  classify: openai-nano-classify
+  rag_answer: openai-nano-rag
+  conversation: openai-nano-conversation
+  # Interactive planning runs at high effort: a two-plan question at xhigh
+  # overruns the 18 s planner ceiling, while high keeps the same plan shape
+  # inside it. Change effort only with a fresh paired probe.
+  record_reasoning: openai-luna-plan-high
+  sql_agent: openai-luna-sql-high
+  # Reasoning route uses Responses; effort is an owner call. No probe counts.
+  coordinator: openai-luna-coordinator-high
+
+escalations:
+  sql_agent:
+    hard_financial: openai-luna-sql-high
+
+# Sending a planner question off-Azure is a data-boundary decision, not a config
+# default. Only the named route is permitted, and only for the purpose listed.
+external_purpose_allowlist:
+  classify:
+    - openai-mini-classify
+    - openai-nano-classify
+  rag_answer:
+    - openai-mini-rag
+    - openai-nano-rag
+  conversation:
+    - openai-mini-conversation
+    - openai-nano-conversation
+  coordinator:
+    - openai-nano-coordinator
+    - openai-mini-coordinator
+    - openai-luna-coordinator-high
+  record_reasoning:
+    - deepseek-direct-plan
+    # Same target and data boundary as deepseek-direct-plan; only the reasoning
+    # effort differs, so it adds no exposure the line above does not carry.
+    - deepseek-direct-plan-high
+    - openai-luna-plan
+    # Same target and data boundary as openai-luna-plan; only the reasoning
+    # effort differs, so it adds no exposure the line above does not already
+    # carry.
+    - openai-luna-plan-high
+  sql_agent:
+    - openai-luna-sql-high

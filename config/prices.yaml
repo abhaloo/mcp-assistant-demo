@@ -1,0 +1,69 @@
+version: "2026-08-15"
+
+# Per-model input/output rates in USD per 1k tokens.
+# REGION CAVEAT: Azure OpenAI pricing varies by region. Verify these values
+# against https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/
+# before trusting the dollar amounts in COSTS.md.
+text-embedding-3-small:
+  input_per_1k: 0.00002
+  output_per_1k: 0.0
+gpt-4o-mini:
+  input_per_1k: 0.00015
+  output_per_1k: 0.0006
+gpt-4o:
+  input_per_1k: 0.005
+  output_per_1k: 0.015
+# Escalation deployment. Historical gpt-4.1 rates kept for old run analysis.
+# Current default (2026-07-31): AZURE_CHAT_ESCALATION_DEPLOYMENT=gpt-5.6-luna.
+# Verify per region (caveat above).
+gpt-4.1:
+  input_per_1k: 0.002
+  output_per_1k: 0.008
+gpt-5.6-luna:
+  input_per_1k: 0.0002
+  output_per_1k: 0.0012
+  # OpenAI bills reasoning tokens at the output rate (same per-1k as output_per_1k).
+  reasoning_per_1k: 0.0012
+# Source: https://openai.com/api/pricing/ (verified 2026-08-03); Azure PAYG matches.
+# $0.05 / $0.40 per 1M tokens -> $0.00005 / $0.0004 per 1k tokens.
+gpt-5-nano:
+  input_per_1k: 0.00005
+  output_per_1k: 0.0004
+  # OpenAI bills reasoning tokens at the output rate (same per-1k as output_per_1k).
+  reasoning_per_1k: 0.0004
+
+# Explicit Azure deployment-name -> price-key map.
+# The cost rollup checks this map FIRST, then falls back to a direct top-level
+# key match. Failing the lookup raises (no silent $0).
+#
+# Our current Azure deployments happen to be named identically to the price keys:
+#   AZURE_CHAT_DEPLOYMENT=gpt-4o-mini
+#   AZURE_EMBEDDING_DEPLOYMENT=text-embedding-3-small
+# so direct match suffices.
+#
+# However, Azure responses echo back the versioned underlying model string
+# (e.g. "gpt-4o-mini-2024-07-18") rather than the deployment name. Map any
+# new versioned IDs here as Azure rolls them out — the cost rollup raises
+# loudly when it sees an unmapped model, never silent $0.
+azure_deployment_to_price_key:
+  "gpt-4o-mini-2024-07-18": "gpt-4o-mini"
+  "gpt-4o-2024-08-06": "gpt-4o"
+  "gpt-4o-2024-05-13": "gpt-4o"
+  "gpt-5-nano-2025-08-07": "gpt-5-nano"
+
+# OpenRouter list prices for deepseek/deepseek-v4-flash-0731.
+# Source: https://openrouter.ai/deepseek/deepseek-v4-flash-0731 (verified 2026-07-31)
+# Rates: $0.14 / $0.28 per 1M tokens -> $0.00014 / $0.00028 per 1k tokens.
+deepseek/deepseek-v4-flash-0731:
+  input_per_1k: 0.00014
+  output_per_1k: 0.00028
+
+# DeepSeek first-party wire id (api.deepseek.com) — product label V4-Flash-0731 is not sent.
+# Source: https://api-docs.deepseek.com/ (list prices aligned with OpenRouter flash rates)
+deepseek-v4-flash:
+  input_per_1k: 0.00014
+  output_per_1k: 0.00028
+
+# OpenRouter model slug -> prices.yaml key (identity map for experiment arm).
+openrouter_model_to_price_key:
+  "deepseek/deepseek-v4-flash-0731": "deepseek/deepseek-v4-flash-0731"

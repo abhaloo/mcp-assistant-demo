@@ -1,0 +1,344 @@
+{
+  "demo_finance": {
+    "user_id": 56,
+    "entity_id": 1,
+    "role": "user",
+    "permissions": [
+      "account statement",
+      "add account",
+      "add currency",
+      "add customer",
+      "add invoice",
+      "add journal entry",
+      "add product",
+      "add quotation",
+      "add supplier",
+      "add tax",
+      "add unit",
+      "approve issue",
+      "approve job requests",
+      "approve receive",
+      "balance sheet",
+      "bill",
+      "bill overdue",
+      "cash flow statement",
+      "customer statement",
+      "delete account",
+      "delete currency",
+      "delete product",
+      "delete supplier",
+      "edit account",
+      "edit currency",
+      "edit customer",
+      "edit inventory",
+      "edit invoice",
+      "edit product",
+      "edit quotation",
+      "edit supplier",
+      "edit tax",
+      "edit unit",
+      "export invoice",
+      "inventory",
+      "inventory dashboard",
+      "issue item",
+      "outstanding receivable",
+      "payment",
+      "profit and loss",
+      "receive item",
+      "supplier statement",
+      "trial balance",
+      "view account",
+      "view category",
+      "view currency",
+      "view customer",
+      "view inventory",
+      "view invoice",
+      "view journal entries",
+      "view payable quotation",
+      "view product",
+      "view quotation",
+      "view supplier",
+      "view tax",
+      "view unit"
+    ],
+    "resources": {
+      "invoice": {
+        "actions": [
+          "search",
+          "read",
+          "link"
+        ],
+        "field_sets": [
+          "summary",
+          "detail"
+        ]
+      },
+      "quotation": {
+        "actions": [
+          "search",
+          "read",
+          "link"
+        ],
+        "field_sets": [
+          "summary",
+          "detail"
+        ]
+      },
+      "payable_quotation": {
+        "actions": [
+          "search",
+          "read",
+          "link"
+        ],
+        "field_sets": [
+          "summary",
+          "detail"
+        ]
+      },
+      "credit_note": {
+        "actions": [
+          "search",
+          "read",
+          "link"
+        ],
+        "field_sets": [
+          "summary",
+          "detail"
+        ]
+      },
+      "customer": {
+        "actions": [
+          "search",
+          "read",
+          "link"
+        ],
+        "field_sets": [
+          "summary",
+          "detail"
+        ]
+      },
+      "supplier": {
+        "actions": [
+          "search",
+          "read",
+          "link"
+        ],
+        "field_sets": [
+          "summary",
+          "detail"
+        ]
+      },
+      "product": {
+        "actions": [
+          "search",
+          "read",
+          "link"
+        ],
+        "field_sets": [
+          "summary",
+          "detail"
+        ]
+      },
+      "inventory": {
+        "actions": [
+          "search",
+          "read",
+          "link"
+        ],
+        "field_sets": [
+          "summary",
+          "detail"
+        ]
+      }
+    },
+    "record_access": {
+      "schema_version": 2,
+      "manifest_hash": "sha256:5952d8152cd18f1dea5b998a3e2869365fc27283795d3c444d29b115a1fe149b",
+      "entity_id": 1,
+      "cross_entity": false,
+      "document_tiers": [
+        "warehouse",
+        "customers",
+        "printing",
+        "all",
+        "sales",
+        "finance"
+      ],
+      "scope_values": {},
+      "resources": {
+        "invoice": {
+          "actions": [
+            "search",
+            "read",
+            "link"
+          ],
+          "field_sets": [
+            "default"
+          ]
+        },
+        "quotation": {
+          "actions": [
+            "search",
+            "read",
+            "link"
+          ],
+          "field_sets": [
+            "default"
+          ]
+        },
+        "payable_quotation": {
+          "actions": [
+            "search",
+            "read",
+            "link"
+          ],
+          "field_sets": [
+            "default"
+          ]
+        },
+        "credit_note": {
+          "actions": [
+            "search",
+            "read",
+            "link"
+          ],
+          "field_sets": [
+            "default"
+          ]
+        },
+        "customer": {
+          "actions": [
+            "search",
+            "read",
+            "link"
+          ],
+          "field_sets": [
+            "default"
+          ]
+        },
+        "supplier": {
+          "actions": [
+            "search",
+            "read",
+            "link"
+          ],
+          "field_sets": [
+            "default"
+          ]
+        },
+        "product": {
+          "actions": [
+            "search",
+            "read",
+            "link"
+          ],
+          "field_sets": [
+            "default"
+          ]
+        },
+        "inventory": {
+          "actions": [
+            "search",
+            "read",
+            "link"
+          ],
+          "field_sets": [
+            "default"
+          ]
+        }
+      }
+    }
+  },
+  "demo_production": {
+    "user_id": 57,
+    "entity_id": 1,
+    "role": "user",
+    "permissions": [
+      "add category",
+      "add job",
+      "add specification item",
+      "add supplier",
+      "add unit",
+      "approve issue",
+      "approve receive",
+      "delete inventory",
+      "delete unit",
+      "edit customer",
+      "edit inventory",
+      "edit job",
+      "edit specification item",
+      "edit unit",
+      "inventory dashboard",
+      "issue item",
+      "job",
+      "job dashboard",
+      "move job",
+      "receive item",
+      "view inventory",
+      "view job",
+      "view specification item",
+      "view unit"
+    ],
+    "resources": {
+      "job": {
+        "actions": [
+          "search",
+          "read",
+          "link"
+        ],
+        "field_sets": [
+          "summary",
+          "detail"
+        ]
+      },
+      "inventory": {
+        "actions": [
+          "search",
+          "read",
+          "link"
+        ],
+        "field_sets": [
+          "summary",
+          "detail"
+        ]
+      }
+    },
+    "record_access": {
+      "schema_version": 2,
+      "manifest_hash": "sha256:5952d8152cd18f1dea5b998a3e2869365fc27283795d3c444d29b115a1fe149b",
+      "entity_id": 1,
+      "cross_entity": false,
+      "document_tiers": [
+        "warehouse",
+        "customers",
+        "sales",
+        "printing",
+        "all",
+        "graphic design"
+      ],
+      "scope_values": {},
+      "resources": {
+        "job": {
+          "actions": [
+            "search",
+            "read",
+            "link"
+          ],
+          "field_sets": [
+            "default"
+          ]
+        },
+        "inventory": {
+          "actions": [
+            "search",
+            "read",
+            "link"
+          ],
+          "field_sets": [
+            "default"
+          ]
+        }
+      }
+    }
+  }
+}

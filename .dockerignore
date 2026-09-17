@@ -1,0 +1,32 @@
+.git
+.venv
+.env
+.claude
+.vite
+__pycache__
+.pytest_cache
+.ruff_cache
+tests
+!tests/eval_dataset.json
+docs
+logs
+data/chroma
+
+# Control-plane code never ships in the production image. The Dockerfile does
+# one blanket `COPY app ./app`, so exclusion happens here rather than by
+# splitting the COPY.
+#
+# app/eval/dataset.py and app/eval/__init__.py DO ship: scripts/reindex.py
+# imports app.eval.dataset and infra/main.bicep runs that script as the ingest
+# job in this same image. Every other app/eval entry is excluded by name;
+# tests/architecture/test_control_plane_image_exclusion.py fails if a new one
+# is added without a line here.
+app/experiments
+app/eval/ask_route
+app/eval/business_query
+app/eval/document_rag
+app/eval/parsing
+app/eval/sql
+app/eval/conversation_coordinator.py
+app/eval/failure_store.py
+app/eval/run_stats.py

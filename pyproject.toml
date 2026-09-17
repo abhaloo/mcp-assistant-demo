@@ -1,0 +1,166 @@
+[project]
+name = "mcp-rag-qa"
+version = "0.1.0"
+description = "AI-powered Q&A system for Multi Color Printers"
+requires-python = ">=3.11"
+dependencies = [
+    # --- Web framework ---
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    # --- LLM orchestration ---
+    "langchain>=1.3,<2",
+    "langchain-openai>=1.4.1,<2",
+    "langchain-community>=0.4,<1",   # SQLDatabase base class — still required
+    "langchain-chroma>=0.2.0",
+    "langgraph>=1.2.5,<2",
+    "langgraph-prebuilt>=1.1.0,<2",  # explicit: a patch-level breaking change shipped here (GH #6363)
+    "sqlglot>=25,<30",               # parser-backed SQL guard (Task 9)
+    "langsmith>=0.8,<0.9",     # explicit pin; was transitive via langchain
+    # --- Vector store ---
+    "chromadb>=0.5.0",
+    # --- Data validation & settings ---
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    # --- Document processing ---
+    "markdown>=3.5",           # required by unstructured.partition.md (UnstructuredMarkdownLoader)
+    "pypdf>=4.0",              # PDF loading
+    "openpyxl>=3.1",           # .xlsx ingestion (excel parser backend)
+    "unstructured>=0.15.0",    # General document loading (optional, heavy)
+    "unstructured-client>=0.25.0",  # hosted Unstructured Serverless API client
+    # --- Phase 2: SQL pipeline ---
+    "sqlalchemy>=2.0",
+    "asyncpg>=0.30",
+    "alembic>=1.14",
+    "pymysql>=1.1",            # Pure-Python MySQL driver
+    "cryptography>=42.0",      # Required by pymysql for caching_sha2_password auth
+    "langchain-experimental>=0.3.0",  # For SemanticChunker (app/rag/ingestion/splitter_factory.py)
+    # --- PII detection & anonymization ---
+    "presidio-analyzer>=2.2",
+    "presidio-anonymizer>=2.2",
+    "spacy>=3.7",              # NLP engine used by Presidio's analyzer
+    "phonenumbers>=8.13",
+    # --- Service-to-service auth (T-042) ---
+    "pyjwt>=2.10",             # HS256 JWT verify; was transitive via msal, now explicit
+    # --- Utilities ---
+    "redis>=5.0",              # server-side conversation transcript store (async)
+    "sentry-sdk>=2.0",           # optional at runtime — init only when SENTRY_DSN is set
+    "python-dotenv>=1.0",
+    "httpx>=0.27.0",           # Async HTTP client
+    # --- OpenTelemetry (T-029) ---
+    "opentelemetry-api>=1.25",
+    "opentelemetry-sdk>=1.25",
+    "opentelemetry-instrumentation-fastapi>=0.46b0",
+    "opentelemetry-instrumentation-asyncio>=0.46b0",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.25",
+]
+
+[project.optional-dependencies]
+azure = [
+    # Optional — only required when settings.retriever_kind == "azure_search"
+    # OR settings.chat_provider == "azure".
+    # Install with: pip install -e ".[azure]"
+    # >=1.8.8: the older b45 exporter uv otherwise picks imports `LogData` from
+    # opentelemetry.sdk._logs, which otel-sdk 1.42 no longer exports (crashes startup).
+    "azure-monitor-opentelemetry>=1.8.8",
+    "azure-search-documents>=11.5.0",
+    # azure-identity is imported unconditionally by langchain-community's
+    # AzureSearch wrapper, even for key-auth paths — pin it here so the
+    # [azure] extra is self-contained.
+    "azure-identity>=1.20.0",
+    "azure-storage-blob>=12.19",
+]
+docling = [
+    # Optional — only required when settings.parser_kind == "docling".
+    # Heavy: pulls torch + layout/table models (downloaded on first run).
+    # Install with: uv sync --extra docling   (or: pip install -e ".[docling]")
+    "docling>=2.0",
+]
+rerank = [
+    "flashrank>=0.2",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "ragas>=0.2.0",            # RAG evaluation framework
+    "apted>=1.0.3",            # APTED tree-edit-distance — TEDS table-parse metric
+    "Distance>=0.1.3",         # sequence Levenshtein — reading-order + TEDS cell distance
+    "ruff==0.15.17",           # Linter + formatter (pinned: formatter output is version-specific)
+    "pyright==1.1.407",        # Type-error ratchet (tests/architecture/test_pyright_ratchet.py)
+    "matplotlib>=3.8",         # chunking-experiments static report figures
+    "plotly>=6.0",             # chunking-experiments interactive HTML + notebook charts
+    "nbformat>=5.10",          # build the report notebook
+    "nbconvert>=7.16",         # execute + export the report notebook
+    "ipykernel>=6.0",          # kernel for notebook execution
+    # Declared directly rather than relied on transitively: the CI failure-baseline
+    # gate (scripts/check_failure_baseline.py) imports it for XXE-safe JUnit parsing.
+    # It currently arrives via nbconvert, so pruning a notebook dep would break the gate.
+    "defusedxml>=0.7.1",
+]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*", "scripts*"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+# The gate covers this repo's own Python: app/, scripts/, tests/, evals/, alembic/.
+# scripts/ is in because it holds the deploy, gate, and eval entry points, and a
+# broken one fails at run time with no test covering it.
+# Excluded: docs/experiments/ is notebook-grade analysis material no CLI imports;
+# .agents/ and .claude/ are agent skill bundles, many of them maintained upstream,
+# so editing them to satisfy this gate only creates drift on the next sync.
+# Note for anyone re-adding a bare directory name here: ruff matches these patterns
+# against every path component, so "scripts" would also exclude tests/scripts/ and
+# each .agents/skills/*/scripts/ directory.
+extend-exclude = ["docs", ".agents", ".claude"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]  # errors, pyflakes, imports, pyupgrade
+# The wider families (bugbear, simplify, complexity, naming, bandit, print, logging,
+# tryceratops, pylint-refactor, blind-except, perflint, eradicate) run through
+# tests/architecture/test_ruff_ratchet.py with frozen per-rule counts; that run's
+# config is tests/architecture/ruff_ratchet.toml, which extends this file.
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI dependency markers are evaluated once per request by the framework.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Header", "fastapi.Query", "fastapi.Body", "fastapi.Path"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests assert, compare against literal fixtures, and carry fake credentials.
+"tests/**" = ["S101", "S105", "S106", "PLR2004"]
+# CLI entry points print their output on purpose.
+"scripts/**" = ["T201"]
+"evals/**" = ["T201"]
+# sql_chain.py's prompt embeds worked-example SQL (few-shot exemplars) as long string
+# literals; E501 there flags SQL formatting inside a string, not code. Keep the prompt
+# byte-identical to what the eval measured rather than reflow examples to fit line length.
+"app/rag/chains/sql_chain.py" = ["E501"]
+# The chunking-experiment builders emit a published report and notebook. Their long
+# lines are prose inside string literals, so reflowing them to fit changes rendered
+# output. Every other rule still applies to these files.
+"scripts/experiments/chunking_experiments/*" = ["E501"]
+
+[tool.pyright]
+# Scoped to the product package; tests/architecture/test_pyright_ratchet.py freezes
+# the error count and lets it fall only.
+include = ["app"]
+pythonVersion = "3.11"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+markers = [
+    # Tests needing a live external service (e.g. MySQL). Not run by default in
+    # CI: the test job passes `-m "not integration"`. Run locally with the DB up
+    # via `pytest -m integration`.
+    "integration: requires a live external service (MySQL, etc.)",
+    # S1a Query Record store — real Postgres only (compose or CI service).
+    "postgres: requires Postgres 16 (Query Record store)",
+]
