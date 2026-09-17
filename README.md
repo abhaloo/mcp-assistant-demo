@@ -7,6 +7,8 @@ versioned business-definition bundles, plus grounded document Q&A with citations
 - **Fail-closed access** — the same question can answer for `demo_finance` and refuse for `demo_production`.
 - **Grounded document Q&A** — retrieve from the bundled handbook and cite sources.
 
+This is a demo distilled from the original app. 
+
 ## Architecture
 
 A finance user asks who owes us, opens an invoice, then asks about that selected record.
