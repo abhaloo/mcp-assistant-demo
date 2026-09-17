@@ -68,6 +68,7 @@ services:
       MCP_RECORD_DATABASE_URL: mysql+pymysql://demo:demo@mariadb:3306/mcp_demo
       BUSINESS_QUERY_MODE: "enabled"
       CONVERSATION_ENABLED: "true"
+      CONVERSATION_COORDINATOR_ENABLED: "true"
     depends_on:
       migrate:
         condition: service_completed_successfully

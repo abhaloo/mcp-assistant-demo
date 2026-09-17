@@ -9,45 +9,112 @@ versioned business-definition bundles, plus grounded document Q&A with citations
 
 ## Architecture
 
+A finance user asks who owes us, opens an invoice, then asks about that selected record.
+This repository is the Ask API. The [record-links replay](docs/replays/demo-s2-who-owes-us.html) is the billing panel that calls it.
+
 ```mermaid
-flowchart LR
-  client[Client]
-  api["FastAPI /api/ask"]
-  jwt[JWT + record_access]
-  classify[Classify]
-  sqlPath[Structured path]
-  bundle[Definition bundle]
-  maria[MariaDB views]
-  docPath[Document path]
-  chroma[Chroma]
-  answer[Answer + citations]
-  client --> api --> jwt --> classify
-  classify --> sqlPath --> bundle --> maria --> answer
-  classify --> docPath --> chroma --> answer
+flowchart TB
+  you[You]
+  recCtx[Selected invoice]
+  api["POST /api/ask"]
+  you --> recCtx --> api
+
+  jwt["Signed JWT: record_access includes document_tiers"]
+  api --> jwt
+
+  redis[Redis transcript]
+  jwt --> redis
+
+  subgraph lg [LangGraph coordinator]
+    decide["Orchestrator (Decide)"]
+    explain[explain_sources]
+    clarify[Clarify]
+    finish[Finish]
+    stop[Stop]
+    decide --> explain
+    decide --> clarify
+    decide --> finish
+    decide -.-> stop
+    explain --> decide
+
+    subgraph bqLine [ ]
+      direction LR
+      bqTool["tool: sql_query_business_records"]
+      maria[MariaDB]
+      cube[Cube compiler]
+      results[Results]
+      bqTool --> maria --> cube --> results
+    end
+
+    subgraph docLine [ ]
+      direction LR
+      docTool["tool: search_documents"]
+      chroma["ChromaDB (hybrid retrieval)"]
+      docTool --> chroma
+    end
+
+    decide --> bqTool
+    decide --> docTool
+    results --> decide
+    docTool --> decide
+  end
+  redis --> decide
+
+  sse["SSE: activity, thought, table, card"]
+  decide -.-> sse
+  finish --> persist[Persist transcript]
+  clarify --> persist
+  persist --> json[JSON answer]
 ```
 
-The product path is structured query: classify → compile against the vendored
-bundle → execute on MariaDB. Document retrieval is the companion path when the
-question is handbook-shaped.
+LangGraph `Orchestrator (Decide)` owns the turn. It calls `tool: sql_query_business_records`, `tool: search_documents`, or `explain_sources`, then loops until it finishes, clarifies, or stops.
+`tool: sql_query_business_records` runs MariaDB through a Cube compiler to results. `tool: search_documents` retrieves from ChromaDB with hybrid retrieval. `explain_sources` restores cited evidence. It is not a catalog tool.
+SSE frames go out while the loop runs. The transcript is written after the turn ends.
+This demo sets `CONVERSATION_COORDINATOR_ENABLED=true`.
 
-## Ask flow (structured)
+## Ask flow
 
 ```mermaid
 sequenceDiagram
   participant U as You
+  participant P as Billing Ask panel
   participant M as demo_mint_jwt.py
   participant A as /api/ask
-  participant B as Definition bundle
-  participant D as MariaDB
+  participant R as Redis
+  participant G as Orchestrator (Decide)
+  participant D as MariaDB or ChromaDB
+
   U->>M: mint JWT (--persona demo_finance)
   M-->>U: Bearer token
-  U->>A: POST question + Authorization
-  A->>A: classify as structured
-  A->>B: compile authorized plan
-  B->>D: execute on views
-  D-->>A: rows
-  A-->>U: answer + citations
+  U->>P: open unpaid invoices
+  P->>A: POST question + JWT
+  Note over P,A: Optional SSE uses Accept text/event-stream
+  A->>A: verify record_access
+  A->>R: load transcript
+  A->>G: start Orchestrator (Decide) loop
+  loop until finish, clarify, or stop
+    G->>D: tool: sql_query_business_records and/or tool: search_documents
+    D-->>G: Cube results or passages
+    G-->>P: SSE activity and tables
+  end
+  alt selected record
+    U->>P: open invoice 3377
+    P->>A: POST with record_context
+    A->>G: decide with that invoice in scope
+  else coordinator follow-up
+    G-->>P: clarify in the thread
+    U->>P: next question
+    P->>A: POST new_question
+  else answer
+    G-->>A: finish
+    A->>R: persist transcript
+    A-->>P: JSON answer
+  end
 ```
+
+You mint a JWT, then ask from the billing panel or from `/api/ask`.
+If you open a row, the next question carries that record.
+The coordinator can ask a follow-up in the same thread.
 
 ## Try these
 
@@ -60,7 +127,10 @@ sequenceDiagram
 
 ## Demo video
 
-<!-- add URL after recording -->
+Open the [record-links replay](docs/replays/demo-s2-who-owes-us.html) in a browser.
+
+It lists unpaid invoices as linked rows, opens invoice 3377, then answers on that selected record.
+The replay is the billing Ask panel. This repository is the API behind it.
 
 ## Quick start
 
