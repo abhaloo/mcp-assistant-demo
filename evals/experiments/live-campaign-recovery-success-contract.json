@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "status": "CONFIRMED",
+  "confirmed_by": "Adeel",
+  "confirmed_at": "2026-08-04T22:40:00Z",
+  "implementation_status": "IMPLEMENTED",
+  "acceptance_status": "NOT_ACCEPTED",
+  "observable_outcome": "After judging completes (oracle.score returns and sanitized scored rows exist), a paid live RAG or SQL campaign terminates with exactly one evidence-derived terminal state: VERDICT_COMPLETE (hash-bound verdict or HOLD) or RECOVERABLE_CHECKPOINT (verified judge checkpoint with required_action=finalize-from-checkpoint). Otherwise ABORTED_NO_RECOVERY. Mid-judge death before checkpoint seal is non-recoverable in P0.",
+  "non_goals": [
+    "Do not permit a verdict under a different code, dependency, Azure deployment, OpenRouter route, judge policy/model, answer bundle, or spend identity",
+    "Do not resume a partial answer matrix as quality evidence in this slice",
+    "Do not claim recoverability for mid-judge death, partial score rows, or oracle exceptions before checkpoint seal",
+    "Recovery does not re-run paid stages implicitly",
+    "Do not convert a HOLD into ACCEPTED",
+    "Do not silently relax OpenRouter provider pinning, require_parameters, fallback, data policy, tool choice, reasoning effort, or output controls",
+    "Do not redesign production /api/ask model selection",
+    "Do not claim a fake/unit test proves a real provider, snapshot, or cloud environment",
+    "Do not use the production billing tunnel or live billing engine as the eval snapshot"
+  ],
+  "examples": [
+    "HEAD changes after answers.jsonl sealed but before judging: ABORTED_NO_RECOVERY",
+    "Process killed mid-oracle.score: ABORTED_NO_RECOVERY",
+    "Checkpoint sealed then before_verdict fails: RECOVERABLE_CHECKPOINT with finalize-from-checkpoint",
+    "environment_hash drift alone allowed under allowlist-only recovery when artifact hashes match",
+    "Git blob OID or content SHA-256 mismatch vs origin/db: refuse before any model call"
+  ],
+  "edge_and_failure_cases": [
+    "Mid-judge process death before checkpoint seal: ABORTED_NO_RECOVERY",
+    "Checkpoint row deleted or changed: checkpoint_hash_mismatch or checkpoint_row_set_mismatch",
+    "Redis dir under repo_root: preflight refuses external_runtime_state",
+    "Heartbeat fails after verdict sealed: COMPLETE_WITH_STATUS_WARNING",
+    "UNSETTLED spend blocks recovery at finalize and abort paths"
+  ],
+  "independent_oracles": [
+    "git rev-parse HEAD and git status --porcelain --untracked-files=all",
+    "SHA-256 of frozen contract, answers, score checkpoint, judge validation, spend ledger, route policy, terminal receipt",
+    "Frozen expected Cell(case_id, arm, repeat) set compared to persisted rows",
+    "Task verify_frozen_contract and finalize gates",
+    "Pinned origin/db:mcp_local.sql git blob OID and content SHA-256",
+    "snapshot_identity eval_snapshot_url_sha256 and eval_today"
+  ],
+  "public_test_seams": [
+    "seal_judge_checkpoint",
+    "verify_recoverable_checkpoint",
+    "finalize_from_checkpoint",
+    "verify_external_run_root",
+    "run_campaign_preflight",
+    "reconcile_spend_evidence",
+    "derive_terminal_state",
+    "write_stage_receipt",
+    "recovery_identity_allowlist"
+  ],
+  "recovery_identity_allowlist": [
+    "commit_sha",
+    "dirty",
+    "dependency_lock_hash",
+    "answers_hash",
+    "scores_checkpoint_hash",
+    "judge_validation_checkpoint_hash",
+    "judge_checkpoint_hash",
+    "expected_cell_set_hash",
+    "judge_policy_hash",
+    "route_identity_hash",
+    "azure_deployment_attestations",
+    "ledger_settled_hash"
+  ],
+  "sql_snapshot_source": "origin/db:mcp_local.sql",
+  "sql_snapshot_git_blob_oid": "bc7491259ffd5a6698357d9aefc5fdb2f324d9a8",
+  "sql_snapshot_content_sha256": "64bf2d927a6bde5a202b2a8121bda4dd99ba78c1c9a905b5eb43d97d723c4327",
+  "sql_snapshot_db_name": "mcp_local",
+  "sql_snapshot_host_class": "ephemeral_sidecar",
+  "acceptance_criteria": {
+    "judge_checkpoint_before_verdict_gate": {
+      "technology": "unit_filesystem_fault_injection"
+    },
+    "recoverable_finalize": {
+      "technology": "offline_integration_fake_task"
+    },
+    "recovery_rejects_drift": {
+      "technology": "unit_filesystem_git_integration"
+    },
+    "immutable_runtime_workspace": {
+      "technology": "real_git_worktree_integration"
+    },
+    "external_runtime_state": {
+      "technology": "filesystem_redis_integration"
+    },
+    "preflight_without_matrix_spend": {
+      "technology": "offline_integration_fake_clients"
+    },
+    "abort_emits_recoverable_checkpoint": {
+      "technology": "unit_fault_injection"
+    },
+    "provider_backpressure_policy": {
+      "technology": "unit_fake_clock_http_errors"
+    },
+    "spend_reconciliation": {
+      "technology": "unit_temp_ledger_integration"
+    },
+    "terminal_state_from_evidence": {
+      "technology": "fault_injection"
+    },
+    "stage_receipts": {
+      "technology": "filesystem_integration"
+    }
+  },
+  "locked_decisions": {
+    "recovery_mode": "allowlist_only",
+    "environment_hash_recovery": "drift_allowed_on_finalize_from_checkpoint",
+    "sql_snapshot_model": "origin_db_sidecar_mariadb_11_4",
+    "openrouter_sql_estimand": {
+      "status": "UNSUPPORTED_FOR_SQL",
+      "confirmed_by": "Adeel",
+      "confirmed_at": "2026-08-04T23:30:00Z",
+      "decision_tip": "818e2a8",
+      "cloud_agent": "bc-271e2979",
+      "arm_name": "forced-deepseek",
+      "profile_id": "deepseek-low",
+      "route_identity_hash": "sha256:f537dd29606363b23816c203f6b3699f7a196a221fae8a4576015635c50cc48e",
+      "canary_receipt_hash": "sha256:d1737e136eb9e0ac18d035202a43633275de60a9416d64029c4085a097644015",
+      "error_class": "NotFoundError",
+      "error_stage": "after_sql_db_list_tables",
+      "require_parameters": true,
+      "allow_fallbacks": false,
+      "note": "Live exact-wire canary under strict eval controls (DeepInfra pin, require_parameters=true, no fallbacks) returned HTTP 404 after sql_db_list_tables; do not relax controls"
+    },
+    "deepseek_direct_sql_estimand": {
+      "status": "SUPPORTED",
+      "confirmed_by": "Adeel",
+      "confirmed_at": "2026-08-05T01:15:00Z",
+      "decision_tip": "265a9aa",
+      "cloud_agent": "bc-c0d5307e",
+      "arm_name": "forced-deepseek-direct",
+      "profile_id": "deepseek-direct-high",
+      "model_id": "deepseek-v4-flash",
+      "route_identity_hash": "sha256:bfa9499150230d6f7bc56ead048dc76aa9585a24a162323b924672b6e51e74be",
+      "canary_receipt_hash": "sha256:cb2445b596718591abd332753da6cf90d32d1511eb7041193972c4c568378bce",
+      "luna_baseline_canary_receipt_hash": "sha256:d46d055f4988c533fbb10ff87b6901a0fe456c457f22765cc2650c1443d1fc8d",
+      "note": "Live exact-wire canary PASS reconfirmed on merged tip 265a9aa (bc-c0d5307e, ~$0.0025 dual-arm, gold=agent=3582). Prior seal bc-ec2eabf3 @ 8b95285. Wire id deepseek-v4-flash; product label V4-Flash-0731 is not sent on the wire. openrouter_sql_estimand remains UNSUPPORTED_FOR_SQL."
+    }
+  },
+  "acceptance_blockers": [
+    "No technology-matched live gate receipts for full SQL/RAG matrices (Task 15 Luna vs DeepSeek-direct matrix NOT_RUN)",
+    "Luna Azure Responses SQL exact-wire 404 — deployment/env fix required for OpenRouter estimand only; does not block deepseek_direct_sql_estimand"
+  ]
+}

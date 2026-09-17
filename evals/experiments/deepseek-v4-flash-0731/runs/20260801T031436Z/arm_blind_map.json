@@ -1,0 +1,7 @@
+{
+  "opaque_to_arm": {
+    "oid-0002": "forced-deepseek",
+    "oid-0000": "prod-mini",
+    "oid-0001": "forced-luna"
+  }
+}

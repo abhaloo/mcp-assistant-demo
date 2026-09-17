@@ -1,0 +1,79 @@
+{
+  "case_id": "bq-08",
+  "family": "product_or_category_lookup",
+  "phrasing": "noisy_english",
+  "expected": "clarification_required",
+  "actual": "unsupported",
+  "outcome_match": false,
+  "literal_match": null,
+  "passed": false,
+  "detail": "expected clarification_required, got unsupported",
+  "receipt_valid": true,
+  "receipt": null,
+  "answer_query_id": null,
+  "reason_code": "member_not_found",
+  "message": "that isn't available to ask here",
+  "diagnostics": [],
+  "correlation_id": "bqeval-bq-08",
+  "planner_ms": 11926.5,
+  "planner_repair_count": 0,
+  "sql_ms": null,
+  "sql": null,
+  "rows_returned": null,
+  "reasoning": "We need answer question: \"how much art paper 300gsm did we use this month\" Need map to card.\n\nWe need parse: \"art paper 300gsm\" - product name? There is product_name dimension on invoice_item. \"did we use\" - usage? Could be stock usage? Inventory? But \"use\" maybe means consumed/sold? Need interpret. \"this month\" period relative. Which time dimension? If product_name on invoice_item and product_units_sold measure. \"how much ... did we use\" might mean quantity sold? But \"use\" in context of stock? Card has inventory stock receipts, but not usage. There is product_units_sold: Units sold on invoice lines. So \"how much art paper 300gsm did we use this month\" -> amount of product used = units sold? Or product_revenue? Could be \"how much\" meaning quantity. Since product_units_sold measure exists, likely this. Need clarify? The card has product_units_sold, product_revenue, product_name. \"how much\" ambiguous could be quantity or money. But \"art paper 300gsm\" is a product, \"did we use\" in inventory/stock sense maybe \"stock used\" = goods issued? No stock usage measure. Could be \"units sold\" as usage. We have product_units_sold.\n\nQuestion asks \"this month\" - period. Need choose time dimension: product_units_sold allowed_time_axes: invoice_item.sold_at. So period with time_dimension invoice_item.sold_at, relative \"this_month\"? Need relative from closed list? The question says \"this month\" -> relative range \"this_month\"? In plan example, \"relative\":\"this_month\". But closed list? Period rules: exactly ONE of: a relative range from the closed list, \"on\", \"since\", or \"between\". We'll use relative \"this_month\", granularity \"month\"? The example has granularity. Need also \"how much\" grain scalar? \"how much\" = how many / how much -> grain \"scalar\" with exactly one measure and no grouping. But we need filter product_name contains \"art paper 300gsm\". Also period. For scalar, dimensions none. So plan: measures [\"product_units_sold\"], dimensions [], bucket_set null, filters all [{\"member\":\"product_name\",\"operator\":\"contains\",\"values\":[\"art paper 300gsm\"]}], having null, period {\"time_dimension\":\"invoice_item.sold_at\",\"relative\":\"this_month\",\"granularity\":\"month\"}, grain \"scalar\", order null? limit? Scalar no limit. Need include every qualifier. \"this month\" period. Need maybe \"we\" = company, no additional filter.\n\nNeed consider currency? product_units_sold no currency. Good.\n\nNeed answer plan action. Ensure all top-level keys exactly. plan object with measures array non-empty. filters all array. For \"this month\" relative range might need \"granularity\":\"month\". The card example uses. We'll include.\n\nNeed make sure product_name is from invoice_item resource, product_units_sold from invoice_item. Good.\n\nPotential issue: \"use\" may refer to stock usage not sales. There is no \"usage\" measure. But product_units_sold is closest. Maybe \"used\" = consumed in production? No measure. Since \"art paper 300gsm\" is a product; \"use\" in a business likely means units sold/consumed. We'll plan.\n\nCould there be a \"stock_receipts\" measure but not usage. So unsupported if no usage measure? But product_units_sold is reasonable. Need maybe ask clarification? The question says \"how much art paper 300gsm did we use this month\" - \"how much\" could mean quantity or revenue. The card has product_revenue and product_units_sold. However, \"art paper 300gsm\" likely a product name; \"how much did we use\" more likely quantity, not revenue. Since \"how much\" without currency often asks amount/quantity. \"use\" not \"sell\". But in context of invoicing, product_units_sold is units sold, not used. Maybe there's inventory warehouse \"use\"? No.\n\nLet's explore card resources. inventory has stock receipts, no usage. So \"use\" cannot be represented by inventory members. product_units_sold is the only quantity measure tied to product. We can interpret \"use\" as sold/consumed. If the user meant \"how much money did we make from art paper\", they'd likely ask \"revenue\". They said \"use\", so quantity. We'll go with product_units_sold.\n\nNeed consider period: \"this month\" as relative. Business date 2026-07-15. So July 2026? \"This month\" = current business month. Granularity \"month\".\n\nNeed output JSON only. Use plan.\n\nLet's construct JSON:\n\n{\n \"action\":\"plan\",\n \"plan\":{\n   \"measures\":[\"product_units_sold\"],\n   \"dimensions\":[],\n   \"bucket_set\":null,\n   \"filters\":{\"all\":[{\"member\":\"product_name\",\"operator\":\"contains\",\"values\":[\"art paper 300gsm\"]}]},\n   \"having\":null,\n   \"period\":{\"time_dimension\":\"invoice_item.sold_at\",\"relative\":\"this_month\",\"granularity\":\"month\"},\n   \"grain\":\"scalar\",\n   \"order\":null,\n   \"limit\":null\n },\n \"clarification_question\":null,\n \"unsupported_reason\":null\n}\n\nNeed check \"relative\" closed list? Maybe \"this_month\" exactly. Example uses \"this_month\". Good.\n\nPotential \"filters\": if no filter? We have filter. Good.\n\nNeed ensure values array maybe string \"art paper 300gsm\". Yes.\n\nLet's finalize.",
+  "tokens_prompt": 6145,
+  "tokens_completion": 1342,
+  "tokens_reasoning": 1229,
+  "capture_planner_payload": true,
+  "planner_raw_payload": null,
+  "failure_layer": "resolver",
+  "failure_detail": "member_not_found",
+  "missing_members": [
+    "product_name"
+  ],
+  "plan": {
+    "measures": [
+      "product_units_sold"
+    ],
+    "dimensions": [],
+    "bucket_set": null,
+    "filters": {
+      "all": [
+        {
+          "member": "product_name",
+          "operator": "contains",
+          "values": [
+            "?"
+          ]
+        }
+      ]
+    },
+    "having": null,
+    "period": {
+      "time_dimension": "invoice_item.sold_at",
+      "relative": "this_month",
+      "on": null,
+      "since": null,
+      "between": null,
+      "granularity": "month"
+    },
+    "grain": "scalar",
+    "order": [],
+    "limit": 20
+  },
+  "grain_check_site": null,
+  "provider_http_retry_budget": 6,
+  "resolver_query_id": "rq_4e47d009fdebbda1e28604c9620d5452",
+  "resolver_started": true,
+  "resolver_disposition": "none",
+  "resolver_match_count": 0,
+  "resolver_version": "s1-resolver-v1",
+  "resolver_value_type": "product",
+  "rows": null,
+  "row_count": null,
+  "result_member_schema": null,
+  "returned_row_count": null,
+  "total_row_count": null,
+  "truncated": null,
+  "latency_ms": 11990
+}

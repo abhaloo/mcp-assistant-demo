@@ -1,0 +1,23 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": null,
+  "case_id": "jobs-per-dept",
+  "role": "printing",
+  "mode": "dev",
+  "run_id": "qwen-exp-baseline",
+  "question": "how many open jobs does each department have?",
+  "gold_sql": "SELECT d.name, COUNT(*) n FROM work_orders wo JOIN departments d ON d.id=wo.department_id WHERE wo.status IN ('IN PROGRESS','CREATED','SUBMITTED','PENDING MOVE APPROVAL') GROUP BY d.name ORDER BY n DESC",
+  "agent_sql_scrubbed": "SELECT d.name AS department_name, COUNT(w.id) AS open_jobs_count\nFROM departments d\nLEFT JOIN work_orders w ON w.status IN (?, ?, ?, ?)\nGROUP BY d.id;",
+  "error_category": null,
+  "reason": "row_count_mismatch",
+  "valid_sql_rate": 1.0,
+  "pass_rate": 0.4,
+  "flaky": true,
+  "chat_deployment": "gpt-4o-mini",
+  "failure_kind": null,
+  "lever": null,
+  "root_cause": null,
+  "rule": null
+}

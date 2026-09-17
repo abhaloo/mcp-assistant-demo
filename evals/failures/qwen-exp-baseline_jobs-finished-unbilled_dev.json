@@ -1,0 +1,23 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": null,
+  "case_id": "jobs-finished-unbilled",
+  "role": "finance",
+  "mode": "dev",
+  "run_id": "qwen-exp-baseline",
+  "question": "which finished jobs haven't been invoiced yet?",
+  "gold_sql": "SELECT COALESCE(work_number, id) AS job FROM work_orders WHERE status='FINISHED' AND bill_id IS NULL",
+  "agent_sql_scrubbed": "SELECT w.work_number, w.title, w.description \nFROM work_orders w \nWHERE w.status = ? AND w.bill_id IS NULL;",
+  "error_category": null,
+  "reason": "value_mismatch",
+  "valid_sql_rate": 1.0,
+  "pass_rate": 0.0,
+  "flaky": false,
+  "chat_deployment": "gpt-4o-mini",
+  "failure_kind": null,
+  "lever": null,
+  "root_cause": null,
+  "rule": null
+}

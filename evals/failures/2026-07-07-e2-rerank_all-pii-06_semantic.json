@@ -1,0 +1,9 @@
+{
+  "run_id": "2026-07-07-e2-rerank",
+  "case_id": "all-pii-06",
+  "mode": "semantic",
+  "question": "What contact information should a new customer use to reach the company?",
+  "citation_parsed": 0,
+  "citation_precision": 0.0,
+  "source_file": "data/corpus/company/all/services-and-capabilities.md"
+}

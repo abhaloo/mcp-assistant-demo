@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "status": "CONFIRMED",
+  "confirmed_by": "Adeel",
+  "confirmed_at": "2026-08-06T06:04:00Z",
+  "unit_status": "IMPLEMENTED",
+  "unit_note": "CapturingCallback + sanitize dual flags + evidence lift; defaults true/true. Not live ACCEPTED.",
+  "contract_id": "campaign-reasoning-persistence",
+  "title": "Campaign reasoning persistence (study CoT + measure redaction)",
+  "locked_decisions": {
+    "shape": "A — per-LLM-call list on answer row",
+    "fields": "A2 — reasoning_text (redacted) + reasoning_text_raw (unredacted)",
+    "scope": "B3 — SQL + RAG + routing campaign answer paths",
+    "defaults": "B4 — both persist_eval_reasoning_text and persist_eval_reasoning_raw default true",
+    "truncation": "C — no truncate",
+    "row_shape": "A — reasoning_calls: [{i, reasoning_text, reasoning_text_raw, sha256, char_count}, ...]",
+    "config": "A — Settings defaults on; freeze/campaign may override off",
+    "redacted_scrub": "A — redact_secrets only on reasoning_text",
+    "non_goals": "A — no prod Ask UI persistence; no committing raw jsonl to git; no change to Reasoning Replay wire / user-facing answers"
+  },
+  "observable_outcome": "Every campaign answer row written via sanitize_answer_rows_for_persistence includes reasoning_calls when the model returned reasoning on one or more LLM calls in that cell. Each call entry has full (untruncated) reasoning_text_raw and reasoning_text=redact_secrets(raw). Defaults: persist_eval_reasoning_text=true and persist_eval_reasoning_raw=true. When either flag is false, that body field is stripped (sha256/char_count metadata may remain). SQL CapturingCallback records per-call evidence; RAG and routing paths attach the same list shape before sanitize. Prod Ask responses and Reasoning Replay wire behavior unchanged.",
+  "non_goals": [
+    "Do not persist reasoning into production Ask / query logs / user-visible answers",
+    "Do not commit answers.jsonl containing reasoning_text_raw into git",
+    "Do not change Reasoning Replay (tool-loop wire preservation) or strip/replay rules",
+    "Do not truncate reasoning bodies in this slice",
+    "Do not apply SQL _scrub to reasoning_text (secrets redaction only)",
+    "Do not claim ACCEPTED from unit tests alone — live matrix optional after unit green"
+  ],
+  "examples": [
+    {
+      "id": "sql-cell-with-thinking",
+      "given": "SQL run_case LLM call returns additional_kwargs.reasoning_content='secret sk-test and plan'",
+      "expect": "row.reasoning_calls[0].reasoning_text_raw contains full text; reasoning_text has secrets redacted; sha256 of raw present; no truncation"
+    },
+    {
+      "id": "flags-off-strip",
+      "given": "persist_eval_reasoning_text=false and persist_eval_reasoning_raw=false",
+      "expect": "persisted row has no reasoning_text / reasoning_text_raw bodies in reasoning_calls (metadata ok)"
+    },
+    {
+      "id": "no-reasoning-model",
+      "given": "LLM calls with no reasoning fields",
+      "expect": "reasoning_calls is [] or omitted consistently (pin one); not a fake empty string entry"
+    },
+    {
+      "id": "rag-and-routing-parity",
+      "given": "RAG and routing finalize paths write answers.jsonl",
+      "expect": "same reasoning_calls shape and sanitize rules as SQL"
+    }
+  ],
+  "edge_cases": [
+    "Multi-call SQL tool loop: one reasoning_calls entry per LLM end with evidence",
+    "Clarify loop: calls before and after oracle reply both captured when present",
+    "Empty reasoning string: do not invent content; skip or record empty per pinned rule (pin: skip empty)",
+    "Huge bodies: no truncate — artifact size is accepted cost for study runs"
+  ],
+  "independent_oracle": [
+    "Literal fixture AIMessage.additional_kwargs.reasoning_content",
+    "Known redact_secrets behavior on a planted secret token",
+    "Settings defaults true/true; override false strips bodies"
+  ],
+  "acceptance_criteria": [
+    "Unit: CapturingCallback (or shared collector) extracts per-call evidence into reasoning_calls",
+    "Unit: sanitize keeps/strips bodies per dual flags; redacted field uses redact_secrets; raw untouched by redact",
+    "Unit: SQL run_case row includes reasoning_calls before/after sanitize under defaults",
+    "Unit: RAG + routing persistence paths apply same sanitize to reasoning_calls",
+    "Config: persist_eval_reasoning_text and persist_eval_reasoning_raw default True",
+    "CONTEXT glossary distinguishes Campaign Reasoning Persistence from Reasoning Replay"
+  ],
+  "public_test_seams": [
+    "CapturingCallback / shared reasoning call collector",
+    "extract_reasoning_evidence (may extend: no truncate when campaign persist)",
+    "sanitize_answer_row_for_persistence",
+    "settings.persist_eval_reasoning_text",
+    "settings.persist_eval_reasoning_raw",
+    "run_case return row",
+    "SqlTask / RagTask / RoutingTask finalize sanitize"
+  ]
+}

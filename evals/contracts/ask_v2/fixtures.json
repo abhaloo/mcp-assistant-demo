@@ -1,0 +1,247 @@
+{
+  "fixture_version": "ask-v2-contract-1",
+  "protocol_version": "2",
+  "requests": {
+    "new_question": {
+      "protocol_version": "2",
+      "operation": "new_question",
+      "run_id": "00000000000000000000000000000001",
+      "thread_id": "fixture-thread-1",
+      "question": "Show a synthetic monthly summary.",
+      "continuation_ref": null,
+      "result_page_cursor": null,
+      "clarification_choice_id": null,
+      "clarification_free_text": null,
+      "idempotency_key": "fixture-idempotency-1",
+      "deadline_at_ms": 1800000025000,
+      "page_context": null,
+      "record_context": null,
+      "response_policy": "strict"
+    },
+    "regenerate": {
+      "protocol_version": "2",
+      "operation": "regenerate",
+      "run_id": "00000000000000000000000000000002",
+      "thread_id": "fixture-thread-1",
+      "question": null,
+      "continuation_ref": "fixture-regenerate-ref",
+      "result_page_cursor": null,
+      "clarification_choice_id": null,
+      "clarification_free_text": null,
+      "idempotency_key": "fixture-idempotency-2",
+      "deadline_at_ms": 1800000025000,
+      "page_context": null,
+      "record_context": null,
+      "response_policy": "strict"
+    },
+    "clarification_reply_choice": {
+      "protocol_version": "2",
+      "operation": "clarification_reply",
+      "run_id": "00000000000000000000000000000003",
+      "thread_id": "fixture-thread-1",
+      "question": null,
+      "continuation_ref": "fixture-clarification-ref",
+      "result_page_cursor": null,
+      "clarification_choice_id": "invoiced_total",
+      "clarification_free_text": null,
+      "idempotency_key": "fixture-idempotency-3",
+      "deadline_at_ms": 1800000025000,
+      "page_context": null,
+      "record_context": null,
+      "response_policy": "strict"
+    },
+    "clarification_reply_free_text": {
+      "protocol_version": "2",
+      "operation": "clarification_reply",
+      "run_id": "00000000000000000000000000000004",
+      "thread_id": "fixture-thread-1",
+      "question": null,
+      "continuation_ref": "fixture-clarification-ref",
+      "result_page_cursor": null,
+      "clarification_choice_id": null,
+      "clarification_free_text": "Use a synthetic outstanding amount.",
+      "idempotency_key": "fixture-idempotency-4",
+      "deadline_at_ms": 1800000025000,
+      "page_context": null,
+      "record_context": null,
+      "response_policy": "strict"
+    },
+    "result_page": {
+      "protocol_version": "2",
+      "operation": "result_page",
+      "run_id": "00000000000000000000000000000005",
+      "thread_id": "fixture-thread-1",
+      "question": null,
+      "continuation_ref": null,
+      "result_page_cursor": "fixture-page-cursor",
+      "clarification_choice_id": null,
+      "clarification_free_text": null,
+      "idempotency_key": "fixture-idempotency-5",
+      "deadline_at_ms": 1800000025000,
+      "page_context": null,
+      "record_context": null,
+      "response_policy": "strict"
+    }
+  },
+  "event_sequences": {
+    "clarification": [
+      {
+        "protocol_version": "2",
+        "run_id": "00000000000000000000000000000003",
+        "sequence": 0,
+        "event_type": "activity",
+        "activity_id": "activity-1",
+        "activity_kind": "understand",
+        "tool_kind": "assistant",
+        "state": "completed",
+        "elapsed_ms": 25
+      },
+      {
+        "protocol_version": "2",
+        "run_id": "00000000000000000000000000000003",
+        "sequence": 1,
+        "event_type": "interaction",
+        "interaction_kind": "clarification",
+        "continuation_ref": "fixture-clarification-ref",
+        "prompt": "Choose a synthetic metric.",
+        "options": [
+          {
+            "id": "invoiced_total",
+            "label": "Invoiced total"
+          },
+          {
+            "id": "invoice_count",
+            "label": "Invoice count"
+          },
+          {
+            "id": "jobs_count",
+            "label": "Jobs count"
+          }
+        ],
+        "free_text_allowed": true
+      },
+      {
+        "protocol_version": "2",
+        "run_id": "00000000000000000000000000000003",
+        "sequence": 2,
+        "event_type": "turn_outcome",
+        "outcome_type": "clarification_required",
+        "trusted": false,
+        "answer_query_id": null,
+        "evidence_digest": null,
+        "query_record_ref": "fixture-query-record-3"
+      }
+    ],
+    "answered_table": [
+      {
+        "protocol_version": "2",
+        "run_id": "00000000000000000000000000000001",
+        "sequence": 0,
+        "event_type": "activity",
+        "activity_id": "activity-1",
+        "activity_kind": "authorize",
+        "tool_kind": "policy",
+        "state": "completed",
+        "elapsed_ms": 10
+      },
+      {
+        "protocol_version": "2",
+        "run_id": "00000000000000000000000000000001",
+        "sequence": 1,
+        "event_type": "result_stream_authorized"
+      },
+      {
+        "protocol_version": "2",
+        "run_id": "00000000000000000000000000000001",
+        "sequence": 2,
+        "event_type": "table_start",
+        "table_id": "table-1",
+        "columns": [
+          {
+            "key": "name",
+            "label": "Name",
+            "value_type": "text"
+          },
+          {
+            "key": "amount",
+            "label": "Amount",
+            "value_type": "decimal"
+          }
+        ]
+      },
+      {
+        "protocol_version": "2",
+        "run_id": "00000000000000000000000000000001",
+        "sequence": 3,
+        "event_type": "table_rows",
+        "table_id": "table-1",
+        "rows": [
+          {
+            "name": "Synthetic A",
+            "amount": "12.50"
+          },
+          {
+            "name": "Synthetic B",
+            "amount": "7.25"
+          }
+        ]
+      },
+      {
+        "protocol_version": "2",
+        "run_id": "00000000000000000000000000000001",
+        "sequence": 4,
+        "event_type": "table_end",
+        "table_id": "table-1",
+        "row_count": 2,
+        "table_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      {
+        "protocol_version": "2",
+        "run_id": "00000000000000000000000000000001",
+        "sequence": 5,
+        "event_type": "turn_outcome",
+        "outcome_type": "answered",
+        "trusted": true,
+        "answer_query_id": "fixture-aqid-1",
+        "evidence_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "query_record_ref": "fixture-query-record-1"
+      }
+    ],
+    "failed": [
+      {
+        "protocol_version": "2",
+        "run_id": "00000000000000000000000000000006",
+        "sequence": 0,
+        "event_type": "stream_error",
+        "code": "deadline_exceeded",
+        "retryable": true
+      }
+    ],
+    "answered_explanation": [
+      {
+        "protocol_version": "2",
+        "run_id": "00000000000000000000000000000007",
+        "sequence": 0,
+        "event_type": "turn_outcome",
+        "outcome_type": "answered",
+        "trusted": true,
+        "answer_mode": "explanation",
+        "source_exchange_ids": [
+          "00000000000000000000000000000001"
+        ]
+      }
+    ],
+    "answered_direct": [
+      {
+        "protocol_version": "2",
+        "run_id": "00000000000000000000000000000008",
+        "sequence": 0,
+        "event_type": "turn_outcome",
+        "outcome_type": "answered",
+        "trusted": true,
+        "answer_mode": "direct"
+      }
+    ]
+  }
+}
+

@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "status": "CONFIRMED",
+  "confirmed_by": "Adeel",
+  "confirmed_at": "2026-08-05T19:47:00Z",
+  "contract_id": "sql-shared-clarify-seam",
+  "observable_outcome": "Prod and eval share one SQL agent clarify loop: model may emit CLARIFY: <question>; a ClarificationReplySource supplies the next user message (Oracle in eval from case.clarify_answer, Null in prod until UI). Same AnonymizingSqlAgent.invoke_with_clarifications entry. Continuation skips list_tables/schema bootstrap (n_human>1 → generate_query). Max 1 clarification by default.",
+  "non_goals": [
+    "Do not build a separate eval-only agent graph",
+    "Do not implement Ask UI multi-turn in this slice (Null source in prod)",
+    "Do not claim full prod clarify parity for SSE/streaming Ask — stream still uses astream_status only (deferred owner: Adeel; wire same seam later)",
+    "Do not raise match rate claims without live matrix",
+    "Do not paste gold SQL into clarify_answer fields",
+    "Do not auto-pass clarify-ok on missing SQL without CLARIFY: marker",
+    "Do not credit clarify_ok when clarify_answer is present — those cases expect post-reply SQL exec-match",
+    "Do not fold clarify_ok into exec-match pass_rate / OutcomeCell.correct"
+  ],
+  "locked_decisions": {
+    "marker": "CLARIFY:",
+    "max_clarifications_default": 1,
+    "prod_reply_source": "NullClarificationReplySource",
+    "eval_reply_source": "OracleClarificationReplySource from case.clarify_answer when present",
+    "continuation": "skip bootstrap when more than one HumanMessage"
+  },
+  "public_test_seams": [
+    "is_clarification_answer",
+    "ClarificationReplySource",
+    "OracleClarificationReplySource",
+    "NullClarificationReplySource",
+    "run_with_clarifications",
+    "AnonymizingSqlAgent.invoke_with_clarifications",
+    "sql_graph START route_start"
+  ]
+}

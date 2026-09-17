@@ -1,0 +1,100 @@
+{
+  "case_id": "bq-04",
+  "family": "jobs_for_order",
+  "phrasing": "clear_english",
+  "expected": "answered",
+  "actual": "answered",
+  "outcome_match": true,
+  "literal_match": false,
+  "passed": false,
+  "detail": "result members do not match the scoring spec: result carries job.customer_order_number",
+  "receipt_valid": true,
+  "receipt": {
+    "answer_query_id": "aq_de9381a65b079dacef0520cf79e22df4",
+    "bundle_hash": "sha256:25fb97334e002586760bace44315d3f10f068e05134713f5c985d52bd563a097",
+    "manifest_hash": "sha256:5952d8152cd18f1dea5b998a3e2869365fc27283795d3c444d29b115a1fe149b",
+    "plan_fingerprint": "2de8e1a977599eec0a291432f4b452e5670bfe3f0d0cbbcb978a7ee50dff218a",
+    "row_count": 2,
+    "executed_at": "2026-08-18T04:47:14.061535Z",
+    "resolver_query_id": null
+  },
+  "answer_query_id": "aq_de9381a65b079dacef0520cf79e22df4",
+  "reason_code": "",
+  "message": "",
+  "diagnostics": [],
+  "correlation_id": "bqeval-bq-04",
+  "planner_ms": 7723.1,
+  "planner_repair_count": 0,
+  "sql_ms": 7.3,
+  "sql": "SELECT ai_v1_bq_job_fact.id AS `job.id`, ai_v1_bq_job_fact.status AS `job.status`, ai_v1_bq_job_fact.customer_order_number AS `job.customer_order_number`, count(*) OVER () AS __bq_total_row_count \nFROM ai_v1_bq_job_fact \nWHERE ai_v1_bq_job_fact.entity_id = %(entity_id_1)s AND ai_v1_bq_job_fact.customer_order_number = %(param_1)s ORDER BY `job.id` ASC \n LIMIT %(param_2)s",
+  "rows_returned": 2,
+  "reasoning": "We need answer JSON only. Need determine action. Question: \"which jobs are on order 744?\" We need translate to business meaning. Order 744 is a customer order number, human-facing order_number. \"which jobs are on order 744?\" Means list jobs associated with customer order 744. Need grain entity_rows probably, dimensions include job id? Need list jobs. Need use job.customer_order_number dimension contains \"744\"? Since number quoted is order number. The capability: job.customer_order_number = Human-facing customer order number on the job. So filter job.customer_order_number eq \"744\"? Since exact order number known, \"744\" exact string. Use operator eq for codes and declared allowed values; order number is a code, exact. Question says \"which jobs\" => list jobs. Dimensions: job.id, maybe job.status, job.customer_order_number? The answer should show jobs, so dims include job.id maybe job.status. Measures empty. Grain entity_rows. Period none (current state? \"on order 744\" no period). Filters: member job.customer_order_number eq [\"744\"]. Need include every filter. No measures. Limit? \"which jobs\" no explicit limit; limit 50? Default? Rule limit must 1-50; list entities. If no limit specified, perhaps limit 50? We need decide. Usually plan includes limit 50 maybe. The examples: \"which/list/show\" -> grain entity_rows: no measures, and list at least one dimension for every column the answer should show. We can set limit maybe 50. Order? Maybe no order? Could order by job.id? But optional. Let's make simple.\n\nNeed ensure use order 744: job.customer_order_number matches. Maybe \"on order 744\" could mean order's jobs. Use filter. Could there be confusion with customer_order.id 744 vs order_number 744? Rule: number quoted for order = human-facing order_number, never id. So use job.customer_order_number eq \"744\".\n\nNeed maybe include invoice? No.\n\nPlan JSON:\n{\n \"action\": \"plan\",\n \"plan\": {\n   \"measures\": [],\n   \"dimensions\": [\"job.id\", \"job.status\"],\n   \"bucket_set\": null,\n   \"filters\": {\"all\":[{\"member\":\"job.customer_order_number\",\"operator\":\"eq\",\"values\":[\"744\"]}]},\n   \"having\": null,\n   \"period\": null,\n   \"grain\": \"entity_rows\",\n   \"order\": [{\"member\":\"job.id\",\"direction\":\"asc\"}],\n   \"limit\": 50\n },\n \"clarification_question\": null,\n \"unsupported_reason\": null\n}\n\nNeed check if \"which jobs\" wants list job ids. It might want all jobs on order 744; maybe include job.id enough. Include job.status to show. But grain entity_rows: no measures, list at least one dimension for every column the answer should show. So dimensions.\n\nNeed all top-level keys. Return only JSON. Ensure \"period\": null, \"having\": null, \"filters\" object. Does operator eq allowed? Yes.\n\nNeed not include bucket_set? yes null.\n\nNeed maybe use customer_order.order_number? But jobs don't join directly to customer_order? job.customer_order_number is dimension. Good.\n\nNeed consider if \"order 744\" could be job id? No, \"orders\" are customer orders. Job has customer_order_number.\n\nFinal JSON.",
+  "tokens_prompt": 6139,
+  "tokens_completion": 818,
+  "tokens_reasoning": 712,
+  "capture_planner_payload": true,
+  "planner_raw_payload": null,
+  "failure_layer": null,
+  "failure_detail": null,
+  "missing_members": [],
+  "plan": {
+    "measures": [],
+    "dimensions": [
+      "job.id",
+      "job.status",
+      "job.customer_order_number"
+    ],
+    "bucket_set": null,
+    "filters": {
+      "all": [
+        {
+          "member": "job.customer_order_number",
+          "operator": "eq",
+          "values": [
+            "?"
+          ]
+        }
+      ]
+    },
+    "having": null,
+    "period": null,
+    "grain": "entity_rows",
+    "order": [
+      {
+        "member": "job.id",
+        "direction": "asc"
+      }
+    ],
+    "limit": 20
+  },
+  "grain_check_site": null,
+  "provider_http_retry_budget": 6,
+  "resolver_query_id": null,
+  "resolver_started": false,
+  "resolver_disposition": null,
+  "resolver_match_count": null,
+  "resolver_version": null,
+  "resolver_value_type": null,
+  "rows": [
+    {
+      "job.id": 24693,
+      "job.status": "IN PROGRESS",
+      "job.customer_order_number": "744"
+    },
+    {
+      "job.id": 24694,
+      "job.status": "IN PROGRESS",
+      "job.customer_order_number": "744"
+    }
+  ],
+  "row_count": 2,
+  "result_member_schema": [
+    "job.id",
+    "job.status",
+    "job.customer_order_number"
+  ],
+  "returned_row_count": 2,
+  "total_row_count": 2,
+  "truncated": false,
+  "latency_ms": 7745
+}

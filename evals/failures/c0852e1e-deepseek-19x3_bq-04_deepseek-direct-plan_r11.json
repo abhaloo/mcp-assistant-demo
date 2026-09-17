@@ -1,0 +1,52 @@
+{
+  "case_id": "bq-04",
+  "family": "jobs_for_order",
+  "phrasing": "clear_english",
+  "expected": "answered",
+  "actual": "incomplete",
+  "passed": false,
+  "detail": "expected answered, got incomplete",
+  "reason_code": "adapter_invalid",
+  "failure_layer": "execute",
+  "failure_detail": "OperationalError: (1054, \"Unknown column 'ai_v1_bq_job_fact.customer_order_number' in 'SELECT'\")",
+  "planner_repair_count": 0,
+  "tokens_prompt": 6152,
+  "tokens_completion": 2442,
+  "tokens_reasoning": 2339,
+  "missing_members": [],
+  "plan": {
+    "measures": [],
+    "dimensions": [
+      "job.id",
+      "job.customer_order_number"
+    ],
+    "bucket_set": null,
+    "filters": {
+      "all": [
+        {
+          "member": "job.customer_order_number",
+          "operator": "eq",
+          "values": [
+            "?"
+          ]
+        }
+      ]
+    },
+    "having": null,
+    "period": null,
+    "grain": "entity_rows",
+    "order": [
+      {
+        "member": "job.id",
+        "direction": "asc"
+      }
+    ],
+    "limit": 20
+  },
+  "message": "",
+  "outcome_match": false,
+  "literal_match": false,
+  "repeat_index": 11,
+  "arm": "deepseek-direct-plan",
+  "reasoning_redacted": true
+}

@@ -1,0 +1,9 @@
+{
+  "run_id": "2026-07-07-semantic-rebaseline",
+  "case_id": "all-05",
+  "mode": "semantic",
+  "question": "My computer is really slow today, what should I do?",
+  "citation_parsed": 0,
+  "citation_precision": 0.0,
+  "source_file": "data/corpus/company/all/it-helpdesk-faq.md"
+}

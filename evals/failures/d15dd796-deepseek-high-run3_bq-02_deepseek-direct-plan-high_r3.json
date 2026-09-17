@@ -1,0 +1,84 @@
+{
+  "case_id": "bq-02",
+  "family": "serena_hotels_last_tissue_order",
+  "phrasing": "code_switched",
+  "expected": "answered",
+  "actual": "unsupported",
+  "outcome_match": false,
+  "literal_match": false,
+  "passed": false,
+  "detail": "expected answered, got unsupported",
+  "receipt_valid": true,
+  "receipt": null,
+  "answer_query_id": null,
+  "reason_code": "no_join_path",
+  "message": "plan cannot be executed safely",
+  "diagnostics": [],
+  "correlation_id": "bqeval-bq-02",
+  "planner_ms": 10938.3,
+  "planner_repair_count": 0,
+  "sql_ms": null,
+  "sql": null,
+  "rows_returned": null,
+  "reasoning": "We need answer question: \"serena hotel last tissue order ilikuwa lini?\" Means \"when was Serena Hotel's last tissue order?\" Or \"Serena hotel last tissue order was when?\" We need business meaning: customer \"serena hotel\", product \"tissue\", customer order. Need find last tissue order date. Need produce plan.\n\nWe need map: \"tissue\" likely product_name (dimension on invoice_item). But \"order\" refers to customer order. Customer order resource has created_at, id, order_number, status, customer.name etc. Does customer_order have product? No direct product member. But maybe join via invoice_item? Joinable groups: {customer, customer_order, invoice, invoice_item, job, ledger_entry} can join. customer_order could join to invoice? Not direct? Invoice has customer_name, invoice items product_name. But order number? Actually job has customer_order_number. Invoice has perhaps invoice_number. Need find \"tissue order\": a customer order containing product \"tissue\". Join customer_order with invoice_item? Perhaps via invoice? Need consider dimensions: product_name is invoice_item. customer_order.created_at is dimension. We could have grouped: group by customer_order.order_number or created_at? But question asks when — we need latest date. Could use \"last tissue order\": find max customer_order.created_at where customer name contains 'serena hotel' and product_name contains 'tissue'? The card has customer.name (dimension) and product_name (dimension from invoice_item) and customer_order.created_at (dimension). We can group by customer_order.created_at or order_number and order desc, limit 1. But no measure needed; grain entity_rows? Since \"which/list/show\" -> entity_rows, list dimension columns. Need show date. Could perhaps plan with dimensions [customer_order.created_at, customer_order.order_number, product_name], filters customer.name contains \"serena hotel\", product_name contains \"tissue\", order by customer_order.created_at desc limit 1. That gives entity_rows. But is that correct? Need maybe \"tissue\" product on invoice lines? The question says \"tissue order\" maybe product name. Need also consider customer \"serena hotel\" via customer.name contains. Since no exact names.\n\nNeed decide if aggregation? \"last tissue order\" asks singular, need find latest. Grain entity_rows is for list/show. We want one row with date. Use dimensions: customer_order.created_at, customer_order.order_number, product_name. Measures empty. Filters include customer.name contains \"serena hotel\", product_name contains \"tissue\". Period? Should we add period? No, all time. Order by customer_order.created_at desc limit 1. This answers.\n\nBut must ensure join path: customer_order to invoice_item? The card says joinable groups includes customer, customer_order, invoice, invoice_item, job, ledger_entry. So yes.\n\nShould we filter on invoice_item.product_name? Yes \"tissue\" is a product on invoice lines. But \"tissue order\" might be customer order containing product \"tissue\". There's no direct link from customer_order to invoice_item except via invoice or job. Perhaps invoice has customer_name; customer_order has customer; but we can join via customer? Hmm. Need be careful: invoice_item belongs to invoice; invoice has customer_name and invoice_number. customer_order maybe related to invoice through job? Actually \"order\" resource may have invoice via job? Not clear.\n\nCould instead use job.customer_order_number and job.department_name? \"tissue\" might be department? The card says job.department_name distinct from TISSUE department. The question says \"tissue order\" likely product \"tissue\". The product_name member is unique across views, on invoice_item. Use that.\n\nNeed consider \"last tissue order\" could mean last order for tissue product. Plan:\n\nmeasures: []\ndimensions: [\"customer_order.created_at\", \"customer_order.order_number\", \"product_name\"]\nbucket_set: null\nfilters: {\"all\":[{\"member\":\"customer.name\",\"operator\":\"contains\",\"values\":[\"serena hotel\"]},{\"member\":\"product_name\",\"operator\":\"contains\",\"values\":[\"tissue\"]}]}\nhaving: null\nperiod: null\ngrain: \"entity_rows\"\norder: [{\"member\":\"customer_order.created_at\",\"direction\":\"desc\"}]\nlimit: 1\n\nDoes this satisfy? Yes.\n\nBut question \"ilikuwa lini\" = when was it. We could also just find date, but list order number and product useful. Use entity_rows.\n\nNeed ensure \"customer.name\" operator contains. Good.\n\nPotential issue: \"tissue\" could be a department name on job, but question \"tissue order\" maybe \"tissue\" as product. product_name is best.\n\nNeed maybe include invoice_item.sold_at? Not needed.\n\nWe output JSON.",
+  "tokens_prompt": 6143,
+  "tokens_completion": 1125,
+  "tokens_reasoning": 1001,
+  "capture_planner_payload": true,
+  "planner_raw_payload": null,
+  "failure_layer": null,
+  "failure_detail": null,
+  "missing_members": [],
+  "plan": {
+    "measures": [],
+    "dimensions": [
+      "customer_order.created_at",
+      "customer_order.order_number",
+      "product_name"
+    ],
+    "bucket_set": null,
+    "filters": {
+      "all": [
+        {
+          "member": "customer.name",
+          "operator": "contains",
+          "values": [
+            "?"
+          ]
+        },
+        {
+          "member": "product_name",
+          "operator": "contains",
+          "values": [
+            "?"
+          ]
+        }
+      ]
+    },
+    "having": null,
+    "period": null,
+    "grain": "entity_rows",
+    "order": [
+      {
+        "member": "customer_order.created_at",
+        "direction": "desc"
+      }
+    ],
+    "limit": 1
+  },
+  "grain_check_site": null,
+  "provider_http_retry_budget": 6,
+  "resolver_query_id": null,
+  "resolver_started": false,
+  "resolver_disposition": null,
+  "resolver_match_count": null,
+  "resolver_version": null,
+  "resolver_value_type": null,
+  "rows": null,
+  "row_count": null,
+  "result_member_schema": null,
+  "returned_row_count": null,
+  "total_row_count": null,
+  "truncated": null,
+  "latency_ms": 10939
+}

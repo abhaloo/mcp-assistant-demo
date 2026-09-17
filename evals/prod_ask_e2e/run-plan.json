@@ -1,0 +1,1440 @@
+{
+  "suite_id": "prod-ask-e2e",
+  "suite_version": "1.17.0",
+  "environment": {
+    "app_url": "http://127.0.0.1:8158",
+    "rag_api": "http://127.0.0.1:8358",
+    "database": "mcp_prod_wire_eval",
+    "entity_id": 1,
+    "credentials_source": "multicolor-billing/scripts/seed-department-test-users.php - run it to (re)seed every persona. The shared test password is the $password literal in that script. Never copy the literal into a report, screenshot, or committed artifact.",
+    "known_conditions": [
+      "GET /readyz returns 503 on business_query_resolver_coverage: app/policy/manifest/index.json accepts a legacy manifest hash (7a413053) that no bundle declares compatibility with. Confirmed pre-existing - the index has no diff against master, and no bundle on master covered it either. Does NOT gate the Ask panel, which probes /healthz. Not a suite failure.",
+      "The deployment is intentionally SQL-only while its document provider is unavailable. The eight legacy document cases (rb-07..rb-12, rt-01b) are visibly NOT RUN and their corpus/index/embedding preflights are conditional. Do not re-enable Azure, ingest documents, or let a document prerequisite block structured cases in this run.",
+      "settings.record_analytics_mode is `disabled` in this environment. Follow-up chips therefore never offer count / group-by prompts, only 'Show the most recent <resource>'. fu-01's expected chip set assumes this; if analytics is enabled, update it.",
+      "Two databases are live on this host and they are not the same one. The billing app (artisan serve, login, record views) reads mcp_local; the RAG container reads mcp_prod_wire_eval (MCP_BILLING_DATABASE_URL and MCP_RECORD_DATABASE_URL). Derive every oracle from mcp_prod_wire_eval - that is the database the answer comes from, and it is what environment.database names. Verified 2026-08-31: the projection fact tables hold identical row counts in both, and the only users-row difference is test_admin, which exists in mcp_local only. That does not affect answers: no module under app/ reads a users table, and caller identity plus permissions arrive in the signed JWT record_access claim (app/auth/jwt.py:89-99, 155-170; ScopeValues in app/auth/record_access.py:48-56 accepts department_id only, extra=forbid). Admin-persona cases are therefore runnable."
+    ]
+  },
+  "preflight": {
+    "why": "Skipping this burns live model calls to discover an environment problem. SQL-only and document-enabled runs have different prerequisites; document checks never block the structured-only subset.",
+    "steps": [
+      {
+        "check": "Personas exist",
+        "how": "php multicolor-billing/scripts/seed-department-test-users.php",
+        "pass": "test_admin plus every test_dept_* user reported created/updated, and the relevant allow/deny matrix below matches the live Spatie grants."
+      },
+      {
+        "check": "Focused persona contract is frozen",
+        "how": "Run the persona-contract queries at the end of evals/prod_ask_e2e/tools/derive_oracles.sql.",
+        "pass": "admin has view job/customer/customer order/invoice; store has view job/customer/invoice and lacks view customer order; print has view job. Entity and department ids match the persona definitions.",
+        "why": "The seeder mirrors mutable source-user permissions, so merely reporting users created is not a stable authorization precondition."
+      },
+      {
+        "check": "Corpus is mounted into the API container",
+        "how": "docker exec <rag-api> sh -lc 'ls /app/data/corpus/company/'",
+        "pass": "Lists admin, all, finance, graphic-design, printing, sales, warehouse.",
+        "note": "Applies only when rb-07..rb-12 or rt-01b are assigned. In the SQL-only run these cases are visibly NOT RUN and this check does not block structured cases."
+      },
+      {
+        "check": "The vector index is NOT empty",
+        "how": "docker exec <rag-api> python -c \"import sqlite3;c=sqlite3.connect('/app/data/chroma/chroma.sqlite3');print(c.execute('select count(*) from embeddings').fetchone())\"",
+        "pass": "Count > 0.",
+        "why": "Applies only when document cases are assigned. /readyz reports chroma: true from a connectivity ping, not a document count."
+      },
+      {
+        "check": "Embeddings actually work",
+        "how": "docker exec <rag-api> python -c \"from app.providers.factory import get_embeddings; print(len(get_embeddings().embed_query('smoke')))\"",
+        "pass": "Prints a dimension count.",
+        "why": "The index-count check above is necessary but not sufficient: a populated index is still useless if query-time embedding fails, and the failure surfaces as 'no relevant documents' rather than as an error. 1.7.3 (review Minor 2): get_embeddings() now checks settings.document_rag_enabled FIRST (factory.py:297, raising 'Document RAG is disabled in this deployment'), then embedding_provider == 'offline' (:300), and only then branches on chat_provider (:308) - so in a document-disabled deployment this probe raises before any provider branch, which IS the expected SQL-only result.",
+        "blocks": [
+          "rb-07",
+          "rb-08",
+          "rb-09",
+          "rb-10",
+          "rb-11",
+          "rb-12",
+          "rt-01b",
+          "fu-06"
+        ],
+        "note": "Does not block SQL-only cases; document capability must remain unavailable for sq-01."
+      },
+      {
+        "check": "Every tier the suite exercises has chunks",
+        "how": "Query the chroma collection metadata for distinct access_tier values.",
+        "pass": "At minimum all, printing, warehouse, admin are present.",
+        "why": "Applies only when the document authorization pairs are assigned. If an ALLOW tier has no chunks, its paired DENY result is vacuous."
+      },
+      {
+        "check": "Oracles match the live data",
+        "how": "mysql -u <user> -p mcp_prod_wire_eval < evals/prod_ask_e2e/tools/derive_oracles.sql",
+        "pass": "Every value matches this file. Reconcile any drift into suite.json BEFORE running.",
+        "why": "A stale oracle marks a correct answer wrong, which teaches you to ignore the suite. That is worse than not running it."
+      },
+      {
+        "check": "Ask panel reachable",
+        "how": "GET <rag_api>/healthz",
+        "pass": "200."
+      }
+    ]
+  },
+  "personas": {
+    "admin": {
+      "username": "test_admin",
+      "department_id": null,
+      "role": "admin"
+    },
+    "store": {
+      "username": "test_dept_store",
+      "department_id": 1,
+      "department_name": "STORE",
+      "note": "structured_permissions lists the permissions the suite depends on, not the caller's full set."
+    },
+    "print": {
+      "username": "test_dept_printing",
+      "department_id": 2,
+      "department_name": "PRINTING PRESS",
+      "note": "Also holds edit job / move job; no capability in the bundle requires them."
+    },
+    "sales": {
+      "username": "test_dept_sales",
+      "department_id": 3,
+      "department_name": "SALES"
+    },
+    "tissue": {
+      "username": "test_dept_tissue",
+      "department_id": 8,
+      "department_name": "TISSUE",
+      "note": "Also holds receive item; no capability in the bundle requires it."
+    }
+  },
+  "dom_contract": {
+    "open_panel": "[data-mcp-ask-ai-toggle]  (or Ctrl+L). Gated only by @auth and services.rag.enabled - no permission gate, so all five personas can open it.",
+    "new_conversation": "[data-mcp-ask-new]",
+    "close_panel": "[data-mcp-ask-ai-close]",
+    "input": "#mcp-ask-ai-input",
+    "send": "button[aria-label='Send question']",
+    "answer": "article[aria-label='AI answer']",
+    "answer_body": ".mcp-ask-ai__msg-body",
+    "phase_timeline": "ol[aria-label='Answer progress'] (class .mcp-ask-ai__phases). RENDERED ONLY WHILE STREAMING - it is removed at terminal state. Capture it during the turn or not at all.",
+    "record_link_inline": "a.mcp-ask-ai__inline-record",
+    "record_link_fallback": ".mcp-ask-ai__record-refs",
+    "citation_marker": "[data-citation-marker]",
+    "citation_card": ".mcp-ask-ai__citation-card",
+    "citation_note_unavailable": ".mcp-ask-ai__citation-note",
+    "followup_chips": ".mcp-ask-ai__chip (max 3, rendered only on the LAST COMPLETED, non-errored assistant message of the current thread)",
+    "error": ".mcp-ask-ai__error",
+    "try_again": ".mcp-ask-ai__try-again",
+    "stopped": ".mcp-ask-ai__stopped",
+    "page_context_chip": "[data-mcp-ask-ai-context]",
+    "page_context_remove": "[aria-label='Stop using the current page']",
+    "page_context_owner": "[data-mcp-page-context-owner]",
+    "terminal_state": "The turn is complete when streaming has stopped AND the action row ([data-copy], [data-regenerate]) is rendered on the message. Poll for that; never use a fixed sleep."
+  },
+  "cases": [
+    {
+      "id": "rb-01",
+      "dimensions": [
+        "rbac",
+        "accuracy"
+      ],
+      "persona": "print",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How many jobs do we have?"
+    },
+    {
+      "id": "fu-01",
+      "dimensions": [
+        "followups"
+      ],
+      "persona": "print",
+      "conversation": "reuse:rb-01",
+      "question": "(no new question - inspect the chips rendered on rb-01's answer)"
+    },
+    {
+      "id": "rb-02",
+      "dimensions": [
+        "rbac",
+        "accuracy"
+      ],
+      "persona": "store",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How many jobs do we have?"
+    },
+    {
+      "id": "rb-03",
+      "dimensions": [
+        "rbac",
+        "accuracy"
+      ],
+      "persona": "admin",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How many jobs do we have?"
+    },
+    {
+      "id": "rb-04",
+      "dimensions": [
+        "rbac",
+        "helpfulness",
+        "uiux"
+      ],
+      "persona": "sales",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How many jobs are in progress right now?"
+    },
+    {
+      "id": "rb-05",
+      "dimensions": [
+        "rbac",
+        "helpfulness"
+      ],
+      "persona": "print",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "What is our total outstanding invoice balance?"
+    },
+    {
+      "id": "rb-06",
+      "dimensions": [
+        "rbac"
+      ],
+      "persona": "tissue",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How many invoices are unpaid?"
+    },
+    {
+      "id": "rb-07",
+      "status": "not_run",
+      "dimensions": [
+        "rbac",
+        "accuracy"
+      ],
+      "persona": "print",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "What is the daily startup checklist for the Heidelberg Speedmaster press?"
+    },
+    {
+      "id": "rb-08",
+      "status": "not_run",
+      "dimensions": [
+        "rbac"
+      ],
+      "persona": "tissue",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "What is the daily startup checklist for the Heidelberg Speedmaster press?"
+    },
+    {
+      "id": "rb-09",
+      "status": "not_run",
+      "dimensions": [
+        "rbac",
+        "accuracy"
+      ],
+      "persona": "tissue",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "What is the procedure for receiving stock from a supplier delivery?"
+    },
+    {
+      "id": "rb-10",
+      "status": "not_run",
+      "dimensions": [
+        "rbac"
+      ],
+      "persona": "print",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "What is the procedure for receiving stock from a supplier delivery?"
+    },
+    {
+      "id": "rb-11",
+      "status": "not_run",
+      "dimensions": [
+        "rbac"
+      ],
+      "persona": "print",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "What is our total monthly payroll cost and how many employees do we have?"
+    },
+    {
+      "id": "rb-12",
+      "status": "not_run",
+      "dimensions": [
+        "rbac",
+        "accuracy"
+      ],
+      "persona": "store",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "What is our total monthly payroll cost and how many employees do we have?"
+    },
+    {
+      "id": "ac-01",
+      "dimensions": [
+        "accuracy"
+      ],
+      "persona": "store",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How many customers do we have?"
+    },
+    {
+      "id": "ux-01",
+      "dimensions": [
+        "uiux"
+      ],
+      "persona": "store",
+      "conversation": "reuse:ac-01 then new",
+      "question": "How many are unpaid?",
+      "procedure": "Run the previous case to completion in this thread. Click [data-mcp-ask-new]. Confirm the thread is visually empty and screenshot that state. Then send the question above."
+    },
+    {
+      "id": "ac-02",
+      "dimensions": [
+        "accuracy",
+        "helpfulness"
+      ],
+      "persona": "store",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How many invoices do we have in total, and how many of them are still unpaid?"
+    },
+    {
+      "id": "ac-03",
+      "dimensions": [
+        "accuracy",
+        "richtext"
+      ],
+      "persona": "store",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "Who are our top 5 customers by total invoiced amount?"
+    },
+    {
+      "id": "fu-02",
+      "dimensions": [
+        "followups",
+        "uiux",
+        "helpfulness"
+      ],
+      "persona": "store",
+      "conversation": "reuse:ac-03",
+      "question": "(click the first chip rendered on the previous answer)",
+      "procedure": "Runs only when ASK_AI_V2_MODULE_INTERACTION_CARD=false. In a run with the card module on, record NOT RUN (fu-03 and fu-04 cover the card)."
+    },
+    {
+      "id": "ux-02",
+      "dimensions": [
+        "uiux"
+      ],
+      "persona": "store",
+      "conversation": "reuse:ac-03",
+      "question": "(observational - recorded DURING the previous case)"
+    },
+    {
+      "id": "act-01",
+      "dimensions": [
+        "uiux",
+        "activity"
+      ],
+      "persona": "store",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How many jobs do we have?",
+      "procedure": "Record the SSE activity frames for this turn (executor brief \u00a7 v2 observation: activity_frames) as they arrive, then the work block's summary text and open state at 0.5 s and again at 2 s after the terminal frame, then the status badge label seen while streaming."
+    },
+    {
+      "id": "act-02",
+      "dimensions": [
+        "uiux",
+        "activity"
+      ],
+      "persona": "store",
+      "conversation": "reuse:rb-04",
+      "question": "(observational - recorded DURING rb-04)",
+      "procedure": "Record the SSE activity frames and the work block's step rows and summary text during and 2 s after the previous turn. If no activity frame arrived, record that and mark this case NOT RUN \u2014 the denial happened before the engine reported any stage."
+    },
+    {
+      "id": "act-04",
+      "dimensions": [
+        "uiux",
+        "accessibility"
+      ],
+      "persona": "store",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How many jobs do we have?",
+      "procedure": "Before opening the panel, emulate prefers-reduced-motion: reduce with the browser tool (executor brief \u00a7 v2 observation: reduced_motion). If the tool cannot emulate it, record that and mark this case NOT RUN. While a step is running, record the work block's step rows (outerHTML) \u2014 after the outcome no step is running and the observation is empty."
+    },
+    {
+      "id": "ux-03",
+      "dimensions": [
+        "uiux"
+      ],
+      "persona": "store",
+      "conversation": "reuse:ac-03",
+      "question": "(observational - recorded AFTER the previous case's outcome and again after one more turn)",
+      "procedure": "Record every details.mcp-ask-v2__work element (open attribute, summary text, owning data-msg-id) at 2 s after the previous turn's terminal frame, then send one more question and record the same set again once the new turn has started streaming. Also record the .mcp-ask-ai__model text in the previous turn's action row."
+    },
+    {
+      "id": "ux-04",
+      "dimensions": [
+        "uiux"
+      ],
+      "persona": "store",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "Which jobs in my department are unpaid?",
+      "procedure": "Resize the viewport to 375 x 812 before opening the panel. After the outcome, record: the panel's scrollWidth vs clientWidth; the work block summary's line count; each .mcp-ask-v2__option's height; whether .mcp-ask-v2__table-wrap scrolls horizontally (scrollWidth > clientWidth) while the panel does not."
+    },
+    {
+      "id": "fu-03",
+      "dimensions": [
+        "followups",
+        "uiux"
+      ],
+      "persona": "store",
+      "conversation": "reuse:ac-03",
+      "question": "(inspect follow-up card presence on previous answer ac-03)",
+      "procedure": "Inspect previous answer ac-03 for follow-up card. Verify no follow-up card is rendered on deterministic SQL route unless turn_outcome.follow_ups is non-empty."
+    },
+    {
+      "id": "fu-04",
+      "dimensions": [
+        "followups"
+      ],
+      "persona": "print",
+      "conversation": "reuse:rb-01",
+      "question": "(no new question - inspect follow-up card on rb-01's answer)",
+      "procedure": "Inspect previous answer rb-01. Verify no follow-up card is rendered."
+    },
+    {
+      "id": "cl-01",
+      "dimensions": [
+        "helpfulness",
+        "uiux"
+      ],
+      "persona": "store",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How many jobs does <PREFIX> have?",
+      "procedure": "The orchestrator picks <PREFIX> before the run: a customer-name prefix the frozen database matches at least twice (SELECT name FROM customers WHERE name LIKE '<PREFIX>%' returns >= 2 rows), records the prefix and the matching names in the run manifest, and substitutes it into the question. Record the card's outerHTML (title, every radio label, whether a Something else option exists, the Continue button's disabled state before and after choosing), then choose the first radio, press Continue, and record the new user turn's text and the answer's AQID."
+    },
+    {
+      "id": "rt-01",
+      "dimensions": [
+        "uiux",
+        "richtext"
+      ],
+      "persona": "store",
+      "conversation": "reuse:ac-03",
+      "question": "(observational - recorded on the previous answer)",
+      "procedure": "Record the .mcp-ask-v2__receipt-card outerHTML (title, description, each chip's text) and, from the terminal SSE frame, business_query.envelope.evidence_sealed, returned_row_count, total_row_count and explanation.applied_filters."
+    },
+    {
+      "id": "rt-02",
+      "dimensions": [
+        "uiux",
+        "richtext"
+      ],
+      "persona": "print",
+      "conversation": "reuse:ac-04",
+      "question": "(observational - recorded on the previous answer)",
+      "procedure": "Record the table's outerHTML and the computed styles of the first th (background-color), the second tbody tr (background-color), and every td whose class contains mcp-ask-v2__cell--number (text-align)."
+    },
+    {
+      "id": "rt-03",
+      "dimensions": [
+        "uiux",
+        "trust"
+      ],
+      "persona": "store",
+      "conversation": "reuse:ac-03",
+      "question": "(inspect previous answer ac-03 and panel for Explain Query and Verified chips)",
+      "procedure": "Inspect previous answer ac-03 and the panel for any Explain Query button/toggle or Verified badge/chip; record any occurrences."
+    },
+    {
+      "id": "hp-02b",
+      "dimensions": [
+        "helpfulness",
+        "uiux"
+      ],
+      "persona": "store",
+      "conversation": "reuse:hp-02",
+      "question": "(pick the first radio in the clarification card, press Continue)",
+      "procedure": "Run only if a card with radio options is visible after the previous turn; otherwise record NOT RUN."
+    },
+    {
+      "id": "ac-04",
+      "dimensions": [
+        "accuracy",
+        "rbac",
+        "richtext"
+      ],
+      "persona": "print",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "Break down the jobs in my department by status."
+    },
+    {
+      "id": "ac-05",
+      "dimensions": [
+        "accuracy"
+      ],
+      "persona": "store",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How many stock receipts have been approved?"
+    },
+    {
+      "id": "ac-06",
+      "dimensions": [
+        "accuracy",
+        "helpfulness"
+      ],
+      "persona": "print",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "how mny jos are in my depatment?"
+    },
+    {
+      "id": "ct-01",
+      "dimensions": [
+        "citations",
+        "accuracy"
+      ],
+      "persona": "store",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "List a few of our largest unpaid invoices with the customer name."
+    },
+    {
+      "id": "ct-02",
+      "dimensions": [
+        "citations",
+        "rbac",
+        "accuracy"
+      ],
+      "persona": "print",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "List the jobs in my department."
+    },
+    {
+      "id": "rt-01b",
+      "status": "not_run",
+      "dimensions": [
+        "richtext",
+        "uiux"
+      ],
+      "persona": "print",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "Summarise the Heidelberg Speedmaster daily startup checklist as a numbered list."
+    },
+    {
+      "id": "pc-01",
+      "dimensions": [
+        "pagecontext",
+        "accuracy",
+        "uiux"
+      ],
+      "persona": "print",
+      "conversation": "isolated",
+      "page_context": "ATTACHED - navigate to the jobs list (/jobs) and leave the context chip in place",
+      "question": "What is the status of these jobs?",
+      "procedure": "Navigate to the jobs list (/jobs), open the composer scope selector and select 'Current page: Jobs' before sending. Capture the selected scope label and send the question."
+    },
+    {
+      "id": "pc-02",
+      "dimensions": [
+        "pagecontext",
+        "rbac"
+      ],
+      "persona": "print",
+      "conversation": "isolated",
+      "page_context": "ATTACHED - jobs list (/jobs), chip in place",
+      "question": "What is the status of job 24682 and who is the customer?",
+      "procedure": "Navigate to /jobs, open the composer scope selector and select 'Current page: Jobs' before sending. Send the question."
+    },
+    {
+      "id": "pc-03",
+      "dimensions": [
+        "pagecontext",
+        "uiux",
+        "accuracy"
+      ],
+      "persona": "store",
+      "conversation": "isolated",
+      "page_context": "AMBIENT jobs list attached, THEN an explicit record chosen from Global Search",
+      "question": "(use the Global Search row's Ask AI affordance on a specific job, then ask) What is the status of this job?",
+      "procedure": "Navigate to /jobs. Open Global Search, search a job the caller can see (e.g. 24693), and use that row's Ask AI action (which stages 'Selected record: ...' in the composer scope). Record what the composer scope displays and what the answer discusses."
+    },
+    {
+      "id": "pc-04",
+      "dimensions": [
+        "pagecontext",
+        "uiux"
+      ],
+      "persona": "print",
+      "conversation": "isolated",
+      "page_context": "ATTACHED then REMOVED before sending",
+      "question": "How many jobs do we have?",
+      "procedure": "Navigate to /jobs so current page scope is available. Select 'All Records' in the composer scope selector before sending. Confirm no page context is sent in the request."
+    },
+    {
+      "id": "hp-01",
+      "dimensions": [
+        "helpfulness",
+        "accuracy"
+      ],
+      "persona": "store",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How much did we spend on marketing last quarter?"
+    },
+    {
+      "id": "hp-02",
+      "dimensions": [
+        "helpfulness"
+      ],
+      "persona": "store",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How are we doing this month?"
+    },
+    {
+      "id": "pc-05",
+      "covers": [
+        "family:ordered_qty"
+      ],
+      "dimensions": [
+        "pagecontext"
+      ],
+      "persona": "print",
+      "conversation": "isolated",
+      "page_context": "ATTACHED - open ONE printing-department job's detail page (route name work-order.show, jobs.show.v1 profile; navigate from the /jobs list), chip in place",
+      "question": "What is the ordered quantity for this job?",
+      "procedure": "The orchestrator selects one concrete printing-department job before the run, records its id and SQL oracle in the run manifest. Navigate to that job's detail page (work-order.show), open the composer scope selector and select 'Current page: Job <id>' before sending."
+    },
+    {
+      "id": "pc-06",
+      "dimensions": [
+        "pagecontext",
+        "rbac"
+      ],
+      "persona": "print",
+      "conversation": "isolated",
+      "page_context": "ATTACHED - a printing-department job's detail page (route name work-order.show), chip in place",
+      "question": "What is the ordered quantity for job 24682?",
+      "procedure": "Navigate from the authorized printing Job page described above, open the composer scope selector and select 'Current page: Job <id>' before sending, and send the question exactly once."
+    },
+    {
+      "id": "pc-07",
+      "covers": [
+        "family:ordered_qty"
+      ],
+      "dimensions": [
+        "pagecontext",
+        "data-quality"
+      ],
+      "persona": "print",
+      "conversation": "isolated",
+      "page_context": "ATTACHED - one authorized printing job detail page with compound ordered_qty or no_pages",
+      "question": "What are the ordered quantity and page count exactly as recorded?",
+      "procedure": "The orchestrator selects one concrete authorized job with a compound ordered_qty or no_pages before the run. Navigate to that job's detail page, open the composer scope selector and select 'Current page: Job <id>' before sending."
+    },
+    {
+      "id": "dt-01",
+      "covers": [
+        "family:print.sides"
+      ],
+      "dimensions": [
+        "accuracy",
+        "helpfulness",
+        "routing"
+      ],
+      "persona": "admin",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "Which jobs are 1 side ptg?"
+    },
+    {
+      "id": "dt-02",
+      "covers": [
+        "family:print.sides"
+      ],
+      "dimensions": [
+        "accuracy",
+        "routing"
+      ],
+      "persona": "admin",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "Which jobs use duplex printing?"
+    },
+    {
+      "id": "dt-03",
+      "covers": [
+        "family:print.sides"
+      ],
+      "dimensions": [
+        "accuracy",
+        "pagecontext",
+        "grounding",
+        "helpfulness"
+      ],
+      "persona": "admin",
+      "conversation": "isolated",
+      "page_context": "ATTACHED - open Job 24694 detail page and leave the context chip in place",
+      "question": "For this job, what print side is recorded, and what definition revision produced it?",
+      "procedure": "Navigate to Job 24694 detail page, open the composer scope selector and select 'Current page: Job 24694' before sending."
+    },
+    {
+      "id": "dt-04",
+      "covers": [
+        "family:print.sides"
+      ],
+      "dimensions": [
+        "accuracy",
+        "pagecontext",
+        "helpfulness"
+      ],
+      "persona": "admin",
+      "conversation": "isolated",
+      "page_context": "detached - navigate away from Jobs and confirm no page-context chip before sending",
+      "question": "For job 24694, what print side and ordered quantity are recorded?"
+    },
+    {
+      "id": "dt-05",
+      "dimensions": [
+        "accuracy",
+        "helpfulness",
+        "uncertainty"
+      ],
+      "persona": "admin",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "Which specification profile revision is job 24694 bound to?"
+    },
+    {
+      "id": "dt-06",
+      "covers": [
+        "family:print.sides"
+      ],
+      "dimensions": [
+        "accuracy",
+        "helpfulness",
+        "grounding"
+      ],
+      "persona": "admin",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "List all queryable typed details recorded for job 24694."
+    },
+    {
+      "id": "dt-07",
+      "dimensions": [
+        "accuracy",
+        "helpfulness",
+        "uncertainty"
+      ],
+      "persona": "store",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "What business name is recorded for customer Sea Cliff Resort & Spa?"
+    },
+    {
+      "id": "dt-08",
+      "covers": [
+        "dimension:customer_order.status"
+      ],
+      "dimensions": [
+        "accuracy",
+        "helpfulness"
+      ],
+      "persona": "admin",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "What is the status of customer order 744?"
+    },
+    {
+      "id": "dt-08b",
+      "covers": [
+        "dimension:customer_order.status"
+      ],
+      "dimensions": [
+        "rbac",
+        "accuracy"
+      ],
+      "persona": "store",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "What is the status of customer order 744?"
+    },
+    {
+      "id": "dt-09",
+      "covers": [
+        "dimension:invoice.created_at"
+      ],
+      "dimensions": [
+        "accuracy",
+        "pagecontext",
+        "routing"
+      ],
+      "persona": "store",
+      "conversation": "isolated",
+      "page_context": "detached - run from a non-Jobs page",
+      "question": "Which invoices were issued this month?"
+    },
+    {
+      "id": "dt-10",
+      "covers": [
+        "family:ordered_qty"
+      ],
+      "dimensions": [
+        "accuracy",
+        "helpfulness",
+        "uncertainty"
+      ],
+      "persona": "admin",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "List jobs ordered above 5,000 pieces."
+    },
+    {
+      "id": "dt-11",
+      "dimensions": [
+        "accuracy",
+        "helpfulness",
+        "uncertainty"
+      ],
+      "persona": "admin",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "Which jobs use FBB Offcuts as the inside material?"
+    },
+    {
+      "id": "pg-01",
+      "dimensions": [
+        "accuracy",
+        "followups",
+        "uiux",
+        "routing"
+      ],
+      "persona": "admin",
+      "status": "not_run",
+      "diagnostic_only": true,
+      "conversation": "reuse:dt-01",
+      "page_context": "detached",
+      "question": "(use the explicit next-results action on dt-01; do not send a natural-language replacement question)",
+      "procedure": "After dt-01 completes, capture its result metadata and the presence or absence of a next-results control. If a distinct next-results control is present, invoke it once and capture the resulting user/action event, answer metadata, and record IDs. Do not substitute a text follow-up or type a replacement question."
+    },
+    {
+      "id": "sq-01",
+      "dimensions": [
+        "routing",
+        "helpfulness",
+        "uiux"
+      ],
+      "persona": "store",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "What do our company policy documents say about workplace safety?"
+    },
+    {
+      "id": "wb-01",
+      "dimensions": [
+        "activity",
+        "uiux",
+        "routing"
+      ],
+      "persona": "sales",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How many jobs do we have?",
+      "procedure": "Send the question. Capture t0-send immediately after send before the first server activity arrives. Check that details.mcp-ask-v2__work is present in the newest article, summary starts with 'Working', and any .mcp-ask-ai__status-badge in that article has getComputedStyle(el).display === 'none'."
+    },
+    {
+      "id": "wb-02",
+      "dimensions": [
+        "activity",
+        "uiux",
+        "accuracy"
+      ],
+      "persona": "sales",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "Show unpaid jobs for Kilimanjaro Traders",
+      "procedure": "Send the question. Capture timed screenshots series (t0-send, t1-first-status, t2-mid, t3-terminal, t4-plus2s). t3-terminal is captured when the Work Block summary changes to 'Done in \u2026'. At t2-mid, verify \u22651 completed step, exactly 1 running step, and fewer steps than t3-terminal. At t4-plus2s (2 s after terminal), verify the Work Block is closed (details:not([open])) unless data-user-toggled."
+    },
+    {
+      "id": "wb-03",
+      "dimensions": [
+        "uiux",
+        "activity"
+      ],
+      "persona": "sales",
+      "conversation": "reuse:wb-02",
+      "page_context": "detached",
+      "question": "(observational on wb-02)",
+      "procedure": "Inspect all captures and DOM states of wb-02 for forbidden literals: 'Understanding your question', 'Reading your question', 'Verified', 'Explain Query', 'Next page', '0 filters'."
+    },
+    {
+      "id": "ord-01",
+      "dimensions": [
+        "uiux"
+      ],
+      "persona": "sales",
+      "conversation": "reuse:wb-02",
+      "page_context": "detached",
+      "question": "(observational on wb-02)",
+      "procedure": "Inspect the children of the newest assistant article after wb-02 completes. Record slot_order: [...article.children].map(c => c.dataset.slot || c.className)."
+    },
+    {
+      "id": "rc-01",
+      "dimensions": [
+        "accuracy",
+        "uiux",
+        "richtext"
+      ],
+      "persona": "sales",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "Show unpaid jobs for Kilimanjaro Traders",
+      "procedure": "Send the question. Inspect receipt title and receipt line text. Verify count against the DB oracle. Check that 'Kilimanjaro Traders', 'unpaid', and the returned count appear exactly once in the receipt and are not duplicated in the article."
+    },
+    {
+      "id": "rc-02",
+      "dimensions": [
+        "uiux",
+        "richtext"
+      ],
+      "persona": "sales",
+      "conversation": "reuse:rc-01",
+      "page_context": "detached",
+      "question": "(observational on rc-01)",
+      "procedure": "Inspect [data-slot='answer'] of rc-01. Check for any lines containing '|'. Inspect SSE stream for content_kind table_fallback."
+    },
+    {
+      "id": "rc-03",
+      "dimensions": [
+        "accuracy",
+        "uiux"
+      ],
+      "persona": "sales",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How many jobs do we have?",
+      "procedure": "Send the question. Verify no <table> element is rendered in [data-slot='result']. Verify .mcp-ask-v2__receipt-title equals SSE table_start.presentation.title and has no trailing period. Verify value equals the jobs count oracle."
+    },
+    {
+      "id": "rc-04",
+      "dimensions": [
+        "accuracy",
+        "uiux"
+      ],
+      "persona": "sales",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "Show jobs created after 31 December 2099",
+      "procedure": "Send the question. Verify the receipt displays 'No matching records'. Verify no skeleton rows or error states are shown."
+    },
+    {
+      "id": "iso-01",
+      "dimensions": [
+        "uiux",
+        "isolation"
+      ],
+      "persona": "sales",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "Show unpaid jobs for Kilimanjaro Traders",
+      "procedure": "In a single thread, send rc-01 question ('Show unpaid jobs for Kilimanjaro Traders') and wait for completion. Capture turn 1 article outerHTML (with open attribute and elapsed-time text stripped). Then send rc-03 question ('How many jobs do we have?') and wait for completion. Capture turn 1 article outerHTML again with the same normalization. Compare before and after."
+    },
+    {
+      "id": "pg-02",
+      "dimensions": [
+        "uiux",
+        "accuracy"
+      ],
+      "persona": "sales",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "Show the most recent jobs",
+      "procedure": "Send the question. Check that no [data-next-page] element or 'Next page' text appears anywhere in the panel. Check receipt line matches '20 of N shown \u00b7 newest first' with N from the jobs-count oracle."
+    },
+    {
+      "id": "fu-05",
+      "dimensions": [
+        "followups",
+        "uiux"
+      ],
+      "persona": "sales",
+      "conversation": "reuse:rc-01",
+      "page_context": "detached",
+      "question": "(observational on rc-01)",
+      "procedure": "Inspect rc-01 answer for follow-up card. Inspect SSE stream for turn_outcome.follow_ups."
+    },
+    {
+      "id": "fu-06",
+      "dimensions": [
+        "followups",
+        "uiux",
+        "diagnostic"
+      ],
+      "persona": "sales",
+      "status": "not_run",
+      "diagnostic_only": true,
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How do I create a new quotation?",
+      "procedure": "Runs only when ask_follow_up_offer_enabled is on in the env card; otherwise mark NOT RUN. Send question. Record follow_ups length from SSE turn_outcome. If > 0, verify exactly one .mcp-ask-v2__card--follow-up rendered, labels equal follow_ups[].label, each normalized prompt != normalized question. Clicking one sends a new user message and a request with operation: new_question and that prompt."
+    },
+    {
+      "id": "cl-02",
+      "dimensions": [
+        "helpfulness",
+        "uiux"
+      ],
+      "persona": "store",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How many jobs does Apollo have?",
+      "procedure": "Send ambiguous customer question (same as cl-01). Verify Continue is disabled until a radio is chosen or non-empty free text is entered. Verify that on clarification turn, result, references, and feedback slots are empty, and answer slot is hidden while card is painted. Choose an option, press Continue. Verify card becomes --answered with chosen label, reply request carries clarification_reply + continuation_ref + chosen option id, and a new Work Block appears for continuation."
+    },
+    {
+      "id": "cp-01",
+      "dimensions": [
+        "uiux",
+        "accessibility"
+      ],
+      "persona": "sales",
+      "conversation": "reuse:rc-01",
+      "page_context": "detached",
+      "question": "(on rc-01) click Copy",
+      "procedure": "On rc-01 answer, click the Copy button. Verify visible button text changes to 'Copied' within 200 ms. Verify #mcp-ask-ai-sr text is 'Copied'. Verify button text reverts to default within 2 s. Read clipboard text via navigator.clipboard.readText(); verify clipboard text starts with receipt title and has no '|' lines."
+    },
+    {
+      "id": "mb-01",
+      "dimensions": [
+        "uiux",
+        "accessibility"
+      ],
+      "persona": "sales",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "Show unpaid jobs for Kilimanjaro Traders",
+      "procedure": "Resize viewport to 375 x 812 before opening panel. Send question. At t2-mid, verify work block bottom <= composer top. At terminal, verify document.documentElement.scrollWidth <= 375, .mcp-ask-v2__table-wrap scrolls horizontally, and every .mcp-ask-v2__option height >= 44 px."
+    },
+    {
+      "id": "cs-01",
+      "dimensions": [
+        "pagecontext",
+        "uiux"
+      ],
+      "persona": "sales",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How many jobs do we have?",
+      "procedure": "Open new conversation. Check scope trigger text is 'All Records'. Send question. Inspect outgoing network request body; verify neither page_context nor record_context is present."
+    },
+    {
+      "id": "cs-02",
+      "dimensions": [
+        "pagecontext",
+        "uiux"
+      ],
+      "persona": "sales",
+      "conversation": "isolated",
+      "page_context": "attached",
+      "question": "What is on this page?",
+      "procedure": "Navigate to /work-order (jobs index). Open composer scope menu, select 'Current page: Jobs'. Send question. Inspect outgoing request body; verify page_context is present. Inspect transcript DOM; verify no .mcp-ask-ai__context-card or page context chip is rendered in the chat transcript."
+    },
+    {
+      "id": "cs-03",
+      "dimensions": [
+        "pagecontext",
+        "uiux"
+      ],
+      "persona": "sales",
+      "conversation": "reuse:cs-02",
+      "page_context": "detached",
+      "question": "How many jobs do we have?",
+      "procedure": "After cs-02, navigate to '/' (home dashboard). Inspect composer scope trigger; verify it has reset to 'All Records'. Send question. Inspect outgoing request body; verify both page_context and record_context are omitted."
+    },
+    {
+      "id": "cs-04",
+      "dimensions": [
+        "uiux"
+      ],
+      "persona": "sales",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "(observational)",
+      "procedure": "Inspect [data-mcp-ask-mode] element in composer. Verify Ask is selected (aria-checked='true'). Verify 'Act \u2014 Coming soon' is disabled. Inspect outgoing requests; verify no mode key is present in request bodies."
+    },
+    {
+      "id": "cs-05",
+      "dimensions": [
+        "pagecontext",
+        "uiux"
+      ],
+      "persona": "sales",
+      "conversation": "isolated",
+      "page_context": "attached",
+      "question": "What is the status of this job?",
+      "procedure": "In Global Search, search for a job and click its Ask AI action. Verify composer scope trigger reads 'Selected record: {label}'. Send question. Verify request body contains record_context and no page_context. After send, verify composer scope trigger resets to 'All Records'."
+    },
+    {
+      "id": "vm-01",
+      "dimensions": [
+        "accuracy",
+        "helpfulness"
+      ],
+      "persona": "admin",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "List jobs for customer Zyxxqvv Nonexistent Ltd",
+      "procedure": "Send the question. If an empty result table renders instead of a refusal, record it, then send the question ONCE more in a new conversation and record both attempts - the planner sometimes binds the name with eq instead of contains, which skips the resolver (planner operator variance, not an infrastructure retry)."
+    },
+    {
+      "id": "rc-05",
+      "dimensions": [
+        "helpfulness",
+        "accuracy"
+      ],
+      "persona": "admin",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How many jobs were created this month?",
+      "procedure": "Send the question. Record the result region after the terminal frame - while streaming a 1x1 result may render as a table and only repaints as the aggregate after table_end."
+    },
+    {
+      "id": "cl-03",
+      "dimensions": [
+        "helpfulness",
+        "accuracy",
+        "uiux"
+      ],
+      "persona": "sales",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "who is our largest outstanding debtor",
+      "procedure": "Send the question. The planner's own rules force a clarification here (a superlative about money owed that names no basis). Record the card's outerHTML. Choose the free-text option (Something else), type 'based on outstanding balances now', press Continue, and record the full reply turn to its terminal state: the timeline during streaming, the terminal answer or refusal, and any error copy. If no clarification card appears (the planner answered directly), record that and mark the case NOT RUN - planner operator variance, not a failure."
+    },
+    {
+      "id": "cl-05",
+      "dimensions": [
+        "helpfulness",
+        "uiux"
+      ],
+      "persona": "admin",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "(any - this case triggers only when a turn stalls naturally)",
+      "procedure": "CONDITIONAL: executable only when a turn's Planning step exceeds the interactive ceiling during this campaign and the stall card appears. Never induce a stall by changing code, config, or load. When it occurs: record the card's outerHTML (the stall copy, chip count, the free-text field), then type a continuation in free text, press Continue, and record the reply turn to its terminal state. If no stall occurs in the campaign, record the case NOT RUN with a note of the longest observed Planning duration."
+    },
+    {
+      "id": "fm-01",
+      "dimensions": [
+        "accuracy",
+        "uiux"
+      ],
+      "persona": "sales",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "What is our total outstanding invoice balance?",
+      "procedure": "Send the question and let the turn reach its terminal state. Record the answer region's outerHTML, every rendered numeric string verbatim (do not normalise, round, or re-group them - copy the characters as painted), the receipt line text, and whether the figure landed in .mcp-ask-v2__aggregate-value or in a .mcp-ask-v2__table cell. Also record the table's column labels."
+    },
+    {
+      "id": "tc-01",
+      "dimensions": [
+        "accuracy",
+        "followups"
+      ],
+      "persona": "sales",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How many invoices are unpaid?",
+      "procedure": "Send the question and wait for the terminal state. In the SAME thread (do not open a new conversation) send: 'what is the total outstanding balance on those?'. Record both answers verbatim - headline text, painted figures, receipt lines - and the elapsed time per turn."
+    },
+    {
+      "id": "fm-02",
+      "dimensions": [
+        "accuracy",
+        "followups"
+      ],
+      "persona": "sales",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How many invoices are unpaid?",
+      "procedure": "Send the question, wait for the terminal state, then in the SAME thread send: 'break that down by status'. Record the second turn's full rendered result - every bucket label and count as painted - and the receipt line."
+    },
+    {
+      "id": "mp-01",
+      "dimensions": [
+        "accuracy"
+      ],
+      "persona": "sales",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "how many invoices are unpaid and what is their total outstanding balance?",
+      "procedure": "Send the question in a new thread and wait for the terminal state. Record the number of stacked result sections, each section's headline and painted figures, and the receipt line. Do not open a follow-up."
+    },
+    {
+      "id": "mp-02",
+      "dimensions": [
+        "accuracy",
+        "followups"
+      ],
+      "persona": "sales",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How many invoices are unpaid?",
+      "procedure": "Send the question, wait for the terminal state, then in the SAME thread send: 'break that down by status'. Record the follow-up plan trace fields bucket_set and companion_plans, the painted bucket labels and counts, and the receipt line."
+    },
+    {
+      "id": "mp-03",
+      "dimensions": [
+        "activity"
+      ],
+      "persona": "sales",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "how many invoices are unpaid and what is their total outstanding balance?",
+      "procedure": "Send the question in a new thread. Capture the SSE frame log as frames arrive (sequence, event_type, activity id) from the first frame through the terminal event. Capture a screenshot of the work timeline DURING streaming, before the terminal frame. Record whether any activity frame arrived before the authorized frame. Labels on the timeline vanish at terminal state, so a post-terminal screenshot is not this capture."
+    },
+    {
+      "id": "ef-01",
+      "dimensions": [
+        "routing",
+        "authorization"
+      ],
+      "persona": "print",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "Hello",
+      "procedure": "New conversation. Send Hello. Then send: What can I ask you? Record both answer bodies, work-step counts, and turn_invocation_report."
+    },
+    {
+      "id": "ef-02",
+      "dimensions": [
+        "routing",
+        "accuracy"
+      ],
+      "persona": "print",
+      "conversation": "reuse:rb-01",
+      "page_context": "detached",
+      "question": "simplify that",
+      "procedure": "After rb-01 completes, send simplify that, then send: what does that number mean? Record both bodies, work steps, chips, and turn_invocation_report."
+    },
+    {
+      "id": "ef-03",
+      "dimensions": [
+        "routing",
+        "accuracy"
+      ],
+      "persona": "print",
+      "conversation": "reuse:ef-02",
+      "page_context": "detached",
+      "question": "How many jobs do we have?",
+      "procedure": "After ef-02, type rb-01's question again. Record work steps, the answer, and turn_invocation_report SQL executions."
+    },
+    {
+      "id": "ef-04",
+      "dimensions": [
+        "routing",
+        "clarification"
+      ],
+      "persona": "print",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How many jobs do we have?",
+      "procedure": "Send rb-01's question, then a second job question this persona holds. Send: explain the first table. Then: explain the answer about how many jobs we have. Then: explain that. Repeat after more than eight displayed results. Match source_exchange_ids to persisted exchange ids from server evidence."
+    },
+    {
+      "id": "ef-05",
+      "dimensions": [
+        "authorization",
+        "routing"
+      ],
+      "persona": "store",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "simplify that",
+      "procedure": "As print: data question then simplify that (works). As store, same thread id forged via sessionStorage: simplify that. Record the body and turn_invocation_report."
+    },
+    {
+      "id": "ef-06",
+      "dimensions": [
+        "routing"
+      ],
+      "persona": "print",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "What is a collection rate?",
+      "procedure": "Send: What is a collection rate? Then: How does our system calculate collection rate? Then: What is ours this month? Record work steps, example labels, done.answer_mode sequence, and whether the third turn runs the data path."
+    },
+    {
+      "id": "ef-07",
+      "dimensions": [
+        "routing",
+        "restore"
+      ],
+      "persona": "print",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How many jobs do we have?",
+      "procedure": "Data A, then simplify A, then click the real Regenerate control on that explanation, then send explain that, then reload. Repeat with a partial source from a frozen backend fault fixture. Record source_exchange_ids, replacement exchanges, restore after reload, and prohibited-operation counts."
+    },
+    {
+      "id": "co-01",
+      "dimensions": [
+        "routing",
+        "documents",
+        "accuracy"
+      ],
+      "persona": "print",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "What does the documented follow-up policy say?",
+      "procedure": "Ask what the documented follow-up policy says; then ask which records match its supported condition. Record trajectory, cards, and whether a metric was invented."
+    },
+    {
+      "id": "co-02",
+      "dimensions": [
+        "routing",
+        "documents",
+        "accuracy"
+      ],
+      "persona": "print",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How many jobs do we have?",
+      "procedure": "Ask for a supported business result and the relevant documented guidance. Record BQ values/filters, citations, and action order."
+    },
+    {
+      "id": "co-03",
+      "dimensions": [
+        "documents",
+        "restore"
+      ],
+      "persona": "print",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "What does the printing department handbook say about safety?",
+      "procedure": "Document-only answer, then a simpler explanation, then regenerate, then reload. Record whether BQ or fresh retrieval ran on explanation, regeneration, or restore."
+    },
+    {
+      "id": "co-04",
+      "dimensions": [
+        "routing"
+      ],
+      "persona": "print",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "What is a collection rate?",
+      "procedure": "In a fresh thread ask a general business concept, then say that more simply, then request our current figure. Record domain-call counts per turn."
+    },
+    {
+      "id": "co-05",
+      "dimensions": [
+        "routing",
+        "restore"
+      ],
+      "persona": "print",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How many jobs do we have?",
+      "procedure": "Data A then data B then explain A then simplify that then regenerate then reload. Extend across BQ primary, companion, document-only, and mixed shapes as the validation contract requires."
+    },
+    {
+      "id": "co-06",
+      "dimensions": [
+        "routing",
+        "safety"
+      ],
+      "persona": "print",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How many jobs do we have?",
+      "procedure": "Script a second BQ action, duplicate call id, repeated document question, malformed call, and more than the action limit. Record admission counters and stop reason."
+    },
+    {
+      "id": "co-07",
+      "dimensions": [
+        "routing",
+        "error-handling"
+      ],
+      "persona": "print",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How many jobs do we have?",
+      "procedure": "BQ succeeds; documents fail or time out; repeat with narrative validation failure. Record committed cards and limitation copy."
+    },
+    {
+      "id": "co-08",
+      "dimensions": [
+        "authorization",
+        "security"
+      ],
+      "persona": "print",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How many jobs do we have?",
+      "procedure": "Revoke a source grant; inject tool instructions in a document; forge a tenant/source id. Inspect model input, response, copy, reload, and logs without recording secrets."
+    },
+    {
+      "id": "co-09",
+      "dimensions": [
+        "cancellation"
+      ],
+      "persona": "print",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How many jobs do we have?",
+      "procedure": "Cancel during queue wait, BQ prepare, BQ commit, document worker, and final generation. Record driver/worker behavior and whether a table arrives after expiry."
+    },
+    {
+      "id": "co-10",
+      "dimensions": [
+        "ui",
+        "routing"
+      ],
+      "persona": "print",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How many jobs do we have?",
+      "procedure": "Desktop and 375px: existing Apollo context, clarification, cards, details, next-step flow, then a mixed coordinator answer. Record usable controls and whether SQL or raw tool names appear."
+    },
+    {
+      "id": "co-11",
+      "dimensions": [
+        "budget"
+      ],
+      "persona": "print",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How many jobs do we have?",
+      "procedure": "Drive large BQ and document outputs; individually valid inputs that exceed the combined input cap; large schema, history, Unicode, and error payloads. Record provider input usage against the pre-call bound."
+    },
+    {
+      "id": "co-12",
+      "dimensions": [
+        "routing"
+      ],
+      "persona": "print",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How many jobs do we have?",
+      "procedure": "Cover tool success, denial, error, timeout, cancel; duplicate, orphan, and wrong-turn results; and a crash-incomplete trace. Record action closure and UNPROVEN on missing completion."
+    }
+  ]
+}

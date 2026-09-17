@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "suite": "prod_ask",
+  "status": "candidate",
+  "source": "eval",
+  "run_id": "pa-20260818T224736Z",
+  "case_id": "pa-04",
+  "mode": "stub",
+  "transport": "sse",
+  "role": "sales",
+  "principal_label": "sales-rep",
+  "route": "semantic",
+  "question": "Which suppliers do we still owe money to, and how much is outstanding for each?",
+  "dimensions": [
+    "accuracy",
+    "citations",
+    "follow_ups"
+  ],
+  "pass_rate": 0.846,
+  "failed_checks": [
+    {
+      "check_id": "follow_ups.presence_matches_expectation",
+      "dimension": "follow_ups",
+      "detail": "expected suggestions=False, got 1"
+    },
+    {
+      "check_id": "follow_ups.varies_with_permissions",
+      "dimension": "follow_ups",
+      "detail": "expected differ=True across the permission pair, got differ=False"
+    }
+  ],
+  "degraded_checks": [],
+  "skipped_checks": [
+    {
+      "check_id": "accuracy.required_facts_present",
+      "reason": "stub mode scripts the model output, so a required fact would be self-fulfilling"
+    },
+    {
+      "check_id": "accuracy.forbidden_facts_absent",
+      "reason": "stub mode scripts the answer text, so absence proves nothing"
+    },
+    {
+      "check_id": "accuracy.sql_oracle_values_present",
+      "reason": "case has no SQL oracle"
+    },
+    {
+      "check_id": "citations.cited_files_contain_the_claim",
+      "reason": "no supporting-source allowlist pinned"
+    }
+  ],
+  "judged": [],
+  "failure_kind": null,
+  "lever": null,
+  "root_cause": null
+}

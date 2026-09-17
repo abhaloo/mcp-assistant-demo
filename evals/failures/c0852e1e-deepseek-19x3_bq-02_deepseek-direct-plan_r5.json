@@ -1,0 +1,59 @@
+{
+  "case_id": "bq-02",
+  "family": "serena_hotels_last_tissue_order",
+  "phrasing": "code_switched",
+  "expected": "answered",
+  "actual": "unsupported",
+  "passed": false,
+  "detail": "expected answered, got unsupported",
+  "reason_code": "no_join_path",
+  "failure_layer": null,
+  "failure_detail": null,
+  "planner_repair_count": 0,
+  "tokens_prompt": 6156,
+  "tokens_completion": 2279,
+  "tokens_reasoning": 2158,
+  "missing_members": [],
+  "plan": {
+    "measures": [],
+    "dimensions": [
+      "customer_order.created_at",
+      "customer_order.order_number"
+    ],
+    "bucket_set": null,
+    "filters": {
+      "all": [
+        {
+          "member": "customer.name",
+          "operator": "contains",
+          "values": [
+            "?"
+          ]
+        },
+        {
+          "member": "product_name",
+          "operator": "contains",
+          "values": [
+            "?"
+          ]
+        }
+      ]
+    },
+    "having": null,
+    "period": null,
+    "grain": "entity_rows",
+    "order": [
+      {
+        "member": "customer_order.created_at",
+        "direction": "desc"
+      }
+    ],
+    "limit": 1
+  },
+  "message": "plan cannot be executed safely",
+  "outcome_match": false,
+  "literal_match": false,
+  "repeat_index": 5,
+  "arm": "deepseek-direct-plan",
+  "reasoning_redacted": true
+}

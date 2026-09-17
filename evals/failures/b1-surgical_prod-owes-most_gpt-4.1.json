@@ -1,0 +1,23 @@
+{
+  "run_id": "b1-surgical",
+  "case_id": "prod-owes-most",
+  "split": "dev",
+  "question": null,
+  "chat_deployment": "gpt-4.1",
+  "pass_rate": "0/5",
+  "reasons": [
+    "value_mismatch",
+    "value_mismatch",
+    "value_mismatch",
+    "value_mismatch",
+    "value_mismatch"
+  ],
+  "diagnosis": "Escalated to gpt-4.1 (B1 routing fired) but still value_mismatch 5/5 \u2014 valid SQL, wrong number. Routing is not the lever; this is a grounding/definition gap (the net-owed computation). Deferred to B2.",
+  "generated_sql_scrubbed": [
+    "SELECT c.name, ROUND(SUM(x.amt - x.paid), 0) AS outstanding\nFROM (\n  SELECT b.id, b.customer_id,\n         SUM((bi.price*bi.quantity - COALESCE(bi.discount,0)) * (1 + COALESCE(bi.tax,0)/100)) AS amt,\n         COALESCE((SELECT SUM(j.debit) FROM journals j JOIN accounts a ON a.id = j.account_id\n                   WHERE j.bill_id = b.id AND j.debit > 0\n                   AND a.account_type IN (?,?,?,?)), 0) AS paid\n  FROM bills b JOIN bill_items bi ON bi.bill_id = b.id\n  WHERE b.type = ? AND YEAR(b.created_at) = 2026 AND MONTH(b.created_at) = 6\n  GROUP BY b.id, b.customer_id\n) x\nJOIN customers c ON c.id = x.customer_id\nWHERE x.amt - x.paid > 0.01\nGROUP BY c.name\nORDER BY outstanding DESC\nLIMIT 1;",
+    "SELECT c.name, ROUND(SUM(x.amt - x.paid), 0) AS outstanding\nFROM (\n  SELECT b.id, b.customer_id,\n         SUM((bi.price*bi.quantity - COALESCE(bi.discount,0)) * (1 + COALESCE(bi.tax,0)/100)) AS amt,\n         COALESCE((SELECT SUM(j.debit) FROM journals j JOIN accounts a ON a.id = j.account_id\n                   WHERE j.bill_id = b.id AND j.debit > 0\n                   AND a.account_type IN (?,?,?,?)), 0) AS paid\n  FROM bills b JOIN bill_items bi ON bi.bill_id = b.id\n  WHERE b.type = ? AND MONTH(b.created_at) = 6 AND YEAR(b.created_at) = 2026\n  GROUP BY b.id, b.customer_id\n) x\nJOIN customers c ON c.id = x.customer_id\nWHERE x.amt - x.paid > 0.01\nGROUP BY c.name\nORDER BY outstanding DESC\nLIMIT 1;",
+    "SELECT c.name, ROUND(SUM(x.amt - x.paid), 0) AS outstanding\nFROM (\n  SELECT b.id, b.customer_id,\n         SUM((bi.price*bi.quantity - COALESCE(bi.discount,0)) * (1 + COALESCE(bi.tax,0)/100)) AS amt,\n         COALESCE((SELECT SUM(j.debit) FROM journals j JOIN accounts a ON a.id = j.account_id\n                   WHERE j.bill_id = b.id AND j.debit > 0\n                   AND a.account_type IN (?,?,?,?)), 0) AS paid\n  FROM bills b JOIN bill_items bi ON bi.bill_id = b.id\n  WHERE b.type = ? AND MONTH(b.created_at) = 6 AND YEAR(b.created_at) = 2026\n  GROUP BY b.id, b.customer_id\n) x\nJOIN customers c ON c.id = x.customer_id\nWHERE x.amt - x.paid > 0.01\nGROUP BY c.name\nORDER BY outstanding DESC\nLIMIT 1;",
+    "SELECT c.name, ROUND(SUM(x.amt - x.paid), 0) AS outstanding\nFROM (\n  SELECT b.id, b.customer_id,\n         SUM((bi.price*bi.quantity - COALESCE(bi.discount,0)) * (1 + COALESCE(bi.tax,0)/100)) AS amt,\n         COALESCE((SELECT SUM(j.debit) FROM journals j JOIN accounts a ON a.id = j.account_id\n                   WHERE j.bill_id = b.id AND j.debit > 0\n                   AND a.account_type IN (?,?,?,?)), 0) AS paid\n  FROM bills b JOIN bill_items bi ON bi.bill_id = b.id\n  WHERE b.type = ? AND MONTH(b.created_at) = 6 AND YEAR(b.created_at) = 2026\n  GROUP BY b.id, b.customer_id\n) x\nJOIN customers c ON c.id = x.customer_id\nWHERE x.amt - x.paid > 0.01\nGROUP BY c.name\nORDER BY outstanding DESC\nLIMIT 1;",
+    "SELECT c.name, ROUND(SUM(x.amt - x.paid), 0) AS outstanding\nFROM (\n  SELECT b.id, b.customer_id,\n         SUM((bi.price*bi.quantity - COALESCE(bi.discount,0)) * (1 + COALESCE(bi.tax,0)/100)) AS amt,\n         COALESCE((SELECT SUM(j.debit) FROM journals j JOIN accounts a ON a.id = j.account_id\n                   WHERE j.bill_id = b.id AND j.debit > 0\n                   AND a.account_type IN (?,?,?,?)), 0) AS paid\n  FROM bills b JOIN bill_items bi ON bi.bill_id = b.id\n  WHERE b.type = ? AND MONTH(b.created_at) = 6 AND YEAR(b.created_at) = 2026\n  GROUP BY b.id, b.customer_id\n) x\nJOIN customers c ON c.id = x.customer_id\nWHERE x.amt - x.paid > 0.01\nGROUP BY c.name\nORDER BY outstanding DESC\nLIMIT 1;"
+  ]
+}

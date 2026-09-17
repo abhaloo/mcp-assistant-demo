@@ -1,0 +1,23 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": null,
+  "case_id": "prod-jobs-june9",
+  "role": "sales",
+  "mode": "all",
+  "run_id": "2026-07-07-sql-citations",
+  "question": "whose jobs were done on june 9 and how big was each order?",
+  "gold_sql": "SELECT c.name, COALESCE(wo.work_number, wo.id) AS job, SUM(woi.quantity) AS item_qty FROM work_orders wo JOIN customers c ON c.id = wo.customer_id JOIN work_order_items woi ON woi.work_order_id = wo.id WHERE DATE(wo.created_at) = '2026-06-09' GROUP BY c.name, COALESCE(wo.work_number, wo.id)",
+  "agent_sql_scrubbed": "SELECT wo.work_number, SUM(wi.quantity) AS total_quantity\nFROM work_orders wo\nJOIN work_order_items wi ON wo.id = wi.work_order_id\nWHERE wo.created_at = ?\nGROUP BY wo.work_number;",
+  "error_category": null,
+  "reason": "row_count_mismatch",
+  "valid_sql_rate": 1.0,
+  "pass_rate": 0.0,
+  "flaky": false,
+  "chat_deployment": "gpt-4o-mini",
+  "failure_kind": null,
+  "lever": null,
+  "root_cause": null,
+  "rule": null
+}

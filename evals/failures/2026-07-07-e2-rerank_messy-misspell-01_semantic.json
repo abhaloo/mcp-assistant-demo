@@ -1,0 +1,9 @@
+{
+  "run_id": "2026-07-07-e2-rerank",
+  "case_id": "messy-misspell-01",
+  "mode": "semantic",
+  "question": "whats the maintanence schedule for the heidleberg press",
+  "citation_parsed": 0,
+  "citation_precision": 0.0,
+  "source_file": "data/corpus/company/printing/press-operating-procedures.md"
+}

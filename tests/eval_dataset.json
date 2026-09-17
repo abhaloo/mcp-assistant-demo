@@ -1,0 +1,986 @@
+[
+  {
+    "id": "all-01",
+    "question": "What are the standard working hours at Multi Color Printers?",
+    "expected_answer": "Standard shift is 8 AM to 5 PM Sunday through Thursday, Friday 8 AM to 12 PM, and Saturday is off.",
+    "expected_tier": "all",
+    "source_file": "data/corpus/company/all/company-handbook.md",
+    "role": "user",
+    "permissions": [],
+    "notes": "Basic company info accessible to all staff",
+    "expected_snippet": "- **Standard shift**: 8:00 AM – 5:00 PM, Sunday through Thursday\n- **Friday**: 8:00 AM – 12:00 PM (half day)\n- **Saturday**: Off"
+  },
+  {
+    "id": "all-02",
+    "question": "What paper stocks does Multi Color Printers offer and what finishing options are available?",
+    "expected_answer": "Paper stocks range from 80gsm bond to 350gsm board, with specialty recycled and textured options. Finishing options include lamination, foil stamping, embossing, die cutting, spot UV, and binding.",
+    "expected_tier": "all",
+    "source_file": "data/corpus/company/all/services-and-capabilities.md",
+    "role": "user",
+    "permissions": [],
+    "notes": "General services info accessible to all staff",
+    "expected_snippet": "- Lamination: Gloss or matte, available on stocks 200gsm+\n- Foil stamping: Gold, silver, or custom colors\n- Embossing/debossing\n- Die cutting: Custom shapes\n- Spot UV: Selective gloss coating\n- Binding: Saddle-stitch, perfect binding, spiral/wire-o"
+  },
+  {
+    "id": "all-03",
+    "question": "What is the turnaround time for business cards and what is the rush surcharge?",
+    "expected_answer": "Business cards take 3-5 days. Rush orders carry a 50% surcharge.",
+    "expected_tier": "all",
+    "source_file": "data/corpus/company/all/services-and-capabilities.md",
+    "role": "user",
+    "permissions": [],
+    "notes": "Turnaround info from public-facing services doc",
+    "expected_snippet": "- Business cards: 3-5 business days\n- Flyers/brochures: 5-7 business days\n- Large format: 2-3 business days\n- Rush service: Available at 50% surcharge"
+  },
+  {
+    "id": "sales-01",
+    "question": "What is the per-piece price for 1,000 double-sided business cards?",
+    "expected_answer": "1,000 double-sided business cards cost Tsh 170 per piece. Prices exclude 5% VAT.",
+    "expected_tier": "sales",
+    "source_file": "data/corpus/company/sales/customer-pricing-guide.md",
+    "role": "user",
+    "permissions": [
+      "view invoice",
+      "add quotation"
+    ],
+    "notes": "Detailed pricing only available to sales tier",
+    "expected_snippet": "- 250 cards: Tsh 65 single-sided, Tsh 80 double-sided, Tsh 140 premium (Spot UV)\n- 500 cards: Tsh 95 single-sided, Tsh 115 double-sided, Tsh 190 premium (Spot UV)\n- 1,000 cards: Tsh 140 single-sided, Tsh 170 double-sided, Tsh 260 premium (Spot UV)\n- 2,000 cards: Tsh 210 single-sided, Tsh 250 double-sided, Tsh 380 premium (Spot UV)"
+  },
+  {
+    "id": "sales-02",
+    "question": "Who is Multi Color Printers' highest-spending customer this year and how much have they spent?",
+    "expected_answer": "Gulf Media Group is the top customer YTD 2024 with Tsh 182,400 in spending. They have gold corporate status and are managed by Tariq Hassan.",
+    "expected_tier": "sales",
+    "source_file": "data/corpus/company/sales/customer-accounts.md",
+    "role": "user",
+    "permissions": [
+      "view customer",
+      "view invoice"
+    ],
+    "notes": "Customer account data restricted to sales tier",
+    "expected_snippet": "- Gulf Media Group: Gold Corporate, Tsh 182,400 YTD, managed by Tariq Hassan, primary contact +255712334455"
+  },
+  {
+    "id": "sales-03",
+    "question": "What discount tiers are available and what percentage does each tier receive?",
+    "expected_answer": "Walk-in customers get 0%, registered customers 5%, corporate 10%, and gold corporate 15%. Discounts above 15% require manager approval.",
+    "expected_tier": "sales",
+    "source_file": "data/corpus/company/sales/customer-pricing-guide.md",
+    "role": "user",
+    "permissions": [
+      "view invoice",
+      "add quotation"
+    ],
+    "notes": "Internal discount structure restricted to sales tier",
+    "expected_snippet": "- Walk-in customers: 0% discount\n- Registered customers: 5% discount\n- Corporate customers: 10% discount\n- Gold Corporate customers: 15% discount\n\nAdditional discounts above 15% require manager approval."
+  },
+  {
+    "id": "all-04",
+    "question": "What volume discounts are available for hotels that sign annual contracts?",
+    "expected_answer": "Hotels signing annual print contracts receive a 15% discount. Multi-property hotel groups get 10% across all properties.",
+    "expected_tier": "all",
+    "source_file": "data/corpus/company/all/hospitality-solutions.md",
+    "role": "user",
+    "permissions": [],
+    "notes": "Tests retrieval from hospitality doc (untested in baseline). Distractor risk: the sales pricing guide also has discount tiers (0-15%) but for general customers, not hospitality-specific.",
+    "expected_snippet": "- Annual contracts: 15% discount on all recurring orders\n- Multi-property groups: Additional 10% for 3+ properties"
+  },
+  {
+    "id": "all-05",
+    "question": "My computer is really slow today, what should I do?",
+    "expected_answer": "Close unused browser tabs and applications, then restart the computer. If the problem persists, submit an IT ticket via the helpdesk portal.",
+    "expected_tier": "all",
+    "source_file": "data/corpus/company/all/it-helpdesk-faq.md",
+    "role": "user",
+    "permissions": [],
+    "notes": "Paraphrase test — casual wording ('really slow') vs document's technical phrasing. Tests embedding robustness, not just keyword match.",
+    "expected_snippet": "1. Restart your workstation first\n2. Check that no large print files are open in Acrobat or CorelDRAW\n3. If the problem persists after restart, submit a helpdesk request via the admin team"
+  },
+  {
+    "id": "all-06",
+    "question": "How often are employee performance reviews conducted?",
+    "expected_answer": "Performance reviews are conducted every 6 months.",
+    "expected_tier": "all",
+    "source_file": "data/corpus/company/all/company-handbook.md",
+    "role": "user",
+    "permissions": [],
+    "notes": "Small detail buried in a long handbook. Tests chunk precision — if chunks are too large, this detail gets diluted by surrounding leave/conduct info.",
+    "expected_snippet": "All employees receive a formal performance review every 6 months."
+  },
+  {
+    "id": "all-07",
+    "question": "What is the minimum DPI required for print-ready files?",
+    "expected_answer": "All print-ready files must be at least 300 DPI.",
+    "expected_tier": "all",
+    "source_file": "data/corpus/company/all/services-and-capabilities.md",
+    "role": "user",
+    "permissions": [],
+    "notes": "Cross-document distractor: 300 DPI appears in services doc (all tier), IT FAQ (all tier), AND file-handoff-standards (graphic design tier). For a basic user, only all-tier docs are accessible. Tests whether retriever pulls the right source.",
+    "expected_snippet": "Minimum resolution: 300 DPI for print"
+  },
+  {
+    "id": "printing-01",
+    "question": "What is the daily startup procedure for the Heidelberg Speedmaster?",
+    "expected_answer": "The Heidelberg Speedmaster daily startup is a 7-step checklist including inspecting rollers, checking ink levels, verifying dampening solution, loading paper to feeder, running a test sheet, confirming registration, and logging startup in the machine book.",
+    "expected_tier": "printing",
+    "source_file": "data/corpus/company/printing/press-operating-procedures.md",
+    "role": "user",
+    "permissions": [
+      "view job"
+    ],
+    "notes": "First printing-tier eval case. Procedural/list content — tests whether chunking preserves multi-step checklists or splits them across chunks.",
+    "expected_snippet": "## Heidelberg Speedmaster — Daily Startup Checklist"
+  },
+  {
+    "id": "graphic-design-01",
+    "question": "What CMYK values should be used for rich black on large fills?",
+    "expected_answer": "Rich black for fills uses C:60, M:40, Y:40, K:100. Plain 100K should only be used for text under 14pt.",
+    "expected_tier": "graphic design",
+    "source_file": "data/corpus/company/graphic-design/file-handoff-standards.md",
+    "role": "user",
+    "permissions": [
+      "view specification"
+    ],
+    "notes": "Precise technical detail in a single location. Tests retrieval of exact values — if faithfulness is low on this case, the LLM is fabricating color values.",
+    "expected_snippet": "- [ ] Rich black formula for large fills: **C:60, M:40, Y:40, K:100**"
+  },
+  {
+    "id": "warehouse-01",
+    "question": "Which stock items are currently below their minimum reorder levels?",
+    "expected_answer": "SRA3 135gsm Gloss Art Paper and Blankets (Heidelberg SM 74) are currently below minimum reorder levels.",
+    "expected_tier": "warehouse",
+    "source_file": "data/corpus/company/warehouse/inventory-procedures.md",
+    "role": "user",
+    "permissions": [
+      "view inventory"
+    ],
+    "notes": "Tests retrieval of specific alert/status data embedded in a procedures doc. The answer is a small detail within a larger inventory procedures document.",
+    "expected_snippet": "- A4 80gsm Paper: Min 50 reams, Current 142 reams, Reorder Qty 200\n- A3 80gsm Paper: Min 20 reams, Current 38 reams, Reorder Qty 100\n- SRA3 135gsm Gloss: Min 15 reams, Current 12 reams, Reorder Qty 50 — BELOW MINIMUM\n- SRA3 300gsm Matt: Min 10 reams, Current 24 reams, Reorder Qty 30"
+  },
+  {
+    "id": "finance-01",
+    "question": "What are the payment terms for each of our active suppliers?",
+    "expected_answer": "Al Faris Paper Supplies: Net 30. Gulf Ink & Consumables: Net 15. Precision Plates LLC: Net 30. Oasis Maintenance & Tech: Net 45. FastPack Packaging: Net 15.",
+    "expected_tier": "finance",
+    "source_file": "data/corpus/company/finance/supplier-payment-schedule.md",
+    "role": "user",
+    "permissions": [
+      "view journal entries"
+    ],
+    "notes": "Tabular data retrieval — answer requires extracting structured info (supplier + terms pairs) from a table. Tests whether chunks preserve table structure.",
+    "expected_snippet": "- Al Faris Paper Supplies: Payment terms Net 30, last payment Tsh 48,200 on 2024-06-15, balance due Tsh 12,400, contact +255 717 998 100\n- Gulf Ink & Consumables: Payment terms Net 15, last payment Tsh 22,700 on 2024-06-28, balance due Tsh 0\n- Precision Plates LLC: Payment terms Net 30, last payment Tsh 8,900 on 2024-06-20, balance due Tsh 3,200\n- Oasis Maintenance & Tech: Payment terms Net 45, last payment Tsh 6,500 on 2024-05-30, balance due Tsh 6,500, contact 0789 445 332\n- FastPack Packaging: Payment terms Net 15, last payment Tsh 11,300 on 2024-07-01, balance due Tsh 0"
+  },
+  {
+    "id": "messy-vague-01",
+    "question": "what about the paper stuff",
+    "expected_answer": "Multi Color Printers offers standard paper stocks ranging from 80gsm bond to 350gsm board, with specialty options including recycled and textured papers.",
+    "expected_tier": "all",
+    "source_file": "data/corpus/company/all/services-and-capabilities.md",
+    "role": "user",
+    "permissions": [],
+    "notes": "Vague query — tests whether the retriever can match 'paper stuff' to paper stocks documentation. Real users don't always ask precise questions.",
+    "expected_snippet": "- 80gsm Bond: General office printing, letterheads\n- 100gsm Uncoated: Premium letterheads, internal documents\n- 130gsm Gloss Art: Flyers, brochures (cost-effective)\n- 170gsm Gloss Art: Premium brochures, catalog pages\n- 250gsm Gloss Art: Business cards, postcards, covers\n- 300gsm Gloss Art: Premium business cards, rigid postcards\n- 350gsm Board: Packaging, heavy-duty cards\n\n### Specialty Papers\n- Recycled options available (80gsm and 100gsm)\n- Textured/linen finish for premium stationery\n- Transparent/vellum for overlays"
+  },
+  {
+    "id": "messy-shorthand-01",
+    "question": "ink stock?",
+    "expected_answer": "Current ink stock levels: Cyan 5 cans (min 3), Magenta 4 cans (min 3), Yellow 6 cans (min 3), Black 7 cans (min 5). All ink levels are above minimum reorder points.",
+    "expected_tier": "warehouse",
+    "source_file": "data/corpus/company/warehouse/inventory-procedures.md",
+    "role": "user",
+    "permissions": [
+      "view inventory"
+    ],
+    "notes": "Shorthand/terse query — two words. Tests whether embeddings can match minimal input to the inventory procedures doc.",
+    "expected_snippet": "### Inks\n\n- Cyan Ink (Heidelberg): Min 3 cans, Current 5 cans, Reorder Qty 6\n- Magenta Ink: Min 3 cans, Current 4 cans, Reorder Qty 6\n- Yellow Ink: Min 3 cans, Current 6 cans, Reorder Qty 6\n- Black Ink: Min 5 cans, Current 7 cans, Reorder Qty 10"
+  },
+  {
+    "id": "messy-multipart-01",
+    "question": "give me the pricing for business cards and also whats the rush fee",
+    "expected_answer": "Business card pricing (per piece): 250 cards Tsh 80 double-sided, 500 cards Tsh 115, 1,000 cards Tsh 170, 2,000 cards Tsh 250. Rush surcharges: same day +40%, next day +25%, 2 days +10%.",
+    "expected_tier": "sales",
+    "source_file": "data/corpus/company/sales/customer-pricing-guide.md",
+    "role": "user",
+    "permissions": [
+      "view invoice",
+      "add quotation"
+    ],
+    "notes": "Multi-part question asking for two things from the same doc. Tests whether the retriever pulls chunks covering both pricing AND rush fees, and whether the LLM addresses both parts.",
+    "expected_snippet": "- Same day: +40% surcharge\n- Next day: +25% surcharge\n- 2 days: +10% surcharge\n- 3+ days: Standard pricing (no surcharge)"
+  },
+  {
+    "id": "messy-casual-01",
+    "question": "hey so im new here, when do i get my days off and how many leave days do i have",
+    "expected_answer": "Saturday is off. Working hours are Sunday-Thursday 8AM-5PM, Friday 8AM-12PM. You get 21 annual leave days, 10 sick days, and 3 emergency leave days per year.",
+    "expected_tier": "all",
+    "source_file": "data/corpus/company/all/company-handbook.md",
+    "role": "user",
+    "permissions": [],
+    "notes": "Casual conversational tone with filler words. Tests whether embeddings handle informal phrasing and whether the LLM extracts both schedule and leave info.",
+    "expected_snippet": "- Annual Leave: 21 days per year\n- Sick Leave: 10 days per year\n- Emergency Leave: 3 days per year\n- Unpaid Leave: Upon request"
+  },
+  {
+    "id": "messy-misspell-01",
+    "question": "whats the maintanence schedule for the heidleberg press",
+    "expected_answer": "Heidelberg Speedmaster maintenance: Daily ink and water level check, weekly blanket wash and roller check, monthly full lubrication and filter replacement.",
+    "expected_tier": "printing",
+    "source_file": "data/corpus/company/printing/press-operating-procedures.md",
+    "role": "user",
+    "permissions": [
+      "view job"
+    ],
+    "notes": "Misspelled 'maintenance' and 'Heidelberg'. Tests embedding robustness to typos — a common real-world failure mode.",
+    "expected_snippet": "- Daily: Ink and water level check\n- Weekly: Blanket wash and roller check\n- Monthly: Full lubrication and filter replacement"
+  },
+  {
+    "id": "router-implicit-01",
+    "question": "who owes us the most money",
+    "expected_query_type": "structured",
+    "notes": "Colloquial phrasing for a structured data question. Live accounts receivable data lives in the database, not in static documents. Originally messy-implicit-01 in semantic eval — moved here because this is a routing/SQL problem, not a retrieval problem."
+  },
+  {
+    "id": "access-control-finance-01",
+    "question": "What was the total revenue collected in Q2 2024 and which accounts are overdue?",
+    "expected_answer_with_access": "Total invoiced was Tsh 945,450, collected Tsh 865,200, with Tsh 80,250 outstanding. Top overdue: Horizon Advertising Tsh 34,050 (60+ days), Gulf Media Group Tsh 22,800 (45 days), Al Noor Trading Tsh 14,300 (30 days).",
+    "expected_behavior_without_access": "The system should NOT return finance-tier information. The answer should indicate it cannot find relevant information or only provide publicly available details.",
+    "source_file": "data/corpus/company/finance/q2-2024-budget-report.md",
+    "test_cases": [
+      {
+        "label": "basic_user_denied",
+        "role": "user",
+        "permissions": [],
+        "should_contain_answer": false,
+        "notes": "A basic user with no finance permissions must NOT see Q2 budget data"
+      },
+      {
+        "label": "finance_user_granted",
+        "role": "user",
+        "permissions": [
+          "view journal entries"
+        ],
+        "should_contain_answer": true,
+        "notes": "A user with accounting permissions should see Q2 budget data"
+      }
+    ]
+  },
+  {
+    "id": "access-control-admin-01",
+    "question": "What are the current salary bands and total monthly payroll?",
+    "expected_answer_with_access": "Salary bands (AED/month): admin senior 8,000-14,000, manager mid-senior 6,000-10,000, user senior 3,500-6,000, user junior 2,000-3,500. Total monthly payroll is 136,600 AED across 26 employees.",
+    "expected_behavior_without_access": "The system should NOT return salary or payroll information. The answer should indicate it cannot find relevant information.",
+    "source_file": "data/corpus/company/admin/salary-records.md",
+    "test_cases": [
+      {
+        "label": "basic_user_denied",
+        "role": "user",
+        "permissions": [],
+        "should_contain_answer": false,
+        "notes": "A basic user must NOT see salary records"
+      },
+      {
+        "label": "manager_denied",
+        "role": "manager",
+        "permissions": [
+          "view customer",
+          "view invoice"
+        ],
+        "should_contain_answer": false,
+        "notes": "Even a manager without admin permissions should NOT see salary data"
+      },
+      {
+        "label": "admin_granted",
+        "role": "admin",
+        "permissions": [
+          "system audit"
+        ],
+        "should_contain_answer": true,
+        "notes": "Admin role should have full access including salary records"
+      }
+    ]
+  },
+  {
+    "id": "router-semantic-01",
+    "question": "What paper stocks do you offer?",
+    "expected_query_type": "semantic",
+    "notes": "Clear document-search question — asks about capabilities, not data"
+  },
+  {
+    "id": "router-semantic-02",
+    "question": "How does the approval workflow work?",
+    "expected_query_type": "semantic",
+    "notes": "Process explanation — lives in company docs, not the database"
+  },
+  {
+    "id": "router-structured-01",
+    "question": "How many customer orders were created this month?",
+    "expected_query_type": "structured",
+    "notes": "Count query — needs live database, not documents"
+  },
+  {
+    "id": "router-structured-02",
+    "question": "Which customers placed orders last week?",
+    "expected_query_type": "structured",
+    "notes": "Time-filtered list — only answerable from live data"
+  },
+  {
+    "id": "router-structured-03",
+    "question": "What is the total value of pending bills?",
+    "expected_query_type": "structured",
+    "notes": "Aggregation query — sum of current records"
+  },
+  {
+    "id": "router-both-01",
+    "question": "What printing services do we offer and how many orders has each generated?",
+    "expected_query_type": "both",
+    "notes": "Needs service descriptions from docs AND order counts from database"
+  },
+  {
+    "id": "sql-basic-01",
+    "question": "How many products are in the database?",
+    "expected_query_type": "structured",
+    "role": "user",
+    "permissions": [
+      "view product"
+    ],
+    "validation": "result_is_integer",
+    "notes": "Simple count query — validates SQL agent can generate and execute basic SQL"
+  },
+  {
+    "id": "sql-basic-02",
+    "question": "List all product categories.",
+    "expected_query_type": "structured",
+    "role": "user",
+    "permissions": [
+      "view product"
+    ],
+    "validation": "result_is_list",
+    "notes": "Simple select — validates agent can list distinct values"
+  },
+  {
+    "id": "sql-join-01",
+    "question": "What products are in the Offset Printing category?",
+    "expected_query_type": "structured",
+    "role": "user",
+    "permissions": [
+      "view product"
+    ],
+    "validation": "result_contains_product_names",
+    "notes": "Requires JOIN between products and categories — tests agent's join ability"
+  },
+  {
+    "id": "sql-access-control-01",
+    "question": "Show me all journal entries.",
+    "expected_query_type": "structured",
+    "role": "user",
+    "permissions": [],
+    "expected_behavior": "Agent should not have access to journals table. Should indicate it cannot answer or that the table is not available.",
+    "notes": "Basic user has no finance tier — journals table should not be in the agent's schema"
+  },
+  {
+    "id": "sql-access-control-02",
+    "question": "What are the current bill totals?",
+    "expected_query_type": "structured",
+    "test_cases": [
+      {
+        "label": "sales_user_denied",
+        "role": "user",
+        "permissions": [
+          "view customer",
+          "view invoice"
+        ],
+        "should_have_access": false,
+        "notes": "Sales user should NOT see bills table (finance tier)"
+      },
+      {
+        "label": "finance_user_granted",
+        "role": "user",
+        "permissions": [
+          "view journal entries",
+          "profit and loss"
+        ],
+        "should_have_access": true,
+        "notes": "Finance user should see bills table"
+      }
+    ]
+  },
+  {
+    "id": "sql-access-control-03",
+    "question": "Show me all customer orders.",
+    "expected_query_type": "structured",
+    "test_cases": [
+      {
+        "label": "basic_user_denied",
+        "role": "user",
+        "permissions": [],
+        "should_have_access": false,
+        "notes": "Basic user without sales permissions should NOT see customer_orders"
+      },
+      {
+        "label": "sales_user_granted",
+        "role": "user",
+        "permissions": [
+          "view customer order"
+        ],
+        "should_have_access": true,
+        "notes": "Sales user should see customer_orders"
+      }
+    ]
+  },
+  {
+    "id": "all-pii-01",
+    "question": "What is the main contact phone number for Multi Color Printers?",
+    "expected_answer": "The available context redacts the main contact phone number as <PHONE_NUMBER>.",
+    "expected_tier": "all",
+    "source_file": "data/corpus/company/all/services-and-capabilities.md",
+    "role": "user",
+    "permissions": [],
+    "notes": "Tests phone number redaction. The independent oracle requires the safe placeholder and must never reward reconstructing the hidden literal.",
+    "expected_snippet": "Phone: +255 712 345 678"
+  },
+  {
+    "id": "all-pii-02",
+    "question": "What number can I call for urgent IT helpdesk issues?",
+    "expected_answer": "The available context redacts the urgent IT helpdesk number as <PHONE_NUMBER>.",
+    "expected_tier": "all",
+    "source_file": "data/corpus/company/all/it-helpdesk-faq.md",
+    "role": "user",
+    "permissions": [],
+    "notes": "Second phone-redaction test, different document and tier-all. The safe oracle requires the placeholder rather than an ungrounded hidden number.",
+    "expected_snippet": "For urgent issues, call the IT helpdesk directly on +255 754 100 200 during business hours."
+  },
+  {
+    "id": "all-pii-03",
+    "question": "What email address can I use to contact Multi Color Printers?",
+    "expected_answer": "You can email info@multicolorprinters.co.tz for general inquiries.",
+    "expected_tier": "all",
+    "source_file": "data/corpus/company/all/services-and-capabilities.md",
+    "role": "user",
+    "permissions": [],
+    "notes": "[REVIEW] PII-direct: tests EMAIL_ADDRESS detection. Currently EMAIL_ADDRESS is not in redaction_entities config, so this is also a coverage gap test — should expose that emails are leaking.",
+    "expected_snippet": "info@multicolorprinters.co.tz"
+  },
+  {
+    "id": "all-pii-04",
+    "question": "Where is Multi Color Printers located?",
+    "expected_answer": "Multi Color Printers is located in Stone Town, Zanzibar.",
+    "expected_tier": "all",
+    "source_file": "data/corpus/company/all/services-and-capabilities.md",
+    "role": "user",
+    "permissions": [],
+    "notes": "[REVIEW] PII-adjacent: question is about location, but the retrieved 'Contact & Ordering' chunk also contains the phone number. Tests that we don't over-degrade the answer when the asked-about content isn't PII.",
+    "expected_snippet": "Location: Stone Town, Zanzibar"
+  },
+  {
+    "id": "all-pii-05",
+    "question": "What is the minimum order quantity for 500 business cards?",
+    "expected_answer": "Business cards have a minimum order of 500 pieces for offset printing.",
+    "expected_tier": "all",
+    "source_file": "data/corpus/company/all/services-and-capabilities.md",
+    "role": "user",
+    "permissions": [],
+    "notes": "[REVIEW] False-positive bait: numeric strings like '500' appear near phone numbers in the same doc. Tests that quantity numbers don't get flagged as PHONE_NUMBER.",
+    "expected_snippet": "- Business cards (minimum order: 500 pieces)"
+  },
+  {
+    "id": "all-pii-06",
+    "question": "What contact information should a new customer use to reach the company?",
+    "expected_answer": "Customers can reach Multi Color Printers by email at info@multicolorprinters.co.tz or via www.multicolorprinters.co.tz; the available phone number is redacted as <PHONE_NUMBER>.",
+    "expected_tier": "all",
+    "source_file": "data/corpus/company/all/services-and-capabilities.md",
+    "role": "user",
+    "permissions": [],
+    "notes": "PII multi-entity oracle: email and URL remain answerable, while the phone must remain the explicit redaction placeholder.",
+    "expected_snippet": "- Phone: +255 712 345 678\n- Email: info@multicolorprinters.co.tz\n- Website: www.multicolorprinters.co.tz"
+  },
+  {
+    "id": "sales-pii-01",
+    "question": "Who is the account manager for Gulf Media Group?",
+    "expected_answer": "Gulf Media Group is managed by Tariq Hassan.",
+    "expected_tier": "sales",
+    "source_file": "data/corpus/company/sales/customer-accounts.md",
+    "role": "user",
+    "permissions": [
+      "view customer",
+      "view invoice"
+    ],
+    "notes": "[REVIEW] PII-tier-restricted (PERSON): asks about an employee name. PERSON not yet in redaction_entities, so this tests baseline (unredacted) behavior. When PERSON is added, this should show name redaction in the answer.",
+    "expected_snippet": "Gulf Media Group: Gold Corporate, Tsh 182,400 YTD, managed by Tariq Hassan, primary contact +255712334455"
+  },
+  {
+    "id": "admin-pii-01",
+    "question": "Which admin accounts are currently active in the system?",
+    "expected_answer": "The active admin accounts are adeel.admin (Adeel Rehman) and rb.admin (R. Bakr).",
+    "expected_tier": "admin",
+    "source_file": "data/corpus/company/admin/system-access-guide.md",
+    "role": "admin",
+    "permissions": [
+      "system audit"
+    ],
+    "notes": "[REVIEW] PII-tier-restricted: admin tier doc with employee names + usernames. Tests that even admin-tier authorized access still goes through redaction layer.",
+    "expected_snippet": "- adeel.admin (Adeel Rehman): Last login 2024-07-05\n- rb.admin (R. Bakr): Last login 2024-07-04"
+  },
+  {
+    "id": "all-pii-07",
+    "question": "What design assistance is included with print orders?",
+    "expected_answer": "All prices include standard design assistance. Complex designs may incur additional charges.",
+    "expected_tier": "all",
+    "source_file": "data/corpus/company/all/services-and-capabilities.md",
+    "role": "user",
+    "permissions": [],
+    "notes": "[REVIEW] PII-adjacent: question about design assistance, but the 'Pricing Guidelines' chunk that contains this also lists prices and may pull adjacent contact info. Tests retrieval doesn't unnecessarily pull PII-laden chunks.",
+    "expected_snippet": "*All prices include standard design assistance. Complex designs may incur additional charges.*"
+  },
+  {
+    "id": "all-08",
+    "question": "What are the four core code of conduct expectations for employees?",
+    "expected_answer": "Treat colleagues and customers with respect; keep client information confidential; report equipment damage immediately to the warehouse team; and do not use company resources for personal projects.",
+    "expected_tier": "all",
+    "source_file": "data/corpus/company/all/company-handbook.md",
+    "role": "user",
+    "permissions": [],
+    "notes": "List-extraction test from a handbook section. Tests whether chunking preserves enumerated lists.",
+    "expected_snippet": "- Treat colleagues and customers with respect\n- Keep client information confidential\n- Report equipment damage immediately to the warehouse team\n- Not use company resources for personal projects"
+  },
+  {
+    "id": "all-09",
+    "question": "Where are the fire exits located in the building?",
+    "expected_answer": "Fire exits are located at the rear of the printing press and the front of the store.",
+    "expected_tier": "all",
+    "source_file": "data/corpus/company/all/company-handbook.md",
+    "role": "user",
+    "permissions": [],
+    "notes": "Safety information retrieval — tests a single specific fact embedded in the Health & Safety section.",
+    "expected_snippet": "- Fire exits are located at the rear of the printing press and the front of the store"
+  },
+  {
+    "id": "all-10",
+    "question": "What are the daily break times at Multi Color Printers?",
+    "expected_answer": "Morning break is 10:15 AM to 10:30 AM, lunch is 1:00 PM to 2:00 PM, and afternoon break is 4:00 PM to 4:15 PM.",
+    "expected_tier": "all",
+    "source_file": "data/corpus/company/all/company-handbook.md",
+    "role": "user",
+    "permissions": [],
+    "notes": "Multi-fact retrieval — answer requires three time ranges from the same section.",
+    "expected_snippet": "- Morning break: 10:15 AM – 10:30 AM\n- Lunch break: 1:00 PM – 2:00 PM\n- Afternoon break: 4:00 PM – 4:15 PM"
+  },
+  {
+    "id": "all-11",
+    "question": "When are salaries processed each month?",
+    "expected_answer": "Salaries are processed on the last working day of each month. Pay queries should be directed to the accounting department.",
+    "expected_tier": "all",
+    "source_file": "data/corpus/company/all/company-handbook.md",
+    "role": "user",
+    "permissions": [],
+    "notes": "Tests the Payroll section of the handbook — which is general info available to all (not the confidential salary records doc).",
+    "expected_snippet": "Salaries are processed on the last working day of each month.\nQueries about pay should be directed to the accounting department.\nFor HR-related queries, contact the People Operations team on +255 712 345 901 during business hours."
+  },
+  {
+    "id": "all-12",
+    "question": "Do I need approval for overtime?",
+    "expected_answer": "Yes, overtime must be pre-approved by your department manager.",
+    "expected_tier": "all",
+    "source_file": "data/corpus/company/all/company-handbook.md",
+    "role": "user",
+    "permissions": [],
+    "notes": "Yes/no question with a clear answer. Tests whether the LLM can give a direct response without padding.",
+    "expected_snippet": "Overtime must be pre-approved by your department manager."
+  },
+  {
+    "id": "all-13",
+    "question": "How much does a single-page laminated restaurant menu cost?",
+    "expected_answer": "Single-page laminated menus cost TSh 5,000 per piece, with a minimum order of 20.",
+    "expected_tier": "all",
+    "source_file": "data/corpus/company/all/hospitality-solutions.md",
+    "role": "user",
+    "permissions": [],
+    "notes": "Specific price with minimum quantity. Tests retrieval of paired numeric facts.",
+    "expected_snippet": "- Single-page laminated menus: TSh 5,000 per piece (minimum 20)"
+  },
+  {
+    "id": "all-14",
+    "question": "What is the estimated annual print spend for Lux Marjani Hotel?",
+    "expected_answer": "Lux Marjani Hotel's estimated annual print spend is between TSh 8,000,000 and TSh 12,000,000.",
+    "expected_tier": "all",
+    "source_file": "data/corpus/company/all/hospitality-solutions.md",
+    "role": "user",
+    "permissions": [],
+    "notes": "Case study fact retrieval. Tests whether the LLM correctly handles a numeric range answer.",
+    "expected_snippet": "Estimated annual print spend: TSh 8,000,000 - TSh 12,000,000"
+  },
+  {
+    "id": "all-15",
+    "question": "Does Multi Color Printers offer custom packaging services?",
+    "expected_answer": "Yes, Multi Color Printers offers custom packaging including branded takeaway boxes, paper bags with hotel logos, soap wrapping, and gift boxes. Capabilities are currently limited; full flexographic packaging is planned for 2025.",
+    "expected_tier": "all",
+    "source_file": "data/corpus/company/all/hospitality-solutions.md",
+    "role": "user",
+    "permissions": [],
+    "notes": "Yes/no with qualifier. Tests whether the LLM includes the important caveat (limited capabilities, future plan).",
+    "expected_snippet": "We are expanding into custom packaging solutions for hospitality:\n- Branded takeaway boxes\n- Custom paper bags with hotel logo\n- Soap and amenity wrapping\n- Gift boxes for hotel boutiques\n\n*Note: Packaging capabilities currently limited. Full flexographic packaging services planned for 2025.*"
+  },
+  {
+    "id": "all-16",
+    "question": "What specialty papers does Multi Color Printers offer?",
+    "expected_answer": "Specialty paper options include recycled paper (80gsm and 100gsm), textured/linen finish for premium stationery, and transparent/vellum for overlays.",
+    "expected_tier": "all",
+    "source_file": "data/corpus/company/all/services-and-capabilities.md",
+    "role": "user",
+    "permissions": [],
+    "notes": "Tests a specific subsection within a long services document. Distractor risk: the doc has many paper-related sections.",
+    "expected_snippet": "- Recycled options available (80gsm and 100gsm)\n- Textured/linen finish for premium stationery\n- Transparent/vellum for overlays"
+  },
+  {
+    "id": "all-17",
+    "question": "What are the steps to place an order with Multi Color Printers?",
+    "expected_answer": "Contact the company with requirements or upload files via the website, receive a quotation within 24 hours, approve the proof and confirm the order, production begins after a 50% deposit, and the balance is due on collection or delivery.",
+    "expected_tier": "all",
+    "source_file": "data/corpus/company/all/services-and-capabilities.md",
+    "role": "user",
+    "permissions": [],
+    "notes": "Procedural list extraction with five steps. Tests preservation of ordered lists in chunking.",
+    "expected_snippet": "### How to Order\n1. Contact us with your requirements or upload files via our website\n2. Receive a quotation within 24 hours\n3. Approve proof and confirm order\n4. Production begins after 50% deposit\n5. Balance due on collection/delivery"
+  },
+  {
+    "id": "all-18",
+    "question": "What file formats does Multi Color Printers prefer for print-ready submissions?",
+    "expected_answer": "Preferred formats are PDF (press-ready), AI, EPS, and PSD. Files should be at least 300 DPI in CMYK color mode with 3mm bleed on all sides.",
+    "expected_tier": "all",
+    "source_file": "data/corpus/company/all/services-and-capabilities.md",
+    "role": "user",
+    "permissions": [],
+    "notes": "Compound technical answer. Tests retrieval of paired requirements (formats + technical specs).",
+    "expected_snippet": "- Preferred formats: PDF (press-ready), AI, EPS, PSD\n- Minimum resolution: 300 DPI for print\n- Color mode: CMYK (not RGB)\n- Include 3mm bleed on all sides"
+  },
+  {
+    "id": "all-19",
+    "question": "Can I plug a USB drive into the production workstations?",
+    "expected_answer": "USB drives are restricted on production workstations. To transfer files, use the shared network folder at \\\\server\\shared or email the file to yourself.",
+    "expected_tier": "all",
+    "source_file": "data/corpus/company/all/it-helpdesk-faq.md",
+    "role": "user",
+    "permissions": [],
+    "notes": "Policy-style question with a 'no, do this instead' answer. Tests whether the LLM provides the alternative pathway, not just the prohibition.",
+    "expected_snippet": "USB drives are restricted on production workstations. If you need to transfer files,\nuse the shared network folder at \\\\server\\shared or email the file to yourself."
+  },
+  {
+    "id": "all-20",
+    "question": "What version of CorelDRAW does the system accept for print jobs?",
+    "expected_answer": "The system accepts CorelDRAW files in version 2019 or earlier.",
+    "expected_tier": "all",
+    "source_file": "data/corpus/company/all/it-helpdesk-faq.md",
+    "role": "user",
+    "permissions": [],
+    "notes": "Specific version detail. Tests retrieval of constraint-style facts (version compatibility).",
+    "expected_snippet": "- CDR (CorelDRAW, version 2019 or earlier)"
+  },
+  {
+    "id": "printing-02",
+    "question": "What should I do at the start of each shift on the Indigo digital machine?",
+    "expected_answer": "Run a calibration print at the start of each shift on the Indigo digital machine.",
+    "expected_tier": "printing",
+    "source_file": "data/corpus/company/printing/press-operating-procedures.md",
+    "role": "user",
+    "permissions": [
+      "view job"
+    ],
+    "notes": "Specific procedural step from a multi-machine doc. Distractor risk: Heidelberg startup is the more prominent procedure in the same file.",
+    "expected_snippet": "Run a calibration print at the start of each shift"
+  },
+  {
+    "id": "printing-03",
+    "question": "What is the acceptable Delta-E tolerance for brand-color jobs?",
+    "expected_answer": "Brand-color jobs must have a Delta-E tolerance of 1.5 or less. Standard jobs allow up to 3.0.",
+    "expected_tier": "printing",
+    "source_file": "data/corpus/company/printing/press-operating-procedures.md",
+    "role": "user",
+    "permissions": [
+      "view job"
+    ],
+    "notes": "Technical specification with comparative threshold. Faithfulness test — exact numeric tolerance must not be hallucinated.",
+    "expected_snippet": "Acceptable Delta-E tolerance: ≤ 3.0 for standard jobs, ≤ 1.5 for brand-color jobs"
+  },
+  {
+    "id": "printing-04",
+    "question": "When does waste need to be reported to a supervisor?",
+    "expected_answer": "Waste above 3% of job quantity must be reported to the supervisor.",
+    "expected_tier": "printing",
+    "source_file": "data/corpus/company/printing/press-operating-procedures.md",
+    "role": "user",
+    "permissions": [
+      "view job"
+    ],
+    "notes": "Threshold-based policy. Tests precise number recall.",
+    "expected_snippet": "- Waste above 3% of job quantity must be reported to supervisor"
+  },
+  {
+    "id": "printing-05",
+    "question": "What color registration tolerance is required on the Heidelberg's first 5 sheets?",
+    "expected_answer": "Color registration must be within 0.1mm tolerance on the first 5 sheets, otherwise it should be adjusted.",
+    "expected_tier": "printing",
+    "source_file": "data/corpus/company/printing/press-operating-procedures.md",
+    "role": "user",
+    "permissions": [
+      "view job"
+    ],
+    "notes": "Specific tolerance value. Faithfulness test for precise technical measurement.",
+    "expected_snippet": "Verify color registration on the first 5 sheets — adjust if outside 0.1mm tolerance"
+  },
+  {
+    "id": "graphic-design-02",
+    "question": "What is the file naming convention for press-ready files?",
+    "expected_answer": "Press-ready files should be named in the format [JobNumber]_[CustomerName]_[ProductType]_[Version].pdf, for example J2024-0841_GulfMedia_BusinessCard_v3.pdf.",
+    "expected_tier": "graphic design",
+    "source_file": "data/corpus/company/graphic-design/file-handoff-standards.md",
+    "role": "user",
+    "permissions": [
+      "view specification"
+    ],
+    "notes": "Convention with example. Tests whether the LLM preserves exact format syntax including underscores and brackets.",
+    "expected_snippet": "```\n[JobNumber]_[CustomerName]_[ProductType]_[Version].pdf\n```"
+  },
+  {
+    "id": "graphic-design-03",
+    "question": "What PDF format should files be saved in for press?",
+    "expected_answer": "Files should be saved as PDF/X-1a or PDF/X-4 for press.",
+    "expected_tier": "graphic design",
+    "source_file": "data/corpus/company/graphic-design/file-handoff-standards.md",
+    "role": "user",
+    "permissions": [
+      "view specification"
+    ],
+    "notes": "Specific format spec. Tests retrieval of standard names with hyphens (X-1a, X-4).",
+    "expected_snippet": "- [ ] File saved as **PDF/X-1a** or **PDF/X-4** for press"
+  },
+  {
+    "id": "graphic-design-04",
+    "question": "What folders should each job have in the file structure?",
+    "expected_answer": "Each job folder should contain four subfolders: artwork (working files like AI, PSD, CDR), proofs (client-approved proofs), press-ready (final PDFs for production), and reference (client-supplied assets and logos).",
+    "expected_tier": "graphic design",
+    "source_file": "data/corpus/company/graphic-design/file-handoff-standards.md",
+    "role": "user",
+    "permissions": [
+      "view specification"
+    ],
+    "notes": "Hierarchical structure description. Tests whether the LLM preserves the purpose of each subfolder.",
+    "expected_snippet": "Each job should have:\n\n```\njobs/\n  J2024-0841_GulfMedia/\n    artwork/          ← working files (AI, PSD, CDR)\n    proofs/           ← client-approved proofs\n    press-ready/      ← final PDF for production\n    reference/        ← client supplied assets, logos, etc."
+  },
+  {
+    "id": "sales-04",
+    "question": "How much does standard vinyl banner printing cost per square meter?",
+    "expected_answer": "Standard vinyl banner printing costs Tsh 35 per sqm. Backlit vinyl is Tsh 55 per sqm and mesh banner is Tsh 45 per sqm.",
+    "expected_tier": "sales",
+    "source_file": "data/corpus/company/sales/customer-pricing-guide.md",
+    "role": "user",
+    "permissions": [
+      "view invoice",
+      "add quotation"
+    ],
+    "notes": "Pricing fact retrieval. Distractor: the public services doc also mentions banners but with different pricing structure.",
+    "expected_snippet": "- Standard vinyl: Tsh 35 per sqm\n- Backlit vinyl: Tsh 55 per sqm\n- Mesh banner: Tsh 45 per sqm"
+  },
+  {
+    "id": "sales-05",
+    "question": "What is the price for 1,000 brochures?",
+    "expected_answer": "1,000 A4 brochures folded to A5 in full color on 170gsm cost Tsh 680.",
+    "expected_tier": "sales",
+    "source_file": "data/corpus/company/sales/customer-pricing-guide.md",
+    "role": "user",
+    "permissions": [
+      "view invoice",
+      "add quotation"
+    ],
+    "notes": "Specific quantity-price lookup.",
+    "expected_snippet": "- 1,000 brochures: Tsh 680"
+  },
+  {
+    "id": "sales-06",
+    "question": "What surcharge applies to a same-day rush order?",
+    "expected_answer": "Same-day rush orders carry a 40% surcharge.",
+    "expected_tier": "sales",
+    "source_file": "data/corpus/company/sales/customer-pricing-guide.md",
+    "role": "user",
+    "permissions": [
+      "view invoice",
+      "add quotation"
+    ],
+    "notes": "Pricing-tier-specific number. Note: the public services doc mentions a 50% rush surcharge for a different product line — distractor risk.",
+    "expected_snippet": "Same day: +40% surcharge"
+  },
+  {
+    "id": "sales-07",
+    "question": "Why is quotation Q-2024-0843 on hold?",
+    "expected_answer": "Q-2024-0843 from Horizon Advertising is on hold pending clearance of their Tsh 34,050 overdue balance. Sales should not proceed without finance clearance.",
+    "expected_tier": "sales",
+    "source_file": "data/corpus/company/sales/customer-accounts.md",
+    "role": "user",
+    "permissions": [
+      "view customer",
+      "view invoice"
+    ],
+    "notes": "Cross-reference question — answer requires connecting the quotation to the overdue balance reason.",
+    "expected_snippet": "Q-2024-0843 is on hold pending clearance of Horizon Advertising's Tsh 34,050 overdue balance. Do not proceed without finance clearance."
+  },
+  {
+    "id": "finance-02",
+    "question": "What was the petty cash budget and how much was spent in June 2024?",
+    "expected_answer": "The June 2024 petty cash budget was Tsh 2,000 and Tsh 1,155 was spent, leaving Tsh 845 remaining.",
+    "expected_tier": "finance",
+    "source_file": "data/corpus/company/finance/supplier-payment-schedule.md",
+    "role": "user",
+    "permissions": [
+      "view journal entries"
+    ],
+    "notes": "Multi-fact extraction with computed remaining. Tests whether the LLM correctly states the third fact (remaining) which is in the doc.",
+    "expected_snippet": "- Total spent: Tsh 1,155\n- Monthly budget: Tsh 2,000\n- Remaining: Tsh 845"
+  },
+  {
+    "id": "finance-03",
+    "question": "What was the gross profit and gross margin for Q2 2024?",
+    "expected_answer": "Q2 2024 gross profit was Tsh 401,400, with a gross margin of 46.3%.",
+    "expected_tier": "finance",
+    "source_file": "data/corpus/company/finance/q2-2024-budget-report.md",
+    "role": "user",
+    "permissions": [
+      "view journal entries"
+    ],
+    "notes": "Two paired financial metrics. Tests precise number retrieval with units (Tsh, %).",
+    "expected_snippet": "- Revenue Collected: Tsh 865,200\n- Total Expenses: Tsh 463,800\n- **Gross Profit: Tsh 401,400**\n- **Gross Margin: 46.3%**"
+  },
+  {
+    "id": "finance-04",
+    "question": "What is the Q3 2024 revenue forecast?",
+    "expected_answer": "Q3 2024 projected revenue is Tsh 1,050,000 with projected expenses of Tsh 490,000 and projected gross profit of Tsh 560,000.",
+    "expected_tier": "finance",
+    "source_file": "data/corpus/company/finance/q2-2024-budget-report.md",
+    "role": "user",
+    "permissions": [
+      "view journal entries"
+    ],
+    "notes": "Forecast section retrieval. Tests whether the LLM includes related projection figures (expenses, profit) alongside revenue.",
+    "expected_snippet": "Projected revenue: Tsh 1,050,000\nProjected expenses: Tsh 490,000\nProjected gross profit: Tsh 560,000"
+  },
+  {
+    "id": "finance-05",
+    "question": "Which customer account is most overdue and what action is required?",
+    "expected_answer": "Horizon Advertising is the most overdue at Tsh 34,050 and 60+ days. The account should be escalated to collections immediately and no new orders accepted until the balance is cleared.",
+    "expected_tier": "finance",
+    "source_file": "data/corpus/company/finance/q2-2024-budget-report.md",
+    "role": "user",
+    "permissions": [
+      "view journal entries"
+    ],
+    "notes": "Combines a fact lookup with an action recommendation from the doc. Tests retrieval of policy/action language alongside the data.",
+    "expected_snippet": "Action Required: Horizon Advertising account is 60+ days overdue. Escalate to collections immediately. Do not accept new orders until balance is cleared."
+  },
+  {
+    "id": "finance-06",
+    "question": "What was the total invoiced revenue for Q2 2024?",
+    "expected_answer": "Q2 2024 total invoiced revenue was Tsh 945,450, of which Tsh 865,200 was collected and Tsh 80,250 remained outstanding.",
+    "expected_tier": "finance",
+    "source_file": "data/corpus/company/finance/q2-2024-budget-report.md",
+    "role": "user",
+    "permissions": [
+      "view journal entries"
+    ],
+    "notes": "Aggregate financial figure with related context. Tests three-part numeric answer.",
+    "expected_snippet": "Q2 Total: Invoiced Tsh 945,450, Collected Tsh 865,200, Outstanding Tsh 80,250"
+  },
+  {
+    "id": "admin-01",
+    "question": "What is the database backup schedule and how long are backups retained?",
+    "expected_answer": "Database backups run daily at 2 AM and are retained for 30 days. File backups run weekly on Sunday and are retained for 90 days.",
+    "expected_tier": "admin",
+    "source_file": "data/corpus/company/admin/system-access-guide.md",
+    "role": "admin",
+    "permissions": [
+      "system audit"
+    ],
+    "notes": "Operational detail with multiple paired facts (backup type + frequency + retention).",
+    "expected_snippet": "- Database backup: Daily at 2 AM, retained for 30 days\n- File backup: Weekly on Sunday, retained for 90 days"
+  },
+  {
+    "id": "admin-02",
+    "question": "Which permissions require GM approval before they can be granted?",
+    "expected_answer": "GM approval is required for: system audit, change permission, profit and loss, balance sheet, cash flow statement, and approve job requests.",
+    "expected_tier": "admin",
+    "source_file": "data/corpus/company/admin/system-access-guide.md",
+    "role": "admin",
+    "permissions": [
+      "system audit"
+    ],
+    "notes": "List extraction with six items. Tests preservation of bulleted lists in chunking.",
+    "expected_snippet": "Sensitive permissions requiring GM approval:\n- `system audit`\n- `change permission`\n- `profit and loss`\n- `balance sheet`\n- `cash flow statement`\n- `approve job requests`"
+  },
+  {
+    "id": "admin-03",
+    "question": "How many steps are in the onboarding checklist for a new employee?",
+    "expected_answer": "There are five steps in the onboarding checklist: create user account, assign department, assign permissions, set temporary password, and verify login.",
+    "expected_tier": "admin",
+    "source_file": "data/corpus/company/admin/system-access-guide.md",
+    "role": "admin",
+    "permissions": [
+      "system audit"
+    ],
+    "notes": "Counts-and-summary question. Tests whether the LLM provides both the count and a summary of each step.",
+    "expected_snippet": "1. **Create user account** in the billing system (Settings > Users > Add User)\n2. **Assign department** in the user profile\n3. **Assign permissions** based on role and department:\n   - Sales staff: `view job`, `add job`, `view customer`, `view quotation`, `add quotation`\n   - Graphics staff: `view job`, `move job`, `view specification`, `view specification item`\n   - Printing press staff: `view jo"
+  },
+  {
+    "id": "warehouse-02",
+    "question": "How often is a full stocktake conducted?",
+    "expected_answer": "A full stocktake is conducted at the end of each month. Spot checks on high-turnover items are performed weekly.",
+    "expected_tier": "warehouse",
+    "source_file": "data/corpus/company/warehouse/inventory-procedures.md",
+    "role": "user",
+    "permissions": [
+      "view inventory"
+    ],
+    "notes": "Frequency question with a related secondary fact (spot checks). Tests whether the LLM offers the related context.",
+    "expected_snippet": "- Full stocktake conducted at end of each month\n- Spot checks performed weekly on high-turnover items"
+  },
+  {
+    "id": "warehouse-03",
+    "question": "What is the first step when receiving a supplier delivery?",
+    "expected_answer": "The first step is to check the delivery note against the purchase order to verify that quantities and item codes match.",
+    "expected_tier": "warehouse",
+    "source_file": "data/corpus/company/warehouse/inventory-procedures.md",
+    "role": "user",
+    "permissions": [
+      "view inventory"
+    ],
+    "notes": "Procedural-first-step question. Tests retrieval of step 1 in an enumerated procedure.",
+    "expected_snippet": "Check the delivery note against the purchase order — quantities and item codes must match"
+  },
+  {
+    "id": "finance-table-01",
+    "question": "What was the opening stock of Art Papers 90gsm glossy as at 30 August 2025, and who is the supplier?",
+    "expected_answer": "Opening stock was 30,355 sheets of Art Papers 90gsm glossy (size 63.5x91.5 cm), supplied by TRANSPAPER.",
+    "expected_tier": "finance",
+    "source_file": "data/corpus/company/finance/STOCK AS AT 30th AUGUST  2025.xlsx",
+    "role": "user",
+    "permissions": ["view journal entries"],
+    "notes": "Excel row-group retrieval — stock sheet header row 4, first item row 7; tests header propagation + xlsx citation",
+    "expected_snippet": "Art Papers  90Gsm- (Glossy)"
+  },
+  {
+    "id": "finance-table-02",
+    "question": "How many pallets of woodfree paper were in the Hangzhou Fuyang Tairun consignment, and what was the cost per pallet?",
+    "expected_answer": "40 pallets of woodfree paper (19,210 kg); the cost per pallet was 622,668.",
+    "expected_tier": "finance",
+    "source_file": "data/corpus/company/finance/Woodfree papers Nov 2025.xlsx",
+    "role": "user",
+    "permissions": ["view journal entries"],
+    "notes": "Excel label-value sheet (Sheet1) — tests sparse-row serialization",
+    "expected_snippet": "Cost per pallet"
+  },
+  {
+    "id": "finance-table-03",
+    "question": "What are the payment terms and total value on tax invoice TRP250507 from Hangzhou Fuyang Tairun?",
+    "expected_answer": "Invoice TRP250507 totals USD 18,240 (19 MT of woodfree paper at $960/MT); payment terms are a 3,385.8 down payment with the balance due before shipment, incoterms CFR Zanzibar Port.",
+    "expected_tier": "finance",
+    "source_file": "data/corpus/company/finance/TAX invoice (1).pdf",
+    "role": "user",
+    "permissions": ["view journal entries"],
+    "notes": "PDF table + terms fidelity — baseline for the later docling-vs-pypdf /rag-experiment. CAUTION (review pass 1, MAJOR-2): 'Woodfree papers Nov 2025.xlsx' sheet 'Hangzhou Fuyung' carries the SAME invoice number with DIFFERENT figures ($16,545.60 / 17.23 MT — a partial-consignment view). The question anchors on payment terms, which exist ONLY in the PDF; the snippet (3385.8) is PDF-unique. If the answer cites the xlsx figures, that is the corpus contradiction — not a parser failure. This case is in reindex.py's GATE_EXEMPT_CASES: it never gates a cutover (review pass 2, MAJOR-A).",
+    "expected_snippet": "3385.8"
+  }
+]

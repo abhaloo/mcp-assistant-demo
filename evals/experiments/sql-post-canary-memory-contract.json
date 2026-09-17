@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "status": "CONFIRMED",
+  "confirmed_by": "Adeel",
+  "confirmed_at": "2026-08-06",
+  "note": "Slice D D0 gate: D8(b) human+production write only; D9 quarantine (7 P0 flip IDs + sealed holdout fold); D10(a) unit-only default. Recall uses existing SqlMemoryProvider / episodic seams — no invented write_episodic_pair or recall() APIs.",
+  "contract_id": "sql-post-canary-memory",
+  "plan_path": "docs/superpowers/plans/2026-08-06-sql-post-canary-tools-tdd.md",
+  "depends_on": {
+    "p0_contract": "evals/experiments/sql-flip-shape-date-p0-contract.json",
+    "holdout_sealed_path": "evals/experiments/deepseek-v4-flash-0731/sealed/cases_holdout.jsonl",
+    "shape_contract": "evals/experiments/sql-post-canary-shape-contract.json",
+    "sole_attachment": "Slice D owns offline write gate + quarantine; runtime read-only inject via SqlMemoryProvider; does not re-own shape/metric/dry_run"
+  },
+  "observable_outcomes": [
+    "build_episodic_store(source=production) requires human_confirm=True (D8b); eval-tagged writes remain refused.",
+    "Confirmed production structural failures with quarantined case_id never enter the episodic store (7 flip + holdout fold).",
+    "SqlMemoryProvider.for_eval_case / retrieve exclude_case_ids keeps quarantined IDs out of episodic inject even if store is stale.",
+    "Runtime for_runtime_question read path excludes quarantined case_ids (defense in depth).",
+    "No runtime write API; offline CLI + build_episodic_store only."
+  ],
+  "non_goals": [
+    "Eval-pass automatic writes (D8a rejected)",
+    "Invented write_episodic_pair or SqlMemoryProvider.recall APIs",
+    "Training on eval gold SQL",
+    "Live residual canary without D10(b) unlock",
+    "Claim ACCEPTED from unit tests alone"
+  ],
+  "locked_decisions": {
+    "D8": "LOCKED (b) human confirm + production source only",
+    "D9": "LOCKED Yes quarantine",
+    "D10": "LOCKED (a) unit-only default"
+  },
+  "flip_canary_case_ids": [
+    "inv-fully-paid-count",
+    "inv-overpaid-count",
+    "inv-top-customer",
+    "quote-largest",
+    "prod-largest-invoice",
+    "prod-jobs-no-invoice",
+    "orders-open"
+  ],
+  "holdout_fold_case_ids": [
+    "h-inv-last-month",
+    "h-inv-paid-count",
+    "h-rev-last-month",
+    "h-inv-total-this-year",
+    "h-quote-top-customer",
+    "h-orders-cancelled",
+    "h-orders-most-recent",
+    "h-jobs-inprogress-by-dept",
+    "h-jobs-invoiced-count",
+    "h-jobs-cancelled",
+    "h-wh-issues-month",
+    "h-wh-adjustments",
+    "h-cust-with-quotes",
+    "h-fin-expense-month",
+    "h-inv-overdue-60",
+    "h-ar-partial-paid-count",
+    "h-ar-overpaid-count",
+    "h-ar-aging-buckets",
+    "h-ar-top-debtor",
+    "h-ar-overdue-by-customer",
+    "h-ar-overdue-45-count",
+    "h-ar-overdue-total-value",
+    "h-ar-customers-over-60"
+  ],
+  "quarantine_case_ids_note": "Union of flip_canary_case_ids + holdout_fold_case_ids (30 total). Pinned at contract freeze from P0 allowlist + sealed holdout manifest.",
+  "public_test_seams": [
+    "app.rag.episodic.build_episodic_store",
+    "app.rag.episodic.EpisodicStore.from_failure_dir",
+    "app.rag.episodic.load_memory_quarantine_case_ids",
+    "app.rag.sql_memory.SqlMemoryProvider.for_eval_case",
+    "app.rag.sql_memory.SqlMemoryProvider.for_runtime_question",
+    "scripts/build_episodic_store.py --human-confirm",
+    "tests/rag/test_sql_nl_memory.py",
+    "tests/rag/test_sql_memory_quarantine.py"
+  ],
+  "acceptance_oracle": {
+    "D-eval refuse": {
+      "layer": "unit",
+      "producer": "build_episodic_store(..., source=eval) raises; validate_store_data rejects eval without flag"
+    },
+    "D-write quarantine": {
+      "layer": "unit",
+      "producer": "from_failure_dir / build_episodic_store skips or excludes 7-flip + holdout IDs"
+    },
+    "D-read exclude": {
+      "layer": "unit",
+      "producer": "for_eval_case / exclude_case_ids keeps quarantined IDs out of inject"
+    },
+    "D-human-confirm": {
+      "layer": "unit",
+      "producer": "build_episodic_store production without human_confirm raises"
+    }
+  },
+  "acceptance": {
+    "unit": "IMPLEMENTED when D0–D3 green against this contract",
+    "residual_canary": "INTEGRATED only if D10(b) unlocked",
+    "ACCEPTED": "NOT_ACCEPTED without live canary evidence when D10(a) locked"
+  }
+}

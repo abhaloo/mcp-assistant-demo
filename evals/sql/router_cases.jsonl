@@ -1,0 +1,50 @@
+{"id":"rr-iv-01","question":"what is our total outstanding balance?","should_escalate":true,"stratum":"in-vocab-positive","source":"AR vocab: outstanding"}
+{"id":"rr-iv-02","question":"list invoices that are past due","should_escalate":true,"stratum":"in-vocab-positive","source":"AR vocab: past due"}
+{"id":"rr-iv-03","question":"break down receivables by aging bucket","should_escalate":true,"stratum":"in-vocab-positive","source":"AR vocab: receivables+aging"}
+{"id":"rr-iv-04","question":"how much is still owed across all customers?","should_escalate":true,"stratum":"in-vocab-positive","source":"AR vocab: owed"}
+{"id":"rr-iv-05","question":"count invoices more than 90 days overdue","should_escalate":true,"stratum":"in-vocab-positive","source":"AR vocab: overdue"}
+{"id":"rr-iv-06","question":"how many invoices have been fully paid?","should_escalate":true,"stratum":"in-vocab-positive","source":"payment-status: fully paid"}
+{"id":"rr-iv-07","question":"how many invoices are partially paid?","should_escalate":true,"stratum":"in-vocab-positive","source":"payment-status: partially paid"}
+{"id":"rr-iv-08","question":"how many invoices have been overpaid?","should_escalate":true,"stratum":"in-vocab-positive","source":"payment-status: overpaid"}
+{"id":"rr-iv-09","question":"who owes us the most money this month?","should_escalate":true,"stratum":"in-vocab-positive","source":"standing balance: owes (prod-owes-most twin)"}
+{"id":"rr-iv-10","question":"what's our average invoice value?","should_escalate":true,"stratum":"in-vocab-positive","source":"value aggregate: average invoice / invoice value"}
+{"id":"rr-iv-11","question":"what's our largest pending quotation and for whom?","should_escalate":true,"stratum":"in-vocab-positive","source":"value aggregate: largest pending quotation (quote-largest twin)"}
+{"id":"rr-iv-12","question":"show all unpaid invoices","should_escalate":true,"stratum":"in-vocab-positive","source":"AR vocab: unpaid"}
+{"id":"rr-aw-01","question":"list our top debtors","should_escalate":true,"stratum":"adversarial-wording-positive","source":"AR synonym 'debtor' — standing receivable ranking"}
+{"id":"rr-aw-02","question":"who hasn't paid their bills yet?","should_escalate":true,"stratum":"adversarial-wording-positive","source":"unpaid-invoice question, no enumerated keyword"}
+{"id":"rr-aw-03","question":"what's our largest quote and for whom?","should_escalate":true,"stratum":"adversarial-wording-positive","source":"'quote' != 'quotation' (Arm A/B miss)"}
+{"id":"rr-aw-04","question":"show me the biggest quote we've issued","should_escalate":true,"stratum":"adversarial-wording-positive","source":"'quote' + 'biggest' (largest-quotation value)"}
+{"id":"rr-aw-05","question":"how much money is on the books from customers?","should_escalate":true,"stratum":"adversarial-wording-positive","source":"'on the books' = receivables"}
+{"id":"rr-aw-06","question":"what's the total amount due from customers?","should_escalate":true,"stratum":"adversarial-wording-positive","source":"'amount due' = outstanding receivable"}
+{"id":"rr-aw-07","question":"which customers carry the highest balances?","should_escalate":true,"stratum":"adversarial-wording-positive","source":"'balance' standing-receivable ranking, no keyword"}
+{"id":"rr-aw-08","question":"which clients are behind on payments?","should_escalate":true,"stratum":"adversarial-wording-positive","source":"'behind on payments' = overdue receivable"}
+{"id":"rr-aw-09","question":"which single invoice is worth the most this month?","should_escalate":true,"stratum":"adversarial-wording-positive","source":"largest invoice value, 'worth the most' wording"}
+{"id":"rr-aw-10","question":"what's the value of our biggest bill this month?","should_escalate":true,"stratum":"adversarial-wording-positive","source":"largest invoice value, 'biggest bill' wording"}
+{"id":"rr-pp-01","question":"Which customer has the largest outstanding balance?","should_escalate":true,"stratum":"paraphrase-positive","source":"probe-owes-1"}
+{"id":"rr-pp-02","question":"This quarter, which client owes us the most?","should_escalate":true,"stratum":"paraphrase-positive","source":"probe-owes-2"}
+{"id":"rr-pp-03","question":"Across all unpaid invoices, who owes us the most?","should_escalate":true,"stratum":"paraphrase-positive","source":"probe-owes-3"}
+{"id":"rr-pp-04","question":"What's our largest quotation by value?","should_escalate":true,"stratum":"paraphrase-positive","source":"probe-quote-1"}
+{"id":"rr-pp-05","question":"Which pending quote totals the most?","should_escalate":true,"stratum":"paraphrase-positive","source":"probe-quote-2 (KNOWN MISS: 'quote')"}
+{"id":"rr-pp-06","question":"Show the single highest-value quote we've issued.","should_escalate":true,"stratum":"paraphrase-positive","source":"probe-quote-3 (KNOWN MISS: 'quote')"}
+{"id":"rr-cn-01","question":"show our monthly revenue this year","should_escalate":false,"stratum":"containment-negative","source":"bare revenue (B1 containment)"}
+{"id":"rr-cn-02","question":"what's our total revenue this month?","should_escalate":false,"stratum":"containment-negative","source":"bare revenue (B1 containment)"}
+{"id":"rr-cn-03","question":"who are our top 10 customers by revenue this year?","should_escalate":false,"stratum":"containment-negative","source":"revenue ranking, passes on mini"}
+{"id":"rr-cn-04","question":"what was our revenue last month?","should_escalate":false,"stratum":"containment-negative","source":"bare revenue (B1 containment)"}
+{"id":"rr-cn-05","question":"how many orders this week?","should_escalate":false,"stratum":"containment-negative","source":"ops count"}
+{"id":"rr-cn-06","question":"which jobs are in progress?","should_escalate":false,"stratum":"containment-negative","source":"ops status"}
+{"id":"rr-cn-07","question":"list customers in Calgary","should_escalate":false,"stratum":"containment-negative","source":"lookup"}
+{"id":"rr-cn-08","question":"total stock on hand for widgets","should_escalate":false,"stratum":"containment-negative","source":"inventory"}
+{"id":"rr-cn-09","question":"how many invoices did we issue this month?","should_escalate":false,"stratum":"containment-negative","source":"invoice COUNT, not value/AR"}
+{"id":"rr-cn-10","question":"how many quotations did we send this month?","should_escalate":false,"stratum":"containment-negative","source":"quotation COUNT, not largest-value"}
+{"id":"rr-cn-11","question":"what's the status of order 5?","should_escalate":false,"stratum":"containment-negative","source":"lookup"}
+{"id":"rr-cn-12","question":"give me a quote for 500 flyers","should_escalate":false,"stratum":"containment-negative","source":"TRAP: 'quote' as pricing-request verb"}
+{"id":"rr-cn-13","question":"quote me a delivery date for order 5","should_escalate":false,"stratum":"containment-negative","source":"TRAP: 'quote' as verb"}
+{"id":"rr-cn-14","question":"how many customers do we have?","should_escalate":false,"stratum":"containment-negative","source":"count"}
+{"id":"rr-cn-15","question":"list all jobs","should_escalate":false,"stratum":"containment-negative","source":"ops"}
+{"id":"rr-cn-16","question":"what's the average delivery time this week?","should_escalate":false,"stratum":"containment-negative","source":"TRAP: 'average' but not invoice"}
+{"id":"rr-ht-01","question":"how many invoices are more than 60 days overdue?","should_escalate":true,"stratum":"holdout-twin","source":"h-ar-customers-over-60 twin: overdue"}
+{"id":"rr-ht-02","question":"total value of overdue invoices","should_escalate":true,"stratum":"holdout-twin","source":"overdue aggregate value"}
+{"id":"rr-ht-03","question":"which customers have invoices over 60 days outstanding?","should_escalate":true,"stratum":"holdout-twin","source":"outstanding receivable"}
+{"id":"rr-ht-04","question":"show the aging report for receivables","should_escalate":true,"stratum":"holdout-twin","source":"aging + receivables"}
+{"id":"rr-ht-05","question":"who are our worst-paying customers?","should_escalate":true,"stratum":"holdout-twin","source":"overdue/late payer ranking, no keyword (MISS)"}
+{"id":"rr-ht-06","question":"list customers with overdue accounts","should_escalate":true,"stratum":"holdout-twin","source":"overdue"}

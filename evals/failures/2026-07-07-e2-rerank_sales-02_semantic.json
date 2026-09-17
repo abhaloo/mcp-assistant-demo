@@ -1,0 +1,9 @@
+{
+  "run_id": "2026-07-07-e2-rerank",
+  "case_id": "sales-02",
+  "mode": "semantic",
+  "question": "Who is Multi Color Printers' highest-spending customer this year and how much have they spent?",
+  "citation_parsed": 0,
+  "citation_precision": 0.0,
+  "source_file": "data/corpus/company/sales/customer-accounts.md"
+}

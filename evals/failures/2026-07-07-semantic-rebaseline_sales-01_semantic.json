@@ -1,0 +1,9 @@
+{
+  "run_id": "2026-07-07-semantic-rebaseline",
+  "case_id": "sales-01",
+  "mode": "semantic",
+  "question": "What is the per-piece price for 1,000 double-sided business cards?",
+  "citation_parsed": 0,
+  "citation_precision": 0.0,
+  "source_file": "data/corpus/company/sales/customer-pricing-guide.md"
+}

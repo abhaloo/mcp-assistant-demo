@@ -1,0 +1,15 @@
+{
+  "arm": null,
+  "attempt_id": "primary",
+  "cap_usd": 3.0,
+  "completed": 1,
+  "error": "RagExperimentError: provenance pilot evidence failed for prod-nano-high/prod-jobs-june9: cell_ceiling_exceeded",
+  "failure_counts": {},
+  "pid": 78156,
+  "reserved_usd": 0.582406,
+  "spend_usd": 0.00445055,
+  "stage": "error",
+  "stage_name": "dev",
+  "total": 440,
+  "updated_at": "2026-08-04T02:12:47.267571+00:00"
+}

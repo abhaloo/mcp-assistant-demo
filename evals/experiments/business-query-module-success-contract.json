@@ -1,0 +1,228 @@
+{
+  "schema_version": 2,
+  "experiment_id": "business-query-module-v2",
+  "status": "confirmed_not_authorized_to_run",
+  "architecture": "internal_first_cube_dark_raw_projection_last",
+  "frozen_inputs": {
+    "rag_base_commit": "53548151500bd7044add8a873cb339cdabb4d584",
+    "billing_base_commit": "4ccbf80b573edd61d2f166111ce7cf3096282967",
+    "planner_model_route": "record_reasoning",
+    "suite_path": "evals/business_query/v2/cases.dev.jsonl",
+    "oracle_path": "evals/business_query/v2/oracle-results.jsonl",
+    "family_path": "evals/business_query/v2/family-manifest.json",
+    "canary_path": "evals/business_query/v2/canary-case-ids.json",
+    "holdout_suite_path": "evals/business_query/v2/cases.holdout.jsonl",
+    "holdout_oracle_path": "evals/business_query/v2/oracle-results.holdout.jsonl",
+    "holdout_family_path": "evals/business_query/v2/paraphrase-families.holdout.json",
+    "suite_hash": "sha256:4b3411c138e132cf7f898e4feead7877c15a6a2c682a5071298142383c39de36",
+    "oracle_hash": "sha256:566b8530935ccbe0c819c90b72feeea0340b9b143c92fb4e215211ab61c5aad9",
+    "holdout_suite_hash": null,
+    "holdout_oracle_hash": null,
+    "definition_bundle_hash": "sha256:245067f1850768886621bc31426e7932f411206b15057c0c5cb6c452dd6101c7",
+    "policy_manifest_hash": "sha256:5952d8152cd18f1dea5b998a3e2869365fc27283795d3c444d29b115a1fe149b",
+    "historical_legacy_suite_hash": "sha256:31ed3e9330f6baa5c28ea9f9a4ea602954f5372c0755f8c9e80c4fb0c6b046be",
+    "cube_image_digest": null
+  },
+  "suite": {
+    "question_count": 80,
+    "family_count": 20,
+    "variants_per_family": 4,
+    "variants": [
+      "clear_english",
+      "noisy_english",
+      "natural_kiswahili",
+      "code_switched"
+    ],
+    "minimum_job_order_relationship_families": 5,
+    "required_outcomes": [
+      "answered",
+      "clarification_required",
+      "unsupported",
+      "denied",
+      "incomplete"
+    ],
+    "required_special_cases": [
+      "honest_empty",
+      "bounded_list_plus_total",
+      "cash_received_distinct_from_receivable_settlement",
+      "role_aware_ui_payment_status_unsupported",
+      "historical_quotation_unsupported",
+      "current_previous_bundle",
+      "cube_outage_no_raw_fallback",
+      "definition_unsupported_never_raw"
+    ],
+    "eligible_accuracy": {
+      "outcomes": [
+        "answered",
+        "clarification_required"
+      ],
+      "eligible_domains_field": "eligible_domains",
+      "exclude_outcomes": [
+        "unsupported",
+        "denied",
+        "incomplete",
+        "deferred_owner"
+      ],
+      "frozen_with_suite_hash": true,
+      "retune_after_live_scores_forbidden": true
+    },
+    "language_review": {
+      "natural_kiswahili_count": 20,
+      "code_switched_or_elliptical_count": 20,
+      "fluent_human_approval_required": true,
+      "english_back_translation_required": true
+    }
+  },
+  "intent_families": [
+    "customer_last_order",
+    "serena_hotels_last_tissue_order",
+    "last_tissue_job",
+    "jobs_for_order",
+    "order_for_job",
+    "open_customer_orders_count",
+    "jobs_grouped_by_status_or_department",
+    "product_or_category_lookup",
+    "inventory_or_supplier_lookup",
+    "overdue_invoice_list",
+    "accounts_receivable_aging",
+    "invoiced_revenue_period",
+    "ledger_revenue_period",
+    "cash_received_receivable_settlement_and_outstanding",
+    "customers_with_no_orders",
+    "top_debtor_this_month_ambiguity",
+    "bare_revenue_ambiguity",
+    "honest_empty_result",
+    "jobs_done_on_date_unsupported",
+    "financial_or_cross_entity_denial"
+  ],
+  "oracle": {
+    "independent_of_implementation": true,
+    "source": "hand-authored literal results from deterministic Billing counterfactual seeds and approved definitions",
+    "forbidden_sources": [
+      "generated SQL",
+      "Business Definition Bundle output",
+      "Cube output",
+      "implementation fixture generator",
+      "legacy gold query execution"
+    ],
+    "mysql_required_for_acceptance": true,
+    "sqlite_claim_limit": "compiler behavior only",
+    "cube_equality_claim_limit": "differential evidence only"
+  },
+  "scoring": {
+    "dimensions": [
+      "plan_intent",
+      "literal_result",
+      "answer_support",
+      "clarification",
+      "containment",
+      "operations"
+    ],
+    "answer_query_selection": "receipt_answer_query_id",
+    "legacy_last_query_heuristic_forbidden": true,
+    "report_slices": [
+      "family",
+      "language_variant",
+      "domain",
+      "outcome",
+      "adapter"
+    ]
+  },
+  "comparison": {
+    "causal_arms": [
+      "module-control",
+      "module-candidate"
+    ],
+    "principal_policy": "identical_frozen_principal_all_arms",
+    "scorer": "common_observable_answer_and_receipt_scorer",
+    "updated_keycards_diagnostic_only": true,
+    "shared_equality_keys": [
+      "suite_hash",
+      "family_manifest_hash",
+      "oracle_hash",
+      "scoring_spec_hash",
+      "bundle_hash",
+      "catalog_hash",
+      "db_snapshot_hash",
+      "db_content_manifest_hash",
+      "principal_hash",
+      "contract_hash",
+      "controlled_route_card_hash"
+    ],
+    "per_arm_identities": [
+      "module_id",
+      "adapter_id",
+      "prompt_hash",
+      "protocol_id",
+      "route_id"
+    ],
+    "preregistered_treatment_identities": [
+      "prompt_hash",
+      "protocol_id"
+    ]
+  },
+  "legacy_benchmark": {
+    "arms": [
+      "legacy-as-shipped",
+      "legacy-clean"
+    ],
+    "release_eligible": false,
+    "reason": "no real executor event bridge; structurally release-ineligible until both arms mint resolvable execution events"
+  },
+  "acceptance": {
+    "eligible_dev_accuracy_min": 0.9,
+    "eligible_denominator": "frozen suite labels: outcome in {answered, clarification_required} and domain in eligible_domains",
+    "overall_delta_percentage_points_min": 10,
+    "development_resampling_unit": "intent_family",
+    "holdout_delta_percentage_points_min": 10,
+    "holdout_resampling_unit": "intent_family",
+    "holdout_ci_lower_bound_strictly_above": 0,
+    "regression_columns_must_all_pass": true,
+    "domain_slice_regression_percentage_points_max": 5,
+    "small_slice_additional_misses_max": 1,
+    "family_stratum_accuracy_spread_percentage_points_max": 5,
+    "clarification_precision_min": 0.9,
+    "clarification_recall_min": 0.9,
+    "clarification_gate_min_ambiguous_variants": 32,
+    "clarification_small_n_policy": "HOLD with Wilson intervals if frozen ambiguous set below min",
+    "model_calls_median_max": 1,
+    "model_calls_p95_max": 2,
+    "normal_data_executions_max": 1,
+    "raw_projection_attempts_exact": 1,
+    "semantic_latency_p95_ratio_to_legacy_max": 0.7,
+    "cost_p95_ratio_to_legacy_max": 1.0,
+    "security_leaks_max": 0,
+    "completed_answer_receipt_rate": 1.0,
+    "json_sse_parity_rate": 1.0
+  },
+  "anti_overfitting": {
+    "legacy_42_cases_immutable": true,
+    "sealed_holdout_hidden_during_development": true,
+    "case_ids_in_production_forbidden": true,
+    "gold_literals_in_production_forbidden": true,
+    "benchmark_phrase_regexes_in_production_forbidden": true,
+    "family_level_scoring_required": true,
+    "counterfactual_seed_rows_required": true,
+    "same_suite_baseline_required": true,
+    "contamination_scan": {
+      "roots": [
+        "rag:app",
+        "billing:app/Authorization/BusinessQuery",
+        "billing:database/ai-business-definitions"
+      ],
+      "text_file_globs": [
+        "**/*"
+      ],
+      "reject_eval_ids": true,
+      "reject_eval_phrases": true
+    }
+  },
+  "authorization": {
+    "planning_and_local_tests": true,
+    "paid_legacy_baseline": false,
+    "paid_dev_campaign": false,
+    "paid_holdout": false,
+    "live_canary": false,
+    "production_rollout": false
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "status": "CONFIRMED",
+  "confirmed_by": "Adeel",
+  "confirmed_at": "2026-08-06",
+  "note": "Slice B B0 gate: D4c pre-inject and D5c intent-gated already LOCKED (Pass-1c). Catalog/resolver/graph wiring deferred to B1–B3. Residual canary gated by D10(a) unit-only default.",
+  "contract_id": "sql-post-canary-metric",
+  "plan_path": "docs/superpowers/plans/2026-08-06-sql-post-canary-tools-tdd.md",
+  "depends_on": {
+    "shape_contract": "evals/experiments/sql-post-canary-shape-contract.json",
+    "slice_a_status": "IMPLEMENTED (unit+fake graph) per shape contract",
+    "sole_attachment": "Slice B owns YAML metric definitions + pre-inject node; does not re-own shape grain or P0 calendar bind"
+  },
+  "observable_outcomes": [
+    "Metric-intent question → billing metric definition block pre-injected on path into generate_query (D4c middleware node; not LLM-selectable tool).",
+    "No metric intent (ordinary Ask SQL) → SoftAbsent; clarify_required=False; no CLARIFY storm.",
+    "Metric intent + zero catalog hits or ambiguous alias (N matches) → ClarifyRequired → AIMessage(CLARIFY:) with no tool_calls.",
+    "generate_query bind set unchanged: {sql_db_query, sql_calendar_windows} — pre-inject must not widen bind_tools.",
+    "Catalog entries are definitions only (id, aliases, definition, caveats, optional column_hints) — never gold SQL or eval-case SQL paste."
+  ],
+  "non_goals": [
+    "Gold SQL in YAML or prompt inject",
+    "Third LLM-selectable tool / ToolNode / bind widen (D4a/D4b rejected)",
+    "Replacing or removing ESCALATED_PAYMENT_RULES in same slice (B4 hold until holdout-neutral deprecation slice)",
+    "Replacing REVENUE_METRIC_RULES prose in same slice",
+    "Scorer / sql_exec_match.compare edits",
+    "CapturingCallback new tool-name filter entries (D4c pre-inject bypasses tool events)",
+    "Claim ACCEPTED from unit+fake alone",
+    "Residual canary without Adeel unlock of D10(b)"
+  ],
+  "locked_decisions": {
+    "note": "D4–D5 LOCKED Pass-1c; do not re-lock at B0",
+    "D4": "LOCKED (c) pre-inject only",
+    "D5": "LOCKED (c) intent-gated",
+    "D10": "LOCKED (a) unit-only default"
+  },
+  "metric_ids": [
+    "fully_paid",
+    "overpaid",
+    "partially_paid",
+    "revenue_invoiced",
+    "revenue_ledger",
+    "overdue",
+    "outstanding",
+    "standing_balance",
+    "open_orders",
+    "unbilled_jobs"
+  ],
+  "catalog_schema": {
+    "required_keys_per_metric": ["id", "aliases", "definition", "caveats"],
+    "optional_keys": ["column_hints"],
+    "forbid": ["gold_sql", "eval_case_ids", "fenced_sql_statements", "sqlglot_parseable_select"]
+  },
+  "resolver_outcomes": {
+    "MetricHit": "alias match → definition payload for pre-inject",
+    "SoftAbsent": "no metric intent → no inject; clarify_required=false",
+    "ClarifyRequired": "metric intent + 0 or N>1 ambiguous hits → CLARIFY"
+  },
+  "public_test_seams": [
+    "app.rag.metrics.billing_metrics.load_catalog",
+    "app.rag.chains.sql_metric_lookup.resolve_metric",
+    "build_sql_graph pre-inject node (before generate_query; D4c only)",
+    "tests/rag/metrics/test_billing_metrics_catalog.py",
+    "tests/rag/chains/test_sql_metric_lookup.py",
+    "tests/rag/chains/test_sql_graph.py (bind set unchanged after B3)"
+  ],
+  "acceptance_oracle": {
+    "B-catalog schema / no gold leak": {
+      "layer": "unit",
+      "producer": "tests/rag/metrics/test_billing_metrics_catalog.py"
+    },
+    "B-intent soft-absent": {
+      "layer": "unit",
+      "producer": "tests/rag/chains/test_sql_metric_lookup.py — non-metric Q → SoftAbsent"
+    },
+    "B-intent miss CLARIFY": {
+      "layer": "unit",
+      "producer": "tests/rag/chains/test_sql_metric_lookup.py — intent+0/N → ClarifyRequired"
+    },
+    "B-pre-inject wired": {
+      "layer": "fake graph",
+      "producer": "metric-intent Q: definition block on path into generate_query; bind unchanged"
+    }
+  },
+  "acceptance": {
+    "unit_fake": "IMPLEMENTED when B1–B3 green against this contract",
+    "residual_canary": "INTEGRATED only if D10(b) unlocked",
+    "ACCEPTED": "NOT_ACCEPTED without residual canary evidence when D10(a) locked — never from unit alone"
+  }
+}

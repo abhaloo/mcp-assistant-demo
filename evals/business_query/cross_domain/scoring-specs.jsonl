@@ -1,0 +1,6 @@
+{"id": "xd-10", "compare_columns": ["invoiced_revenue"], "note": "period labels differ between the oracle and compare_to presentation"}
+{"id": "xd-11", "compare_columns": ["invoices_count", "bill_outstanding"], "note": "bucket labels come from the bundle, not the oracle"}
+{"id": "xd-13", "compare_columns": ["work_number", "status"], "note": "the answer lists jobs; the invoice columns are the oracle's own check"}
+{"id": "xd-14", "compare_columns": ["work_number", "status"], "note": "the answer lists jobs; order_number is the oracle's own check"}
+{"id": "xd-20", "compare_columns": ["name"], "note": "kind is a synthetic tag; quantity is NULL on job rows"}
+{"id": "xd-21", "compare_columns": ["jobs_count", "orders_count"], "note": "the ratio is computed by the reader from the two facts"}

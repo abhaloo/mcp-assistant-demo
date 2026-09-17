@@ -1,0 +1,4 @@
+id: deepseek-direct-max
+extends: deepseek-direct-high
+reasoning_effort: max
+est_answer_usd: 0.008

@@ -1,0 +1,23 @@
+{
+  "run_id": "b1-surgical",
+  "case_id": "quote-largest",
+  "split": "dev",
+  "question": null,
+  "chat_deployment": "gpt-4.1",
+  "pass_rate": "0/5",
+  "reasons": [
+    "value_mismatch",
+    "invalid_sql",
+    "invalid_sql",
+    "invalid_sql",
+    "invalid_sql"
+  ],
+  "diagnosis": "Escalated to gpt-4.1 (B1 routing fired) but FAILURE MODE DEGRADED: baseline on mini was value_mismatch (valid-but-wrong); on gpt-4.1 it is invalid_sql 4/5. Root cause is NOT the money formula (it uses the correct invoice-value expression). It is (a) hallucinated non-existent columns bills.reference / bills.number in 4/5 runs -> invalid_sql, and (b) an unbound 'b.type = ?' placeholder for the quotation-type filter. The 1 run that used a real column (b.due_date) executed but returned the wrong row (value_mismatch). So this is a grounding gap on QUOTATION IDENTIFICATION (which column flags a quotation vs invoice, what 'pending' means), not routing and not the value formula. Deferred to B2.",
+  "generated_sql_scrubbed": [
+    "SELECT b.id, b.due_date, c.name, SUM((bi.price*bi.quantity - COALESCE(bi.discount,0)) * (1 + COALESCE(bi.tax,0)/100)) AS value\nFROM bills b\nJOIN bill_items bi ON bi.bill_id = b.id\nJOIN customers c ON c.id = b.customer_id\nWHERE b.type = ?\nGROUP BY b.id, b.due_date, c.name\nORDER BY value DESC\nLIMIT 1;",
+    "SELECT b.id, b.reference, c.name, SUM((bi.price*bi.quantity - COALESCE(bi.discount,0)) * (1 + COALESCE(bi.tax,0)/100)) AS value\nFROM bills b\nJOIN bill_items bi ON bi.bill_id = b.id\nJOIN customers c ON c.id = b.customer_id\nWHERE b.type = ?\nGROUP BY b.id, c.name, b.reference\nORDER BY value DESC\nLIMIT 1;",
+    "SELECT b.id, b.reference, c.name, SUM((bi.price*bi.quantity - COALESCE(bi.discount,0)) * (1 + COALESCE(bi.tax,0)/100)) AS value\nFROM bills b\nJOIN bill_items bi ON bi.bill_id = b.id\nJOIN customers c ON b.customer_id = c.id\nWHERE b.type = ?\nGROUP BY b.id, b.reference, c.name\nORDER BY value DESC\nLIMIT 1;",
+    "SELECT b.id, b.reference, c.name, SUM((bi.price*bi.quantity - COALESCE(bi.discount,0)) * (1 + COALESCE(bi.tax,0)/100)) AS value\nFROM bills b\nJOIN bill_items bi ON bi.bill_id = b.id\nJOIN customers c ON c.id = b.customer_id\nWHERE b.type = ?\nGROUP BY b.id, b.reference, c.name\nORDER BY value DESC\nLIMIT 1;",
+    "SELECT b.id, b.number, c.name, SUM((bi.price*bi.quantity - COALESCE(bi.discount,0)) * (1 + COALESCE(bi.tax,0)/100)) AS value\nFROM bills b\nJOIN bill_items bi ON bi.bill_id = b.id\nJOIN customers c ON c.id = b.customer_id\nWHERE b.type = ?\nGROUP BY b.id, b.number, c.name\nORDER BY value DESC\nLIMIT 1;"
+  ]
+}

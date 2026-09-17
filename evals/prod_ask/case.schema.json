@@ -1,0 +1,593 @@
+{
+  "$defs": {
+    "AccuracySpec": {
+      "additionalProperties": false,
+      "properties": {
+        "oracle": {
+          "$ref": "#/$defs/OracleRef"
+        },
+        "required_facts": {
+          "items": {
+            "$ref": "#/$defs/LiteralFact"
+          },
+          "title": "Required Facts",
+          "type": "array"
+        },
+        "forbidden_facts": {
+          "items": {
+            "$ref": "#/$defs/LiteralFact"
+          },
+          "title": "Forbidden Facts",
+          "type": "array"
+        },
+        "judge_claim": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Claim a judge must verify when the answer is a synthesis, not a literal.",
+          "title": "Judge Claim"
+        }
+      },
+      "required": [
+        "oracle"
+      ],
+      "title": "AccuracySpec",
+      "type": "object"
+    },
+    "CitationSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "expect_parsed": {
+          "title": "Expect Parsed",
+          "type": "boolean"
+        },
+        "supporting_source_files": {
+          "description": "Basenames of documents that genuinely contain the claim.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Supporting Source Files",
+          "type": "array"
+        },
+        "min_cited": {
+          "default": 0,
+          "title": "Min Cited",
+          "type": "integer"
+        },
+        "max_cited": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Cited"
+        }
+      },
+      "required": [
+        "expect_parsed"
+      ],
+      "title": "CitationSpec",
+      "type": "object"
+    },
+    "FollowUpSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "expect_any": {
+          "title": "Expect Any",
+          "type": "boolean"
+        },
+        "question_resources": {
+          "description": "Manifest resource names the question itself names.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Question Resources",
+          "type": "array"
+        },
+        "max_suggestions": {
+          "default": 3,
+          "title": "Max Suggestions",
+          "type": "integer"
+        },
+        "expected_varies_by_permission": {
+          "default": false,
+          "description": "Whether the paired case must produce a different suggestion set.",
+          "title": "Expected Varies By Permission",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "expect_any"
+      ],
+      "title": "FollowUpSpec",
+      "type": "object"
+    },
+    "HelpfulnessSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "user_need": {
+          "minLength": 1,
+          "title": "User Need",
+          "type": "string"
+        },
+        "must_enable": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Must Enable",
+          "type": "array"
+        },
+        "min_score": {
+          "default": 3,
+          "maximum": 5,
+          "minimum": 1,
+          "title": "Min Score",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "user_need"
+      ],
+      "title": "HelpfulnessSpec",
+      "type": "object"
+    },
+    "LiteralFact": {
+      "additionalProperties": false,
+      "description": "One checkable fact. Numbers compare numerically, text compares as a phrase.",
+      "properties": {
+        "label": {
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "text",
+            "number"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Text"
+        },
+        "number": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Number"
+        },
+        "aliases": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Aliases",
+          "type": "array"
+        }
+      },
+      "required": [
+        "label",
+        "kind"
+      ],
+      "title": "LiteralFact",
+      "type": "object"
+    },
+    "OracleRef": {
+      "additionalProperties": false,
+      "description": "Where the truth for this case comes from, independent of the ask route.",
+      "properties": {
+        "kind": {
+          "enum": [
+            "corpus",
+            "sql",
+            "none"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "corpus_file": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Corpus File"
+        },
+        "locator": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Heading or line a human re-reads to re-derive the fact.",
+          "title": "Locator"
+        },
+        "sql_case_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Row key in evals/prod_ask/oracle-results.jsonl.",
+          "title": "Sql Case Id"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "OracleRef",
+      "type": "object"
+    },
+    "PrincipalSpec": {
+      "additionalProperties": false,
+      "description": "The caller a case runs as. Permissions drive the retrieval tier filter.",
+      "properties": {
+        "label": {
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "role": {
+          "minLength": 1,
+          "title": "Role",
+          "type": "string"
+        },
+        "permissions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Permissions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "label",
+        "role"
+      ],
+      "title": "PrincipalSpec",
+      "type": "object"
+    },
+    "RichTextSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "structure": {
+          "$ref": "#/$defs/StructureSpec"
+        },
+        "currency_tokens": {
+          "description": "Closed allowlist of currency labels permitted beside a money amount.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Currency Tokens",
+          "type": "array"
+        },
+        "forbidden_currency_symbols": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Forbidden Currency Symbols",
+          "type": "array"
+        },
+        "oracle_amounts": {
+          "description": "Money values from the oracle that must render with a currency token.",
+          "items": {
+            "type": "number"
+          },
+          "title": "Oracle Amounts",
+          "type": "array"
+        }
+      },
+      "required": [
+        "structure"
+      ],
+      "title": "RichTextSpec",
+      "type": "object"
+    },
+    "StructureSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "table",
+            "list",
+            "prose"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "min_body_rows": {
+          "default": 0,
+          "title": "Min Body Rows",
+          "type": "integer"
+        },
+        "min_columns": {
+          "default": 0,
+          "title": "Min Columns",
+          "type": "integer"
+        },
+        "min_items": {
+          "default": 0,
+          "title": "Min Items",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "StructureSpec",
+      "type": "object"
+    },
+    "StubDoc": {
+      "additionalProperties": false,
+      "description": "One fixture chunk the stub retriever may return, tagged with its tier.",
+      "properties": {
+        "source_file": {
+          "minLength": 1,
+          "title": "Source File",
+          "type": "string"
+        },
+        "access_tier": {
+          "minLength": 1,
+          "title": "Access Tier",
+          "type": "string"
+        },
+        "chunk_index": {
+          "minimum": 0,
+          "title": "Chunk Index",
+          "type": "integer"
+        },
+        "content": {
+          "minLength": 1,
+          "title": "Content",
+          "type": "string"
+        },
+        "section": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Section"
+        }
+      },
+      "required": [
+        "source_file",
+        "access_tier",
+        "chunk_index",
+        "content"
+      ],
+      "title": "StubDoc",
+      "type": "object"
+    },
+    "StubSpec": {
+      "additionalProperties": false,
+      "description": "Scripted generation output plus the tier-tagged corpus the stub serves.\n\nThe scripted answer is a fixture of what a model said. Stub mode therefore\nproves what the route DOES with that text, never that the text was correct.",
+      "properties": {
+        "docs": {
+          "items": {
+            "$ref": "#/$defs/StubDoc"
+          },
+          "title": "Docs",
+          "type": "array"
+        },
+        "model_answer": {
+          "minLength": 1,
+          "title": "Model Answer",
+          "type": "string"
+        }
+      },
+      "required": [
+        "model_answer"
+      ],
+      "title": "StubSpec",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "review_status": {
+      "default": "draft",
+      "enum": [
+        "draft",
+        "approved"
+      ],
+      "title": "Review Status",
+      "type": "string"
+    },
+    "dimensions": {
+      "items": {
+        "enum": [
+          "accuracy",
+          "citations",
+          "rich_text",
+          "follow_ups",
+          "helpfulness"
+        ],
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Dimensions",
+      "type": "array"
+    },
+    "question": {
+      "minLength": 1,
+      "title": "Question",
+      "type": "string"
+    },
+    "principal": {
+      "$ref": "#/$defs/PrincipalSpec"
+    },
+    "route": {
+      "enum": [
+        "semantic",
+        "structured",
+        "both"
+      ],
+      "title": "Route",
+      "type": "string"
+    },
+    "expected_access_tiers": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Expected Access Tiers",
+      "type": "array"
+    },
+    "modes": {
+      "items": {
+        "enum": [
+          "stub",
+          "replay",
+          "live"
+        ],
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Modes",
+      "type": "array"
+    },
+    "pair_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Twin case asking the same question as a different principal.",
+      "title": "Pair Id"
+    },
+    "grounding": {
+      "minLength": 1,
+      "title": "Grounding",
+      "type": "string"
+    },
+    "accuracy": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AccuracySpec"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "citations": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CitationSpec"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "rich_text": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RichTextSpec"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "follow_ups": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/FollowUpSpec"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "helpfulness": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/HelpfulnessSpec"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "stub": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/StubSpec"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "id",
+    "dimensions",
+    "question",
+    "principal",
+    "route",
+    "modes",
+    "grounding"
+  ],
+  "title": "prod_ask eval case",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Generated from app.eval.ask_route.case.ProdAskCase. Regenerate after any model change."
+}

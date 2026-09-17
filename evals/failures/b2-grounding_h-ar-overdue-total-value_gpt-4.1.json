@@ -1,0 +1,22 @@
+{
+  "run_id": "b2-grounding",
+  "case_id": "h-ar-overdue-total-value",
+  "split": "holdout",
+  "question": null,
+  "chat_deployment": "gpt-4.1",
+  "pass_rate": "0/5",
+  "reasons": [
+    "value_mismatch",
+    "value_mismatch",
+    "value_mismatch",
+    "value_mismatch",
+    "value_mismatch"
+  ],
+  "diagnosis": "Floored at 0/5 on gpt-4.1 in BOTH B1 (b1-surgical) and B2 (b2-grounding) \u2014 B2's snapshot/invoice_number prose did NOT touch it (not a B2 target) and did NOT change its approach: every run computes total overdue receivable as SUM(invoice_value - payments) over invoices with due_date < frozen-today, all returning value_mismatch (valid SQL, wrong number). The model's shape is the canonical balance pattern, so the gap is NOT the per-invoice value/payment formula. Likely a definitional mismatch vs gold on the OVERDUE TOTAL: which bills count (Invoice only? include partial?), the overdue boundary, or whether overpaid invoices net against the total. Sibling to inv-overdue-30 (dev, aging-band #45). Candidate for a future grounding lever on the overdue-aggregate definition \u2014 NOT this lever.",
+  "generated_sql_scrubbed": [
+    "SELECT ROUND(SUM(x.amt - x.paid), 0) AS total_overdue\nFROM (\n  SELECT b.id, b.due_date,\n         SUM((bi.price*bi.quantity - COALESCE(bi.discount,0)) * (1 + COALESCE(bi.tax,0)/100)) AS amt,\n         COALESCE((SELECT SUM(j.debit) FROM journals j JOIN accounts a ON a.id = j.account_id\n                   WHERE j.bill_id = b.id AND j.debit > 0\n                   AND a.account_type IN (?,?,?,?)), 0) AS paid\n  FROM bills b JOIN bill_items bi ON bi.bill_id = b.id\n  WHERE b.type = ? GROUP BY b.id, b.due_date ) x\nWHERE x.amt - x.paid > 0.01 AND x.due_date < CURDATE();",
+    "SELECT ROUND(SUM(x.amt - x.paid), 0) AS overdue_total\nFROM (\n  SELECT b.id, b.due_date,\n         SUM((bi.price*bi.quantity - COALESCE(bi.discount,0)) * (1 + COALESCE(bi.tax,0)/100)) AS amt,\n         COALESCE((SELECT SUM(j.debit) FROM journals j JOIN accounts a ON a.id = j.account_id\n                   WHERE j.bill_id = b.id AND j.debit > 0\n                   AND a.account_type IN (?,?,?,?)), 0) AS paid\n  FROM bills b JOIN bill_items bi ON bi.bill_id = b.id\n  WHERE b.type = ? GROUP BY b.id, b.due_date ) x\nWHERE x.amt - x.paid > 0.01 AND x.due_date < CURDATE();",
+    "SELECT SUM(x.amt - x.paid) AS total_overdue\nFROM (\n  SELECT b.id, b.due_date,\n         SUM((bi.price*bi.quantity - COALESCE(bi.discount,0)) * (1 + COALESCE(bi.tax,0)/100)) AS amt,\n         COALESCE((SELECT SUM(j.debit) FROM journals j JOIN accounts a ON a.id = j.account_id\n                   WHERE j.bill_id = b.id AND j.debit > 0\n                   AND a.account_type IN (?,?,?,?)), 0) AS paid\n  FROM bills b JOIN bill_items bi ON bi.bill_id = b.id\n  WHERE b.type = ? GROUP BY b.id, b.due_date ) x\nWHERE x.amt - x.paid > 0.01 AND x.due_date < CURDATE();",
+    "SELECT ROUND(SUM(x.amt - x.paid), 0) AS overdue_total\nFROM (\n  SELECT b.id, b.due_date,\n         SUM((bi.price*bi.quantity - COALESCE(bi.discount,0)) * (1 + COALESCE(bi.tax,0)/100)) AS amt,\n         COALESCE((SELECT SUM(j.debit) FROM journals j JOIN accounts a ON a.id = j.account_id\n                   WHERE j.bill_id = b.id AND j.debit > 0\n                   AND a.account_type IN (?,?,?,?)), 0) AS paid\n  FROM bills b JOIN bill_items bi ON bi.bill_id = b.id\n  WHERE b.type = ? \n  GROUP BY b.id, b.due_date \n) x\nWHERE x.amt - x.paid > 0.01 AND x.due_date < CURDATE();"
+  ]
+}

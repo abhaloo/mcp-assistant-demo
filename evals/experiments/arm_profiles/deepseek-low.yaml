@@ -1,0 +1,18 @@
+id: deepseek-low
+arm_name: forced-deepseek
+provider: openrouter
+requested_model: deepseek/deepseek-v4-flash-0731
+allowed_actual_models:
+  - deepseek/deepseek-v4-flash-20260731
+harness_output_cap_tokens: 65536
+attested_output_cap_tokens: 65536
+reasoning_effort: low
+request_timeout_s: 300
+# SQL sealed parity uses null timeout; RAG keeps request_timeout_s above.
+sql_request_timeout_s: null
+deployment_attestation:
+  source: openrouter_generation_metadata
+  model: deepseek/deepseek-v4-flash-0731
+  allowed_response_models:
+    - deepseek/deepseek-v4-flash-20260731
+est_answer_usd: 0.0015

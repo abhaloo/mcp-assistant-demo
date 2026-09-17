@@ -1,0 +1,21 @@
+{
+  "status": "HOLD",
+  "reasons": [
+    "infra failure rate 0.4000 > 0.02"
+  ],
+  "details": {
+    "infra_failure_rate": 0.4
+  },
+  "projection": {
+    "answer_calls": 9.0,
+    "answer_usd": 0.0315,
+    "judge_usd": 0.09,
+    "total_usd": 0.1215,
+    "phase_budget_usd": 6.0
+  },
+  "spent_usd_estimate": 0.092405,
+  "n_answers": 9,
+  "infra_failures": 0,
+  "factual_missing": 3,
+  "faithfulness_missing": 3
+}

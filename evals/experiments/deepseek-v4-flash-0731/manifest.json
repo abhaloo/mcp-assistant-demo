@@ -1,0 +1,27 @@
+{
+  "experiment_id": "deepseek-v4-flash-0731",
+  "frozen_at": "2026-07-31",
+  "git_base_sha": "7f98e54383150a5b946515513b1f237ab051c29c",
+  "rag": {
+    "case_count": 62,
+    "case_ids_path": "evals/experiments/deepseek-v4-flash-0731/rag_case_ids.json",
+    "case_ids_sha256": "1271869f3a76a54426815c9b32a006049aa39282512d287ee171374903c3d1cf",
+    "source_run": "evals/runs/2026-07-07-semantic-rebaseline/summary.json"
+  },
+  "sql_dev": {
+    "case_count": 42,
+    "path": "evals/sql/cases.jsonl",
+    "sha256": "71bd75518977fab3fe216b093ae9ec99b886907af2fddd92ffaae0a2f8dad302"
+  },
+  "sql_holdout": {
+    "case_count": 23,
+    "path": "evals/experiments/deepseek-v4-flash-0731/sealed/cases_holdout.jsonl",
+    "sha256": "1756a233cdf1dd144c9149bcd3df30c7837b4ef38b0715dd537a9578a79d111a"
+  },
+  "prices_yaml_sha256": "f8fd5088842ec07f19180eed9a652a0155efb4d3637723dfdbaaa2373e4c9c69",
+  "defaults": {
+    "azure_chat_deployment": "gpt-4o-mini",
+    "azure_chat_escalation_deployment": "gpt-5.6-luna",
+    "experiment_model": "deepseek/deepseek-v4-flash-0731"
+  }
+}

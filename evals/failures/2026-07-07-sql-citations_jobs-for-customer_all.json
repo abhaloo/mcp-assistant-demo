@@ -1,0 +1,23 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": null,
+  "case_id": "jobs-for-customer",
+  "role": "sales",
+  "mode": "all",
+  "run_id": "2026-07-07-sql-citations",
+  "question": "show all jobs for Zanzibar Serena Hotel this year",
+  "gold_sql": "SELECT COALESCE(wo.work_number, wo.id) AS job, wo.status FROM work_orders wo JOIN customers c ON c.id=wo.customer_id WHERE c.name='ZANZIBAR SERENA HOTEL' AND YEAR(wo.created_at)=2026",
+  "agent_sql_scrubbed": "SELECT w.id, w.work_number, w.title, w.description, w.created_at, w.status \nFROM work_orders w \nJOIN customers c ON w.customer_id = c.id \nWHERE c.name = ? \nAND YEAR(w.created_at) = 2026;",
+  "error_category": null,
+  "reason": "value_mismatch",
+  "valid_sql_rate": 1.0,
+  "pass_rate": 0.0,
+  "flaky": false,
+  "chat_deployment": "gpt-4o-mini",
+  "failure_kind": null,
+  "lever": null,
+  "root_cause": null,
+  "rule": null
+}

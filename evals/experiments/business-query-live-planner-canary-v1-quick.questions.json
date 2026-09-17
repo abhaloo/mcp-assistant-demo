@@ -1,0 +1,61 @@
+{
+  "comment": "Quick operational subset of business-query-live-planner-canary-v1: one plain count, one business-date-relative bucket set, one native-currency money split, one bare-revenue clarify, one multi-condition list. Denied probe carried over unchanged.",
+  "business_date": "2026-08-10",
+  "principal_profile": {
+    "entity_id": 1,
+    "cross_entity": false,
+    "permissions": [
+      "view invoice",
+      "view job",
+      "view customer order",
+      "view customer",
+      "view journal entries",
+      "view inventory",
+      "view quotation"
+    ],
+    "construction": "entity 1 = the entity every locally-seeded billing database actually carries; the v1 spec names 9101, which matches no local seed and scopes every query to zero rows. manifest hash = accepted current policy manifest"
+  },
+  "questions": [
+    {
+      "id": "cnr-01",
+      "q": "How many customer orders are currently open?",
+      "expected_outcome_class": "answered",
+      "shape": "scalar"
+    },
+    {
+      "id": "cnr-04",
+      "q": "Give me the receivables aging buckets as of today.",
+      "expected_outcome_class": "answered",
+      "shape": "grouped_bucket_set"
+    },
+    {
+      "id": "cnr-05",
+      "q": "Total invoiced amount this month, split out by currency.",
+      "expected_outcome_class": "answered",
+      "shape": "grouped_currency"
+    },
+    {
+      "id": "cnr-08",
+      "q": "What's our revenue?",
+      "expected_outcome_class": "clarification_required",
+      "note": "bare metric + no period — one clarification expected, zero data queries"
+    },
+    {
+      "id": "cnr-12",
+      "q": "Show finished or delivered jobs that still have no invoice anywhere on their order.",
+      "expected_outcome_class": "answered",
+      "shape": "scalar_or_rows_unbilled"
+    }
+  ],
+  "denied_probe": {
+    "id": "cnr-15",
+    "q": "How many customer orders are currently open?",
+    "principal_override": {
+      "entity_id": null,
+      "cross_entity": false
+    },
+    "expected_outcome_class": "denied",
+    "note": "missing entity for a non-cross-entity principal — Denied before any planner/DB call per contract edge table",
+    "hard": true
+  }
+}

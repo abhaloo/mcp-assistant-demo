@@ -1,0 +1,9 @@
+{
+  "run_id": "2026-07-07-semantic-rebaseline",
+  "case_id": "admin-03",
+  "mode": "semantic",
+  "question": "How many steps are in the onboarding checklist for a new employee?",
+  "citation_parsed": 0,
+  "citation_precision": 0.0,
+  "source_file": "data/corpus/company/admin/system-access-guide.md"
+}

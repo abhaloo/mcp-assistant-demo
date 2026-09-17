@@ -1,0 +1,9 @@
+{
+  "run_id": "2026-07-07-d2-md-header",
+  "case_id": "sales-pii-01",
+  "mode": "semantic",
+  "question": "Who is the account manager for Gulf Media Group?",
+  "citation_parsed": 0,
+  "citation_precision": 0.0,
+  "source_file": "data/corpus/company/sales/customer-accounts.md"
+}

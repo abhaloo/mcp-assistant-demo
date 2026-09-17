@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "version": 2,
+  "source": "parent Success Contract intent families, frozen before baseline",
+  "families": [
+    "customer_last_order",
+    "serena_hotels_last_tissue_order",
+    "last_tissue_job",
+    "jobs_for_order",
+    "order_for_job",
+    "open_customer_orders_count",
+    "jobs_grouped_by_status_or_department",
+    "product_or_category_lookup",
+    "inventory_or_supplier_lookup",
+    "overdue_invoice_list",
+    "accounts_receivable_aging",
+    "invoiced_revenue_period",
+    "ledger_revenue_period",
+    "cash_received_receivable_settlement_and_outstanding",
+    "customers_with_no_orders",
+    "top_debtor_this_month_ambiguity",
+    "bare_revenue_ambiguity",
+    "honest_empty_result",
+    "jobs_done_on_date_unsupported",
+    "financial_or_cross_entity_denial",
+    "open_orders_for_top_customers"
+  ],
+  "relationship_families": [
+    "customer_last_order",
+    "serena_hotels_last_tissue_order",
+    "last_tissue_job",
+    "jobs_for_order",
+    "order_for_job",
+    "open_orders_for_top_customers"
+  ],
+  "variants": [
+    "clear_english",
+    "noisy_english",
+    "natural_kiswahili",
+    "code_switched"
+  ],
+  "required_deterministic_examples": [
+    "open_customer_orders_count",
+    "serena_hotels_last_tissue_order",
+    "last_tissue_job",
+    "jobs_for_order",
+    "order_for_job",
+    "customers_with_no_orders",
+    "accounts_receivable_aging",
+    "cash_received_receivable_settlement_and_outstanding",
+    "honest_empty_result",
+    "jobs_done_on_date_unsupported",
+    "financial_or_cross_entity_denial",
+    "open_orders_for_top_customers"
+  ],
+  "frozen_eligible_domains": ["business_query"],
+  "minimum_relationship_families": 5,
+  "deferred_until_gold_reapproval": [
+    "bq-02",
+    "bq-03",
+    "bq-07",
+    "bq-10",
+    "bq-14",
+    "bq-16"
+  ]
+}

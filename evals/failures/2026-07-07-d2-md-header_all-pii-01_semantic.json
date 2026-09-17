@@ -1,0 +1,9 @@
+{
+  "run_id": "2026-07-07-d2-md-header",
+  "case_id": "all-pii-01",
+  "mode": "semantic",
+  "question": "What is the main contact phone number for Multi Color Printers?",
+  "citation_parsed": 0,
+  "citation_precision": 0.0,
+  "source_file": "data/corpus/company/all/services-and-capabilities.md"
+}

@@ -1,0 +1,25 @@
+id: prod-mini
+arm_name: prod-mini
+provider: azure
+requested_model: gpt-4o-mini
+allowed_actual_models:
+  - gpt-4o-mini
+  - gpt-4o-mini-2024-07-18
+harness_output_cap_tokens: 16384
+attested_output_cap_tokens: null
+reasoning_effort: null
+deployment_attestation:
+  source: azure_resource_manager
+  observed_at: "2026-08-01"
+  resource_group: mcp-rag-qa
+  account: mcp-rag-qa-openai-service
+  deployment: gpt-4o-mini
+  model_name: gpt-4o-mini
+  model_version: "2024-07-18"
+  deployment_state: Running
+  provisioning_state: Succeeded
+  sku: GlobalStandard
+  allowed_response_models:
+    - gpt-4o-mini
+    - gpt-4o-mini-2024-07-18
+est_answer_usd: 0.003

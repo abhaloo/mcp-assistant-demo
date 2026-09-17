@@ -1,0 +1,23 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": null,
+  "case_id": "prod-jobs-no-invoice",
+  "role": "finance",
+  "mode": "all",
+  "run_id": "2026-07-07-sql-citations",
+  "question": "which jobs this week haven't had invoices created for them",
+  "gold_sql": "SELECT COALESCE(wo.work_number, wo.id) AS job, c.name FROM work_orders wo JOIN customers c ON c.id = wo.customer_id WHERE wo.bill_id IS NULL AND YEARWEEK(wo.created_at, 1) = YEARWEEK('2026-06-16', 1)",
+  "agent_sql_scrubbed": "SELECT wo.id, wo.work_number, wo.title, wo.created_at \nFROM work_orders wo \nLEFT JOIN bills b ON wo.id = b.bill_id \nWHERE wo.created_at >= ? \nAND wo.created_at < ? \nAND b.id IS NULL;",
+  "error_category": "OperationalError",
+  "reason": "invalid_sql",
+  "valid_sql_rate": 0.0,
+  "pass_rate": 0.0,
+  "flaky": false,
+  "chat_deployment": "gpt-4o-mini",
+  "failure_kind": null,
+  "lever": null,
+  "root_cause": null,
+  "rule": null
+}

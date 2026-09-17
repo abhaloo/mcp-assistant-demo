@@ -1,0 +1,23 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": null,
+  "case_id": "inv-overdue-30",
+  "role": "finance",
+  "mode": "all",
+  "run_id": "2026-07-07-sql-citations",
+  "question": "which invoices are more than 30 days overdue?",
+  "gold_sql": "SELECT COUNT(*) FROM (SELECT b.id, b.due_date, b.customer_id, SUM((bi.price*bi.quantity-COALESCE(bi.discount,0))*(1+COALESCE(bi.tax,0)/100)) AS amt, COALESCE((SELECT SUM(j.debit) FROM journals j JOIN accounts a ON a.id=j.account_id WHERE j.bill_id=b.id AND a.account_type IN ('OPERATING_EXPENSE','PAYABLE','CASH','BANK') AND j.debit>0),0) AS paid FROM bills b JOIN bill_items bi ON bi.bill_id=b.id WHERE b.type='Invoice' GROUP BY b.id, b.due_date, b.customer_id) x WHERE x.amt-x.paid > 0.01 AND x.due_date < '2026-05-17'",
+  "agent_sql_scrubbed": "SELECT b.id, b.invoice_number, b.due_date, c.name AS customer_name, \n  ROUND(SUM((bi.price*bi.quantity - COALESCE(bi.discount,0)) * (1 + COALESCE(bi.tax,0)/100)), 0) AS invoice_value,\n  COALESCE((SELECT SUM(j.debit) FROM journals j JOIN accounts a ON a.id = j.account_id\n            WHERE j.bill_id = b.id AND j.debit > 0\n            AND a.account_type IN (?,?,?,?)), 0) AS payments\nFROM bills b\nJOIN bill_items bi ON bi.bill_id = b.id\nJOIN customers c ON c.id = b.customer_id\nWHERE b.type = ? AND b.due_date < CURDATE() - INTERVAL 30 DAY\nGROUP BY b.id, b.invoice_number, b.due_date, c.name\nHAVING invoice_value - payments > 0.01\nORDER BY b.due_date ASC\nLIMIT 20;",
+  "error_category": null,
+  "reason": "row_count_mismatch",
+  "valid_sql_rate": 1.0,
+  "pass_rate": 0.0,
+  "flaky": false,
+  "chat_deployment": "gpt-4.1",
+  "failure_kind": null,
+  "lever": null,
+  "root_cause": null,
+  "rule": null
+}

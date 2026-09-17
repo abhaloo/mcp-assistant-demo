@@ -1,0 +1,79 @@
+{
+  "case_id": "bq-08",
+  "family": "product_or_category_lookup",
+  "phrasing": "noisy_english",
+  "expected": "clarification_required",
+  "actual": "unsupported",
+  "outcome_match": false,
+  "literal_match": null,
+  "passed": false,
+  "detail": "expected clarification_required, got unsupported",
+  "receipt_valid": true,
+  "receipt": null,
+  "answer_query_id": null,
+  "reason_code": "member_not_found",
+  "message": "that isn't available to ask here",
+  "diagnostics": [],
+  "correlation_id": "bqeval-bq-08",
+  "planner_ms": 17331.9,
+  "planner_repair_count": 0,
+  "sql_ms": null,
+  "sql": null,
+  "rows_returned": null,
+  "reasoning": "We need to answer \"how much art paper 300gsm did we use this month\" in JSON.\n\nWe need to parse the question. \"art paper 300gsm\" is a product name probably. \"did we use\" suggests units sold? or maybe stock receipts? Actually \"use\" in context of a business that sells art paper? Hmm. The card has \"product_units_sold\" measure: Units sold on invoice lines. \"how much ... did we use this month\" could be translated to \"how many units of product 'art paper 300gsm' were sold this month\"? Or \"used\" could refer to consumption/inventory? There is inventory resource with stock receipts, not usage. There is no \"usage\" measure. There is product_units_sold. The question says \"this month\" which is a period. We need to pick a time dimension. Product units sold has allowed_time_axes: invoice_item.sold_at. So we can use that.\n\n\"how much\" -> could be asking for a total count/amount. Product units sold is a count of units, so \"how much\" can be \"sum of units sold\". Grain: \"how much\" without \"by\" is scalar with exactly one measure and no grouping. But we have a product filter. Dimensions: none, measures: [\"product_units_sold\"], filters: product_name contains \"art paper 300gsm\". Period: this month relative? The card has no explicit period rule but \"this month\" is a relative range from closed list. We need time_dimension. The measure's allowed_time_axes is invoice_item.sold_at. We can set period.time_dimension=\"invoice_item.sold_at\", relative=\"this_month\", granularity=\"month\"? The period object expects relative, maybe \"this_month\" is a relative range. Also we might need a dimension? No.\n\nBut wait: the measure product_units_sold is kind-locked to invoice_item. The question is about \"use\" — maybe in this business \"use\" means jobs consumed? But no measure for job materials. Most likely they intend sales of that product. The resource is invoice_item. There is product_name dimension. So plan: scalar, measures [\"product_units_sold\"], filters [{\"member\":\"product_name\",\"operator\":\"contains\",\"values\":[\"art paper 300gsm\"]}], period {\"time_dimension\":\"invoice_item.sold_at\",\"relative\":\"this_month\",\"granularity\":\"month\"} maybe \"granularity\" not needed? The example includes granularity. But period rules: relative range from closed list, \"this_month\". Should be fine.\n\nCheck grain: scalar. No dimensions. Limit? For scalar, limit should be null maybe? The instructions say limit must be between 1 and 50 inclusive, but for scalar plans maybe limit is null? Actually the response examples show for plan with grouped grain includes limit. For scalar, likely limit not needed. The protocol says \"limit rule: limit must be an integer between 1 and 50, inclusive.\" But if grain scalar, there are no rows, so limit not applicable. In the synthetic examples, scalar plan likely has no limit. In the template, the response has limit field. We can set limit to 1? Usually for scalar, no limit. Let's think: We return one JSON object with plan fields: measures, dimensions, bucket_set, filters, having, period, grain, order, limit. For scalar, order and limit irrelevant. Could set \"order\": null, \"limit\": null? The protocol says \"Return every top-level key exactly as shown.\" So top-level keys: action, plan, clarification_question, unsupported_reason. Within plan, likely need all keys? The example shows a plan with all keys. We can set order:null, limit:null for scalar. But \"Limit rule: limit must be an integer between 1 and 50, inclusive.\" Hmm maybe for scalar we set limit to 1? Let's check the protocol: \"Grain rules: ... 'how many/count/how much/total' -> grain 'scalar' with exactly one measure and no grouping.\" It doesn't mention limit. I'd set limit to null? The instruction \"limit must be an integer between 1 and 50, inclusive\" might apply only when order/limit used. But to be safe, we need a valid output. There is no example for scalar. We can set \"limit\":null. But if validator expects integer, maybe 1. However for scalar, there is just one number, so limit doesn't matter. I'll set limit to null. Also order can be null.\n\nNow, \"this month\" — business date is 2026-07-15, so this month is July 2026. We use relative \"this_month\" and the time dimension invoice_item.sold_at. Does product_units_sold have allowed_time_axes \"invoice_item.sold_at\", so okay.\n\nOne nuance: \"art paper 300gsm\" might also be a product on inventory? But \"use\" could mean stock issued? There is no measure for inventory usage. The card's measure product_units_sold is the only \"units\" metric. So it's reasonable.\n\nShould we filter currency? No, product_units_sold is not monetary.\n\nQuestion: \"how much art paper 300gsm did we use this month\" — \"how much\" could be \"how many units\" or \"how much money\"? Since \"art paper 300gsm\" is a product, \"how much\" likely units. We choose product_units_sold.\n\nDimension? None. But maybe product_name should be in dimensions? No, \"how much\" scalar. Filter on product name.\n\nPeriod: relative \"this_month\" with time_dimension invoice_item.sold_at. In the protocol, \"this_month\" is probably a valid relative range. Also maybe \"granularity\": \"month\"? The example shows \"granularity\":\"month\" for relative this_month. Actually in examples, period has \"relative\":\"this_month\",\"granularity\":\"month\". But the period rule says \"a relative range from the closed list, 'on', 'since', or 'between'.\" So we can set relative:\"this_month\". Granularity? Might not be necessary, but example includes. I'll include granularity:\"month\".\n\nWait, the user's question is \"this month\" not \"this month by product\" so scalar.\n\nLet's construct JSON.\n\n{\n  \"action\":\"plan\",\n  \"plan\":{\n    \"measures\":[\"product_units_sold\"],\n    \"dimensions\":[],\n    \"bucket_set\":null,\n    \"filters\":{\"all\":[{\"member\":\"product_name\",\"operator\":\"contains\",\"values\":[\"art paper 300gsm\"]}]},\n    \"having\":null,\n    \"period\":{\"time_dimension\":\"invoice_item.sold_at\",\"relative\":\"this_month\",\"granularity\":\"month\"},\n    \"grain\":\"scalar\",\n    \"order\":null,\n    \"limit\":null\n  },\n  \"clarification_question\":null,\n  \"unsupported_reason\":null\n}\n\nCheck if filters need to be \"filters\":{\"all\":[...]} or \"filters\":[ ... ]? The example shows \"filters\":{\"all\":[...]}. So yes.\n\nBut also there might be multiple product names? \"art paper 300gsm\" is a fragment, so contains.\n\nShould we use product_name with operator \"contains\"? Yes, identifier rules: When a person names a product, they type a fragment of stored name. Use contains. Good.\n\nAny other filters? \"this month\" is period, not filter. Good.\n\nOne thing: \"did we use\" might mean \"sold\" or \"used in production\"? There is no usage measure. If unsupported, we'd have to say unsupported. But I think product_units_sold is the closest. We should not clarify because the question names measure? Actually \"use\" is ambiguous but there is no alternative. The instructions say never clarify if names measure/entity/period clearly. Here the entity is product, period this month. The measure? \"use\" is not a measure name. But we can map to units sold. The capability card has no \"usage\" measure. Could be that \"use\" refers to inventory receipts? No. I'll go with plan.\n\nLet's ensure top-level keys exactly: action, plan, clarification_question, unsupported_reason. Yes.\n\nFinal output.",
+  "tokens_prompt": 6145,
+  "tokens_completion": 1885,
+  "tokens_reasoning": 1772,
+  "capture_planner_payload": true,
+  "planner_raw_payload": null,
+  "failure_layer": "resolver",
+  "failure_detail": "member_not_found",
+  "missing_members": [
+    "product_name"
+  ],
+  "plan": {
+    "measures": [
+      "product_units_sold"
+    ],
+    "dimensions": [],
+    "bucket_set": null,
+    "filters": {
+      "all": [
+        {
+          "member": "product_name",
+          "operator": "contains",
+          "values": [
+            "?"
+          ]
+        }
+      ]
+    },
+    "having": null,
+    "period": {
+      "time_dimension": "invoice_item.sold_at",
+      "relative": "this_month",
+      "on": null,
+      "since": null,
+      "between": null,
+      "granularity": "month"
+    },
+    "grain": "scalar",
+    "order": [],
+    "limit": 20
+  },
+  "grain_check_site": null,
+  "provider_http_retry_budget": 6,
+  "resolver_query_id": "rq_4e47d009fdebbda1e28604c9620d5452",
+  "resolver_started": true,
+  "resolver_disposition": "none",
+  "resolver_match_count": 0,
+  "resolver_version": "s1-resolver-v1",
+  "resolver_value_type": "product",
+  "rows": null,
+  "row_count": null,
+  "result_member_schema": null,
+  "returned_row_count": null,
+  "total_row_count": null,
+  "truncated": null,
+  "latency_ms": 17371
+}

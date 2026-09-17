@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "status": "CONFIRMED",
+  "confirmed_by": "Adeel",
+  "confirmed_at": "2026-08-04T00:00:00Z",
+  "observable_outcome": "Shared SQL tool-output caps (max_rows + max_chars with explicit truncation marker) plus pre-call run budgets that emit operational_failure=budget_exceeded without scoring as wrong SQL (including after n_sql_attempts>0); native-high DeepSeek reasoning replay preserved; live UNSUPPORTED_FOR_SQL flip deferred to post-cap evidence.",
+  "non_goals": [
+    "Do not truncate or strip reasoning_content",
+    "Do not disable thinking to fake equal-spend under deepseek-direct-high",
+    "Do not implement sophisticated history compaction",
+    "Do not use cell-ceiling inflation as the primary fix",
+    "Do not claim live matrix acceptance from unit tests",
+    "Do not flip live deepseek_direct_sql_estimand to UNSUPPORTED_FOR_SQL in this slice"
+  ],
+  "locked_decisions": {
+    "sql_tool_max_rows": 20,
+    "sql_tool_max_chars": 12000,
+    "sql_tool_max_chars_source": "interim_or_measured_p95",
+    "estimand": "native_high",
+    "budget_exceeded_scoring": "operational_even_after_sql_attempts",
+    "systematic_over_budget_policy": "document_only_defer_live_unsupported_flip"
+  },
+  "evidence": {
+    "motivating_agent": "bc-aa1ac292",
+    "case_id": "jobs-finished-unbilled",
+    "approx_prompt_tokens": 507000,
+    "approx_llm_calls": 4,
+    "approx_cell_usd": 0.072
+  },
+  "public_test_seams": [
+    "SqlToolOutputBudget",
+    "format_sql_tool_result",
+    "AnonymizingSQLDatabase.run_bounded",
+    "build_sql_graph",
+    "SqlRunBudget",
+    "SqlContextBudgetExceeded",
+    "budget_exceeded"
+  ]
+}

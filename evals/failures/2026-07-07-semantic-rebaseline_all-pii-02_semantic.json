@@ -1,0 +1,9 @@
+{
+  "run_id": "2026-07-07-semantic-rebaseline",
+  "case_id": "all-pii-02",
+  "mode": "semantic",
+  "question": "What number can I call for urgent IT helpdesk issues?",
+  "citation_parsed": 0,
+  "citation_precision": 0.0,
+  "source_file": "data/corpus/company/all/it-helpdesk-faq.md"
+}

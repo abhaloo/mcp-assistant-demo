@@ -1,0 +1,23 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": null,
+  "case_id": "jobs-busiest-customer",
+  "role": "sales",
+  "mode": "all",
+  "run_id": "2026-07-07-sql-citations",
+  "question": "which customer has the most jobs this month?",
+  "gold_sql": "SELECT c.name, COUNT(*) n FROM work_orders wo JOIN customers c ON c.id=wo.customer_id WHERE wo.created_at>='2026-06-01' AND wo.created_at<'2026-07-01' GROUP BY c.name ORDER BY n DESC LIMIT 1",
+  "agent_sql_scrubbed": "SELECT name FROM customers WHERE id = 295;",
+  "error_category": null,
+  "reason": "value_mismatch",
+  "valid_sql_rate": 1.0,
+  "pass_rate": 0.8,
+  "flaky": true,
+  "chat_deployment": "gpt-4o-mini",
+  "failure_kind": null,
+  "lever": null,
+  "root_cause": null,
+  "rule": null
+}

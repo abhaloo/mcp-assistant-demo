@@ -1,0 +1,9 @@
+{
+  "run_id": "2026-07-07-d2-md-header",
+  "case_id": "finance-04",
+  "mode": "semantic",
+  "question": "What is the Q3 2024 revenue forecast?",
+  "citation_parsed": 0,
+  "citation_precision": 0.0,
+  "source_file": "data/corpus/company/finance/q2-2024-budget-report.md"
+}

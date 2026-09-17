@@ -1,0 +1,23 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": null,
+  "case_id": "fin-revenue-month",
+  "role": "finance",
+  "mode": "all",
+  "run_id": "2026-07-07-sql-citations",
+  "question": "what's our total revenue this month?",
+  "gold_sql": "SELECT ROUND(SUM(j.credit-j.debit),0) FROM journals j JOIN accounts a ON a.id=j.account_id WHERE a.account_type IN ('OPERATING_REVENUE','NON_OPERATING_REVENUE') AND j.post_date>='2026-06-01' AND j.post_date<'2026-07-01'",
+  "agent_sql_scrubbed": "SELECT ROUND(SUM((bi.price * bi.quantity - COALESCE(bi.discount, 0)) * (1 + COALESCE(bi.tax, 0) / 100)), 0) AS total_revenue\nFROM bills b JOIN bill_items bi ON bi.bill_id = b.id\nWHERE b.type = ? AND MONTH(b.created_at) = MONTH(CURDATE()) AND YEAR(b.created_at) = YEAR(CURDATE())",
+  "error_category": null,
+  "reason": "value_mismatch",
+  "valid_sql_rate": 1.0,
+  "pass_rate": 0.6,
+  "flaky": true,
+  "chat_deployment": "gpt-4o-mini",
+  "failure_kind": null,
+  "lever": null,
+  "root_cause": null,
+  "rule": null
+}

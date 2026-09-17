@@ -1,0 +1,60 @@
+{
+  "manifest_version": "2.0.0",
+  "workload_id": "ask-v2-perf-workload-24",
+  "description": "Frozen 24-turn performance workload for Ask AI v2 (8 measured turns, each repeated 3 times).",
+  "measured_turn_ids": [
+    "fu-01",
+    "fu-02",
+    "hp-02",
+    "hp-02b",
+    "cl-01",
+    "cl-02",
+    "pg-01",
+    "sq-01"
+  ],
+  "repetitions_per_turn": 3,
+  "total_measured_turns": 24,
+  "p95_formula": {
+    "method": "nearest_rank",
+    "formula": "ceil(0.95 * total_measured_turns)",
+    "rank_1_indexed": 23,
+    "index_0_indexed": 22
+  },
+  "failure_policy": {
+    "treat_timeouts_as_failures": true,
+    "drop_incomplete_from_denominator": false,
+    "max_hard_deadline_ms": 25000,
+    "target_p95_latency_ms": 10000,
+    "max_p95_regression_pct": 10.0
+  },
+  "warmup_policy": {
+    "unscored_warmup_per_route_allowed": true,
+    "max_warmup_turns_per_route": 1
+  },
+  "workload_items": [
+    { "turn_index": 1, "case_id": "fu-01", "repetition": 1, "persona": "print", "description": "Follow-up chips inspection" },
+    { "turn_index": 2, "case_id": "fu-01", "repetition": 2, "persona": "print", "description": "Follow-up chips inspection (rep 2)" },
+    { "turn_index": 3, "case_id": "fu-01", "repetition": 3, "persona": "print", "description": "Follow-up chips inspection (rep 3)" },
+    { "turn_index": 4, "case_id": "fu-02", "repetition": 1, "persona": "store", "description": "Follow-up chip click and continuation" },
+    { "turn_index": 5, "case_id": "fu-02", "repetition": 2, "persona": "store", "description": "Follow-up chip click and continuation (rep 2)" },
+    { "turn_index": 6, "case_id": "fu-02", "repetition": 3, "persona": "store", "description": "Follow-up chip click and continuation (rep 3)" },
+    { "turn_index": 7, "case_id": "hp-02", "repetition": 1, "persona": "store", "description": "Ambiguous question scoping" },
+    { "turn_index": 8, "case_id": "hp-02", "repetition": 2, "persona": "store", "description": "Ambiguous question scoping (rep 2)" },
+    { "turn_index": 9, "case_id": "hp-02", "repetition": 3, "persona": "store", "description": "Ambiguous question scoping (rep 3)" },
+    { "turn_index": 10, "case_id": "hp-02b", "repetition": 1, "persona": "store", "description": "Clarification replay and idempotency join" },
+    { "turn_index": 11, "case_id": "hp-02b", "repetition": 2, "persona": "store", "description": "Clarification replay and idempotency join (rep 2)" },
+    { "turn_index": 12, "case_id": "hp-02b", "repetition": 3, "persona": "store", "description": "Clarification replay and idempotency join (rep 3)" },
+    { "turn_index": 13, "case_id": "cl-01", "repetition": 1, "persona": "store", "description": "Clarification prompt with option choices" },
+    { "turn_index": 14, "case_id": "cl-01", "repetition": 2, "persona": "store", "description": "Clarification prompt with option choices (rep 2)" },
+    { "turn_index": 15, "case_id": "cl-01", "repetition": 3, "persona": "store", "description": "Clarification prompt with option choices (rep 3)" },
+    { "turn_index": 16, "case_id": "cl-02", "repetition": 1, "persona": "store", "description": "Clarification reply choice on SQL route" },
+    { "turn_index": 17, "case_id": "cl-02", "repetition": 2, "persona": "store", "description": "Clarification reply choice on SQL route (rep 2)" },
+    { "turn_index": 18, "case_id": "cl-02", "repetition": 3, "persona": "store", "description": "Clarification reply choice on SQL route (rep 3)" },
+    { "turn_index": 19, "case_id": "pg-01", "repetition": 1, "persona": "admin", "description": "Next-results page execution" },
+    { "turn_index": 20, "case_id": "pg-01", "repetition": 2, "persona": "admin", "description": "Next-results page execution (rep 2)" },
+    { "turn_index": 21, "case_id": "pg-01", "repetition": 3, "persona": "admin", "description": "Next-results page execution (rep 3)" },
+    { "turn_index": 22, "case_id": "sq-01", "repetition": 1, "persona": "store", "description": "SQL-only document offline reporting" },
+    { "turn_index": 23, "case_id": "sq-01", "repetition": 2, "persona": "store", "description": "SQL-only document offline reporting (rep 2)" },
+    { "turn_index": 24, "case_id": "sq-01", "repetition": 3, "persona": "store", "description": "SQL-only document offline reporting (rep 3)" }
+  ]
+}

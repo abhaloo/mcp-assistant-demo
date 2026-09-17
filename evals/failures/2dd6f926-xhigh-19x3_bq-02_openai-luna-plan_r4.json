@@ -1,0 +1,77 @@
+{
+  "case_id": "bq-02",
+  "family": "serena_hotels_last_tissue_order",
+  "phrasing": "code_switched",
+  "expected": "answered",
+  "actual": "unsupported",
+  "outcome_match": false,
+  "literal_match": false,
+  "passed": false,
+  "detail": "expected answered, got unsupported",
+  "receipt_valid": true,
+  "receipt": null,
+  "answer_query_id": null,
+  "reason_code": "no_join_path",
+  "message": "plan cannot be executed safely",
+  "diagnostics": [],
+  "correlation_id": "bqeval-bq-02",
+  "planner_ms": 8169.8,
+  "planner_repair_count": 0,
+  "sql_ms": null,
+  "sql": null,
+  "rows_returned": null,
+  "reasoning": null,
+  "tokens_prompt": 6043,
+  "tokens_completion": 1012,
+  "tokens_reasoning": 907,
+  "capture_planner_payload": true,
+  "planner_raw_payload": null,
+  "failure_layer": null,
+  "failure_detail": null,
+  "missing_members": [],
+  "plan": {
+    "measures": [
+      "customer_last_order_date"
+    ],
+    "dimensions": [],
+    "bucket_set": null,
+    "filters": {
+      "all": [
+        {
+          "member": "customer.name",
+          "operator": "contains",
+          "values": [
+            "?"
+          ]
+        },
+        {
+          "member": "product_name",
+          "operator": "contains",
+          "values": [
+            "?"
+          ]
+        }
+      ]
+    },
+    "having": null,
+    "period": null,
+    "grain": "scalar",
+    "order": [],
+    "limit": 20
+  },
+  "grain_check_site": null,
+  "provider_http_retry_budget": 6,
+  "resolver_query_id": null,
+  "resolver_started": false,
+  "resolver_disposition": null,
+  "resolver_match_count": null,
+  "resolver_version": null,
+  "resolver_value_type": null,
+  "rows": null,
+  "row_count": null,
+  "result_member_schema": null,
+  "returned_row_count": null,
+  "total_row_count": null,
+  "truncated": null,
+  "latency_ms": 8171
+}

@@ -1,0 +1,42 @@
+{
+  "comment": "Live planner canary question set — freshly authored operational probes. ZERO overlap with evals/sql/cases.jsonl or any gold artifact. expected_outcome_class is a soft operational expectation (outcome type only, never a result value) — divergence is recorded, not failed, except where marked hard.",
+  "business_date": "2026-08-10",
+  "principal_profile": {
+    "entity_id": 9101,
+    "cross_entity": false,
+    "permissions": [
+      "view invoice",
+      "view job",
+      "view customer order",
+      "view customer",
+      "view journal entries",
+      "view inventory",
+      "view quotation"
+    ],
+    "construction": "entity 9101 = the oracle seeder's entity; manifest hash = accepted current policy manifest"
+  },
+  "questions": [
+    {"id": "cnr-01", "q": "How many customer orders are currently open?", "expected_outcome_class": "answered", "shape": "scalar"},
+    {"id": "cnr-02", "q": "Count of jobs per department for jobs started during July 2026.", "expected_outcome_class": "answered", "shape": "grouped"},
+    {"id": "cnr-03", "q": "List the invoices that are more than a month past their due date, with what is still owed on each.", "expected_outcome_class": "answered", "shape": "entity_rows"},
+    {"id": "cnr-04", "q": "Give me the receivables aging buckets as of today.", "expected_outcome_class": "answered", "shape": "grouped_bucket_set"},
+    {"id": "cnr-05", "q": "Total invoiced amount this month, split out by currency.", "expected_outcome_class": "answered", "shape": "grouped_currency"},
+    {"id": "cnr-06", "q": "How much actual cash landed in our accounts during the last week?", "expected_outcome_class": "answered", "shape": "scalar_cash_received"},
+    {"id": "cnr-07", "q": "What portion of receivables got settled in July, including discounts and non-cash reductions?", "expected_outcome_class": "answered", "shape": "scalar_receivable_settlement"},
+    {"id": "cnr-08", "q": "What's our revenue?", "expected_outcome_class": "clarification_required", "note": "bare metric + no period — one clarification expected, zero data queries"},
+    {"id": "cnr-09", "q": "How many price quotes did we send out during 2025?", "expected_outcome_class": "unsupported", "note": "quotation history — deliberately unsupported", "hard": true},
+    {"id": "cnr-10", "q": "How many stock receipt documents were recorded this quarter?", "expected_outcome_class": "answered", "shape": "scalar"},
+    {"id": "cnr-11", "q": "Which three customers carry the highest outstanding balance right now?", "expected_outcome_class": "answered", "shape": "grouped_topn"},
+    {"id": "cnr-12", "q": "Show finished or delivered jobs that still have no invoice anywhere on their order.", "expected_outcome_class": "answered", "shape": "scalar_or_rows_unbilled"},
+    {"id": "cnr-13", "q": "Which products brought in the most invoiced revenue this year?", "expected_outcome_class": "answered", "shape": "grouped_topn_product_join", "note": "exercises the invoice→invoice_item join"},
+    {"id": "cnr-14", "q": "How many invoices were issued on February 30th this year?", "expected_outcome_class": "clarification_or_unsupported", "note": "impossible date — must not execute a data query with an invented date"}
+  ],
+  "denied_probe": {
+    "id": "cnr-15",
+    "q": "How many customer orders are currently open?",
+    "principal_override": {"entity_id": null, "cross_entity": false},
+    "expected_outcome_class": "denied",
+    "note": "missing entity for a non-cross-entity principal — Denied before any planner/DB call per contract edge table",
+    "hard": true
+  }
+}

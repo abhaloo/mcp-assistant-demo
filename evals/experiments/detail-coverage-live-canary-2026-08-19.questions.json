@@ -1,0 +1,123 @@
+{
+  "comment": "Live planner canary question set testing AI Record Detail Coverage changes (2026-08-19). Exercises work_order_item planning grid vocabulary, job department scoping, customer orders, inventory receipts, AR aging, and fail-closed refusal boundaries.",
+  "business_date": "2026-07-15",
+  "principal_profile": {
+    "entity_id": 1,
+    "cross_entity": false,
+    "permissions": [
+      "view invoice",
+      "view job",
+      "view customer order",
+      "view customer",
+      "view journal entries",
+      "view inventory",
+      "view quotation"
+    ],
+    "construction": "entity 1 = primary tenant; manifest hash = accepted current policy manifest"
+  },
+  "questions": [
+    {
+      "id": "canary-01",
+      "q": "How many units of products were planned on jobs this month?",
+      "expected_outcome_class": "answered",
+      "shape": "scalar",
+      "note": "Tests product_units_used measure over work_order_item planning grid lines"
+    },
+    {
+      "id": "canary-02",
+      "q": "Count of jobs per department for jobs started during July 2026.",
+      "expected_outcome_class": "answered",
+      "shape": "grouped",
+      "note": "Tests job.department_name grouping with July 2026 business period"
+    },
+    {
+      "id": "canary-03",
+      "q": "How many customer orders are currently open?",
+      "expected_outcome_class": "answered",
+      "shape": "scalar",
+      "note": "Tests open customer orders count (NEW / IN_PROGRESS states)"
+    },
+    {
+      "id": "canary-04",
+      "q": "Give me the receivables aging buckets as of today.",
+      "expected_outcome_class": "answered",
+      "shape": "grouped_bucket_set",
+      "note": "Tests ar_aging bucket set over due_date"
+    },
+    {
+      "id": "canary-05",
+      "q": "How many stock receipts were recorded this quarter?",
+      "expected_outcome_class": "answered",
+      "shape": "scalar",
+      "note": "Tests inventory store receipts"
+    },
+    {
+      "id": "canary-06",
+      "q": "How many finished jobs are currently unbilled?",
+      "expected_outcome_class": "answered",
+      "shape": "scalar",
+      "note": "Tests jobs_finished_unbilled measure"
+    },
+    {
+      "id": "canary-07",
+      "q": "What was our total invoiced revenue for July 2026?",
+      "expected_outcome_class": "answered",
+      "shape": "scalar",
+      "note": "Tests bill_amount over July 2026"
+    },
+    {
+      "id": "canary-08",
+      "q": "What's our revenue?",
+      "expected_outcome_class": "clarification_required",
+      "note": "Bare metric with no period — must ask clarification rather than guessing invoiced vs ledger vs cash",
+      "hard": true
+    },
+    {
+      "id": "canary-09",
+      "q": "Which customer orders were completed on July 14th 2026?",
+      "expected_outcome_class": "unsupported",
+      "note": "Job completion timestamp absent — must refuse honestly as unsupported",
+      "hard": true
+    },
+    {
+      "id": "canary-11",
+      "q": "What is the ordered quantity for job 24694?",
+      "expected_outcome_class": "unsupported",
+      "note": "Raw ordered_qty is available only in jobs.show.v1 page context; no cross-record Business Query member exists yet",
+      "hard": true
+    },
+    {
+      "id": "canary-12",
+      "q": "Which jobs use 1 Side Ptg?",
+      "expected_outcome_class": "unsupported",
+      "note": "Changing specification JSON is not yet a typed queryable dimension",
+      "hard": true
+    },
+    {
+      "id": "canary-13",
+      "q": "Which jobs have more than 5,000 ordered pieces?",
+      "expected_outcome_class": "unsupported",
+      "note": "ordered_qty is legacy free text and is not an aggregatable numeric Business Query member",
+      "hard": true
+    },
+    {
+      "id": "canary-14",
+      "q": "Show the specification details for job 24694.",
+      "expected_outcome_class": "unsupported",
+      "note": "Full specification detail requires the Phase B typed detail read path; SQL must not scrape raw JSON",
+      "hard": true
+    }
+  ],
+  "denied_probe": {
+    "id": "canary-10",
+    "q": "What is our company total ledger revenue?",
+    "principal_override": {
+      "permissions": ["view job", "view customer order"],
+      "entity_id": 1,
+      "cross_entity": false
+    },
+    "expected_outcome_class": "denied",
+    "note": "Sales-only permissions asking for financial ledger revenue — must be Denied before DB execution",
+    "hard": true
+  }
+}

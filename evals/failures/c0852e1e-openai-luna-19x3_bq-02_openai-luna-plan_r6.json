@@ -1,0 +1,53 @@
+{
+  "case_id": "bq-02",
+  "family": "serena_hotels_last_tissue_order",
+  "phrasing": "code_switched",
+  "expected": "answered",
+  "actual": "unsupported",
+  "passed": false,
+  "detail": "expected answered, got unsupported",
+  "reason_code": "no_join_path",
+  "failure_layer": null,
+  "failure_detail": null,
+  "planner_repair_count": 0,
+  "tokens_prompt": 6043,
+  "tokens_completion": 880,
+  "tokens_reasoning": 775,
+  "missing_members": [],
+  "plan": {
+    "measures": [
+      "customer_last_order_date"
+    ],
+    "dimensions": [],
+    "bucket_set": null,
+    "filters": {
+      "all": [
+        {
+          "member": "customer.name",
+          "operator": "contains",
+          "values": [
+            "?"
+          ]
+        },
+        {
+          "member": "product_name",
+          "operator": "contains",
+          "values": [
+            "?"
+          ]
+        }
+      ]
+    },
+    "having": null,
+    "period": null,
+    "grain": "scalar",
+    "order": [],
+    "limit": 20
+  },
+  "message": "plan cannot be executed safely",
+  "outcome_match": false,
+  "literal_match": false,
+  "repeat_index": 6,
+  "arm": "openai-luna-plan",
+  "reasoning_redacted": true
+}

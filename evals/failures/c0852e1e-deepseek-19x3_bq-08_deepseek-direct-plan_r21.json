@@ -1,0 +1,53 @@
+{
+  "case_id": "bq-08",
+  "family": "product_or_category_lookup",
+  "phrasing": "noisy_english",
+  "expected": "clarification_required",
+  "actual": "incomplete",
+  "passed": false,
+  "detail": "expected clarification_required, got incomplete",
+  "reason_code": "adapter_invalid",
+  "failure_layer": null,
+  "failure_detail": null,
+  "planner_repair_count": 0,
+  "tokens_prompt": 6158,
+  "tokens_completion": 1271,
+  "tokens_reasoning": 1158,
+  "missing_members": [],
+  "plan": {
+    "measures": [
+      "product_units_sold"
+    ],
+    "dimensions": [],
+    "bucket_set": null,
+    "filters": {
+      "all": [
+        {
+          "member": "product_name",
+          "operator": "contains",
+          "values": [
+            "?"
+          ]
+        }
+      ]
+    },
+    "having": null,
+    "period": {
+      "time_dimension": "invoice_item.sold_at",
+      "relative": "this_month",
+      "on": null,
+      "since": null,
+      "between": null,
+      "granularity": "month"
+    },
+    "grain": "scalar",
+    "order": [],
+    "limit": 20
+  },
+  "message": "",
+  "outcome_match": false,
+  "literal_match": null,
+  "repeat_index": 21,
+  "arm": "deepseek-direct-plan",
+  "reasoning_redacted": true
+}

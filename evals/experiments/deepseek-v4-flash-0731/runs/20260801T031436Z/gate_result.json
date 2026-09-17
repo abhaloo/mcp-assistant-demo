@@ -1,0 +1,33 @@
+{
+  "status": "FAIL",
+  "reasons": [
+    "factual_correctness: paired 95% CI lower bound -0.0758 < -0.05"
+  ],
+  "details": {
+    "infra_failure_rate": 0.01935483870967742,
+    "factual_correctness": {
+      "n": 57,
+      "mean_delta": -0.0174,
+      "ci_lo": -0.0758,
+      "ci_hi": 0.0407
+    },
+    "faithfulness": {
+      "n": 61,
+      "mean_delta": 0.0208,
+      "ci_lo": -0.0434,
+      "ci_hi": 0.0864
+    }
+  },
+  "projection": {
+    "answer_calls": 186.0,
+    "answer_usd": 0.0,
+    "judge_usd": 1.86,
+    "total_usd": 1.86,
+    "phase_budget_usd": 6.0
+  },
+  "spent_usd_estimate": 1.86,
+  "n_answers": 186,
+  "infra_failures": 0,
+  "factual_missing": 5,
+  "faithfulness_missing": 1
+}

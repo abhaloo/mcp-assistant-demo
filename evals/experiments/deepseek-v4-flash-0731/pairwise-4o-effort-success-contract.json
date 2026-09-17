@@ -1,0 +1,101 @@
+{
+  "confirmed_at": "2026-08-02",
+  "confirmed_by": "Adeel",
+  "status": "CONFIRMED",
+  "observable_outcome": "Two independent pairwise RAG campaigns (gpt-4o vs DeepSeek-high, then gpt-4o vs DeepSeek-xhigh) each emit an evidence-complete development verdict or HOLD without a model-quality claim; Campaign A (high) must complete with a trustworthy harness before Campaign B (xhigh) spends.",
+  "non_goals": [
+    "True 3-arm matrix or joint multi-arm statistical gate",
+    "Run SQL B2",
+    "Flip a production routing default",
+    "Use Luna as an answer arm",
+    "384k DeepSeek output unless a later budget decision",
+    "Combine the two pairwise p-values into a single winner claim"
+  ],
+  "examples": [
+    "Each campaign retrieves 62 cases once, answers both arms for three repeats on identical contexts.",
+    "Baseline arm prod-4o uses Azure gpt-4o with harness_output_cap 16384; DeepSeek arm uses request slug deepseek/deepseek-v4-flash-0731 with attested DeepInfra effective harness_output_cap 65536 for both high and xhigh.",
+    "OpenRouter route policy pins only DeepInfra; reasoning.effort is frozen and applied on every candidate answer call (not ambient default).",
+    "actual_model attestation accepts only deepseek/deepseek-v4-flash-20260731.",
+    "Harness smoke (before gpt-4o is provisioned): Campaign A may use attested gpt-4o-mini vs DeepSeek high with 32768 cap at low effort or 65536 at high/xhigh and frozen reasoning.effort=high.",
+    "Campaign A uses candidate-effort=high; Campaign B uses xhigh; harness cap is identical so effort is the only free variable.",
+    "Ops failures use answer-opportunity denominator; harness_output_cap hits are zero-scored and labeled as harness caps not model limits.",
+    "Live spend requires cold_independent APPROVE bound to the exact runtime commit; waivers cap ledger at IMPLEMENTED.",
+    "Per-attempt campaign_cap_usd is 25; phase rag_repair 55; global TOTAL_CAP_USD 60."
+  ],
+  "edge_and_failure_cases": [
+    "missing Azure gpt-4o ARM attestation",
+    "reasoning.effort not present on OpenRouter extra_body",
+    "request slug accepted as actual_model",
+    "Fireworks or multi-provider mix",
+    "32k DeepSeek cap reused for high/xhigh",
+    "Campaign B launched before Campaign A harness validation"
+  ],
+  "independent_oracles": [
+    "frozen semantic eval case literals",
+    "literal judge-canary score bands",
+    "git commit and dirty-state checks",
+    "artifact SHA-256 hashes",
+    "paired non-inferiority specification",
+    "OpenRouter /generation provider and model metadata"
+  ],
+  "acceptance_criteria": {
+    "cases": 62,
+    "answer_arms": ["prod-4o", "forced-deepseek"],
+    "repeats": 3,
+    "retrievals_per_case": 1,
+    "harness_output_cap_tokens_by_arm": {
+      "prod-4o": 16384,
+      "forced-deepseek": 65536
+    },
+    "output_ceiling_is_harness_cap": false,
+    "deepseek_effective_output_cap_attestation": "DeepInfra live stop 65536 on deepseek-v4-flash-0731",
+    "judge_deployment": "gpt-5.6-luna",
+    "candidate_route_policy": {
+      "providers": ["DeepInfra"],
+      "allow_fallbacks": false,
+      "data_collection": "deny",
+      "require_parameters": true,
+      "reasoning_effort_values": ["high", "xhigh"],
+      "post_call_generation_metadata_required": true
+    },
+    "allowed_actual_models": {
+      "prod-4o": ["gpt-4o"],
+      "forced-deepseek": ["deepseek/deepseek-v4-flash-20260731"]
+    },
+    "max_operational_or_missing_rate": 0.02,
+    "campaign_cap_usd": 25.0,
+    "global_spend_cap_usd": 60.0,
+    "launch_order": ["high", "xhigh"],
+    "required_live_checks": [
+      "B0 tool smoke",
+      "small /api/ask authorization and rollback smoke",
+      "B1 full RAG attempt"
+    ],
+    "required_evidence": [
+      "immutable attempt",
+      "provider response metadata",
+      "frozen reasoning.effort on candidate route_policy",
+      "judge call metadata",
+      "failure files",
+      "acceptance ledger",
+      "case movement audit",
+      "task economics audit"
+    ],
+    "comparison_goals": ["accuracy", "cost_per_task", "latency_per_task"]
+  },
+  "public_test_seams": [
+    "apply_campaign_profile",
+    "freeze_rag_experiment",
+    "answer_frozen_case",
+    "invoke_rag_generation_with_usage",
+    "evaluate_rag_evidence"
+  ],
+  "approved_test_doubles": [
+    "Azure retrieval and answer adapter",
+    "OpenRouter answer adapter",
+    "Luna judge adapter",
+    "spend adapter",
+    "clock",
+    "filesystem"
+  ]
+}

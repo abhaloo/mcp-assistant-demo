@@ -1,0 +1,9 @@
+{
+  "run_id": "2026-07-07-semantic-rebaseline",
+  "case_id": "all-16",
+  "mode": "semantic",
+  "question": "What specialty papers does Multi Color Printers offer?",
+  "citation_parsed": 0,
+  "citation_precision": 0.0,
+  "source_file": "data/corpus/company/all/services-and-capabilities.md"
+}

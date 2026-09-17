@@ -1,0 +1,9 @@
+{
+  "run_id": "2026-07-07-semantic-rebaseline",
+  "case_id": "messy-vague-01",
+  "mode": "semantic",
+  "question": "what about the paper stuff",
+  "citation_parsed": 0,
+  "citation_precision": 0.0,
+  "source_file": "data/corpus/company/all/services-and-capabilities.md"
+}

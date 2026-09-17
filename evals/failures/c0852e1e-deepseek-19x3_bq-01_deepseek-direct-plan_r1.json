@@ -1,0 +1,46 @@
+{
+  "case_id": "bq-01",
+  "family": "customer_last_order",
+  "phrasing": "noisy_english",
+  "expected": "answered",
+  "actual": "incomplete",
+  "passed": false,
+  "detail": "expected answered, got incomplete",
+  "reason_code": "adapter_invalid",
+  "failure_layer": null,
+  "failure_detail": null,
+  "planner_repair_count": 0,
+  "tokens_prompt": 6153,
+  "tokens_completion": 1161,
+  "tokens_reasoning": 1073,
+  "missing_members": [],
+  "plan": {
+    "measures": [
+      "customer_last_order_date"
+    ],
+    "dimensions": [],
+    "bucket_set": null,
+    "filters": {
+      "all": [
+        {
+          "member": "customer.name",
+          "operator": "contains",
+          "values": [
+            "?"
+          ]
+        }
+      ]
+    },
+    "having": null,
+    "period": null,
+    "grain": "scalar",
+    "order": [],
+    "limit": 20
+  },
+  "message": "",
+  "outcome_match": false,
+  "literal_match": false,
+  "repeat_index": 1,
+  "arm": "deepseek-direct-plan",
+  "reasoning_redacted": true
+}

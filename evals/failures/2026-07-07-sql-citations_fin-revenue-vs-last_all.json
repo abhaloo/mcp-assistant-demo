@@ -1,0 +1,23 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": null,
+  "case_id": "fin-revenue-vs-last",
+  "role": "finance",
+  "mode": "all",
+  "run_id": "2026-07-07-sql-citations",
+  "question": "is revenue up or down compared to last month?",
+  "gold_sql": "SELECT 'this_month' p, ROUND(SUM(j.credit-j.debit),0) revenue FROM journals j JOIN accounts a ON a.id=j.account_id WHERE a.account_type IN ('OPERATING_REVENUE','NON_OPERATING_REVENUE') AND j.post_date>='2026-06-01' AND j.post_date<'2026-07-01' UNION ALL SELECT 'last_month', ROUND(SUM(j.credit-j.debit),0) FROM journals j JOIN accounts a ON a.id=j.account_id WHERE a.account_type IN ('OPERATING_REVENUE','NON_OPERATING_REVENUE') AND j.post_date>='2026-05-01' AND j.post_date<'2026-06-01'",
+  "agent_sql_scrubbed": "SELECT SUM(j.credit - j.debit) AS revenue, MONTH(j.post_date) AS month, YEAR(j.post_date) AS year\nFROM journals j\nJOIN accounts a ON a.id = j.account_id\nWHERE a.account_type IN (?, ?)\nAND j.post_date >= DATE_SUB(CURDATE(), INTERVAL 2 MONTH)\nGROUP BY year, month\nORDER BY year, month;",
+  "error_category": null,
+  "reason": "row_count_mismatch",
+  "valid_sql_rate": 1.0,
+  "pass_rate": 0.0,
+  "flaky": false,
+  "chat_deployment": "gpt-4o-mini",
+  "failure_kind": null,
+  "lever": null,
+  "root_cause": null,
+  "rule": null
+}

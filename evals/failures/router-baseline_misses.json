@@ -1,0 +1,187 @@
+{
+  "score": {
+    "n": 50,
+    "n_pos": 34,
+    "n_neg": 16,
+    "tp": 21,
+    "fp": 0,
+    "fn": 13,
+    "tn": 16,
+    "recall": 0.6176,
+    "recall_ci95": [
+      0.4504,
+      0.761
+    ],
+    "precision": 1.0,
+    "misses": [
+      [
+        "rr-aw-01",
+        "list our top debtors"
+      ],
+      [
+        "rr-aw-02",
+        "who hasn't paid their bills yet?"
+      ],
+      [
+        "rr-aw-03",
+        "what's our largest quote and for whom?"
+      ],
+      [
+        "rr-aw-04",
+        "show me the biggest quote we've issued"
+      ],
+      [
+        "rr-aw-05",
+        "how much money is on the books from customers?"
+      ],
+      [
+        "rr-aw-06",
+        "what's the total amount due from customers?"
+      ],
+      [
+        "rr-aw-07",
+        "which customers carry the highest balances?"
+      ],
+      [
+        "rr-aw-08",
+        "which clients are behind on payments?"
+      ],
+      [
+        "rr-aw-09",
+        "which single invoice is worth the most this month?"
+      ],
+      [
+        "rr-aw-10",
+        "what's the value of our biggest bill this month?"
+      ],
+      [
+        "rr-pp-05",
+        "Which pending quote totals the most?"
+      ],
+      [
+        "rr-pp-06",
+        "Show the single highest-value quote we've issued."
+      ],
+      [
+        "rr-ht-05",
+        "who are our worst-paying customers?"
+      ]
+    ],
+    "false_escalations": [],
+    "by_stratum": {
+      "in-vocab-positive": {
+        "n": 12,
+        "n_pos": 12,
+        "recall": 1.0,
+        "misses": []
+      },
+      "adversarial-wording-positive": {
+        "n": 10,
+        "n_pos": 10,
+        "recall": 0.0,
+        "misses": [
+          "rr-aw-01",
+          "rr-aw-02",
+          "rr-aw-03",
+          "rr-aw-04",
+          "rr-aw-05",
+          "rr-aw-06",
+          "rr-aw-07",
+          "rr-aw-08",
+          "rr-aw-09",
+          "rr-aw-10"
+        ]
+      },
+      "paraphrase-positive": {
+        "n": 6,
+        "n_pos": 6,
+        "recall": 0.6667,
+        "misses": [
+          "rr-pp-05",
+          "rr-pp-06"
+        ]
+      },
+      "containment-negative": {
+        "n": 16,
+        "n_pos": 0,
+        "recall": null,
+        "misses": []
+      },
+      "holdout-twin": {
+        "n": 6,
+        "n_pos": 6,
+        "recall": 0.8333,
+        "misses": [
+          "rr-ht-05"
+        ]
+      }
+    }
+  },
+  "audit": {
+    "needs_escalation": [
+      {
+        "case_id": "prod-largest-invoice",
+        "question": "what was the largest invoice this month and from who",
+        "mini_pass": 0.0,
+        "esc_pass": 1.0,
+        "router_escalates": true
+      },
+      {
+        "case_id": "prod-owes-most",
+        "question": "who owes us the most money this month",
+        "mini_pass": 0.0,
+        "esc_pass": 1.0,
+        "router_escalates": true
+      },
+      {
+        "case_id": "inv-avg-value",
+        "question": "what's our average invoice value?",
+        "mini_pass": 0.0,
+        "esc_pass": 1.0,
+        "router_escalates": true
+      },
+      {
+        "case_id": "quote-largest",
+        "question": "what's our largest pending quotation and for whom?",
+        "mini_pass": 0.0,
+        "esc_pass": 1.0,
+        "router_escalates": true
+      }
+    ],
+    "contradictions": [],
+    "audit_gaps": [
+      "cust-no-orders",
+      "fin-revenue-vs-last",
+      "h-cust-with-quotes",
+      "h-wh-issues-month",
+      "jobs-finished-unbilled",
+      "jobs-for-customer",
+      "orders-oldest-open",
+      "prod-dept-slowest",
+      "prod-jobs-delayed",
+      "prod-jobs-june9",
+      "prod-jobs-no-invoice",
+      "prod-revenue-june9"
+    ],
+    "no_mini_evidence": [
+      "fin-ar-aging",
+      "h-ar-aging-buckets",
+      "h-ar-customers-over-60",
+      "h-ar-overdue-45-count",
+      "h-ar-overdue-by-customer",
+      "h-ar-overdue-total-value",
+      "h-ar-overpaid-count",
+      "h-ar-partial-paid-count",
+      "h-ar-top-debtor",
+      "h-inv-overdue-60",
+      "h-inv-paid-count",
+      "inv-fully-paid-count",
+      "inv-outstanding-total",
+      "inv-overdue-30",
+      "inv-overpaid-count",
+      "inv-partial-paid-count",
+      "inv-unpaid-count"
+    ],
+    "coverage_note": "4 case(s) have fail-mini & pass-esc evidence; 17 case(s) escalated everywhere -> no mini outcome, empirically un-auditable. 'No contradictions' covers ONLY the evidenced cases."
+  }
+}

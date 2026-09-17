@@ -1,0 +1,5 @@
+id: prod-nano-low
+extends: prod-nano
+arm_name: prod-nano-low
+reasoning_effort: low
+request_timeout_s: 300

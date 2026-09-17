@@ -1,0 +1,23 @@
+id: prod-4o
+arm_name: prod-4o
+provider: azure
+requested_model: gpt-4o
+allowed_actual_models:
+  - gpt-4o
+harness_output_cap_tokens: 16384
+attested_output_cap_tokens: null
+reasoning_effort: null
+deployment_attestation:
+  source: azure_resource_manager
+  observed_at: "2026-08-02"
+  resource_group: mcp-rag-qa
+  account: mcp-rag-qa-openai-service
+  deployment: gpt-4o
+  model_name: gpt-4o
+  model_version: "2024-08-06"
+  deployment_state: Running
+  provisioning_state: Succeeded
+  sku: GlobalStandard
+  allowed_response_models:
+    - gpt-4o
+est_answer_usd: 0.025

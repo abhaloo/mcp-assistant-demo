@@ -1,0 +1,48 @@
+{
+  "case_id": "bq-14",
+  "family": "cash_received_receivable_settlement_and_outstanding",
+  "phrasing": "code_switched",
+  "expected": "answered",
+  "actual": "answered",
+  "passed": false,
+  "detail": "values differ from answer key (1 expected row(s))",
+  "reason_code": "",
+  "failure_layer": null,
+  "failure_detail": null,
+  "planner_repair_count": 0,
+  "tokens_prompt": 6050,
+  "tokens_completion": 344,
+  "tokens_reasoning": 230,
+  "missing_members": [],
+  "plan": {
+    "measures": [
+      "cash_received"
+    ],
+    "dimensions": [
+      "invoice.currency_code"
+    ],
+    "bucket_set": null,
+    "filters": null,
+    "having": null,
+    "period": {
+      "time_dimension": "invoice.created_at",
+      "relative": null,
+      "on": null,
+      "since": null,
+      "between": [
+        "?",
+        "?"
+      ],
+      "granularity": null
+    },
+    "grain": "grouped",
+    "order": [],
+    "limit": 20
+  },
+  "message": "",
+  "outcome_match": true,
+  "literal_match": false,
+  "repeat_index": 37,
+  "arm": "openai-luna-plan",
+  "reasoning_redacted": true
+}

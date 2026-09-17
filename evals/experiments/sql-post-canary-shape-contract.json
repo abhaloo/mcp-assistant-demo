@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "status": "CONFIRMED",
+  "confirmed_by": "Adeel",
+  "confirmed_at": "2026-08-06",
+  "note": "Adeel confirmed Pass-1 defaults + hand-labeled grain fixtures 2026-08-06. Pass-1e/1f: latest sql_db_query-only + retry teaching-signal schema + first-Human grain. D11 Task-6 arm satisfied (canary PASS). Still require --delta re-APPROVE; fairness-tip freeze while Task 7 full 440 may run.",
+  "contract_id": "sql-post-canary-shape",
+  "plan_path": "docs/superpowers/plans/2026-08-06-sql-post-canary-tools-tdd.md",
+  "depends_on": {
+    "p0_plan": "docs/superpowers/plans/2026-08-06-sql-flip-shape-date-p0-tdd.md",
+    "p0_contract": "evals/experiments/sql-flip-shape-date-p0-contract.json",
+    "cardinality_pattern_source_hash": "3b1438877a7ac506f123935b80e91941a14b6d409cf9d997c18a7968e6a50efa",
+    "sole_attachment": "P0 owns pre-gen needs_cardinality_rules; this contract owns post-exec shape grain labels that must agree on COUNT/singular overlap"
+  },
+  "observable_outcomes": [
+    "After the latest successful sql_db_query ToolMessage (ignore earlier sql_db_query in-thread), detect multirow-when-scalar/count-expected; one retry then AIMessage(CLARIFY:) with no tool_calls then END visible to _final_answer / run_with_clarifications.",
+    "Shape node inspects only the latest sql_db_query ToolMessage by message order; calendar-only hop pass-through; Error: prefix skipped (not 0-row).",
+    "Primary AC: multirow when singular/COUNT expected. Explicit multirow grain advisory unless listed below. No list min row_count>=2 fail-closed.",
+    "Grain labels independent hand oracle — never the grain function under test. Grain source = first HumanMessage (original Ask).",
+    "Stale multirow sql_db_query followed by successful 1-row sql_db_query must pass_or_skip (no false CLARIFY).",
+    "On shape retry: inject teaching signal with kind/reason/expected_grain/observed_row_count (carrier XOR: message body vs TypedDict+marker — ADR 0041)."
+  ],
+  "non_goals": [
+    "Pre-gen CARDINALITY prompt edits (P0 sole)",
+    "Scorer / gold SQL changes",
+    "Auto-rewrite final_sql",
+    "New LLM-selectable tools",
+    "List min-row enforcement",
+    "Claim ACCEPTED from unit alone",
+    "Slice A commits/pushes on fairness tip during Task 7 full-440 freeze (new slug worktree OK for unit A1 after --delta APPROVE)"
+  ],
+  "locked_decisions": {
+    "note": "Adeel LOCKED Pass-1 defaults 2026-08-06; D11 Task-6 report arm satisfied 2026-08-06 (canary PASS)",
+    "D1": "LOCKED (c) hybrid P0-aligned",
+    "D2": "LOCKED (c) retry once then CLARIFY AIMessage",
+    "D3": "LOCKED 1",
+    "D4": "LOCKED (c) pre-inject only",
+    "D5": "LOCKED (c) intent-gated",
+    "D6": "LOCKED (a) middleware-only",
+    "D7": "LOCKED defer Slice C; D7(a) REJECTED",
+    "D8": "LOCKED (b) human+production only",
+    "D9": "LOCKED Yes quarantine",
+    "D10": "LOCKED (a) unit-only default",
+    "D11": "LOCKED XOR hard gate; Task-6 arm satisfied"
+  },
+  "grain_fixtures_hand_labeled": [
+    {"question": "how many invoices have been fully paid?", "grain": "count_scalar", "aligns_p0_cardinality": true},
+    {"question": "what is the number of open customer orders?", "grain": "count_scalar", "aligns_p0_cardinality": true},
+    {"question": "who is our top customer by invoice value?", "grain": "singular", "aligns_p0_cardinality": true},
+    {"question": "what was the largest invoice this month and from who", "grain": "singular", "aligns_p0_cardinality": true},
+    {"question": "what is the largest pending quotation and for whom?", "grain": "singular", "aligns_p0_cardinality": true},
+    {"question": "which customer has the biggest outstanding balance?", "grain": "singular", "aligns_p0_cardinality": true},
+    {"question": "who are our top 5 customers by revenue this year?", "grain": "explicit_multirow", "aligns_p0_cardinality": false},
+    {"question": "list overdue invoices", "grain": "explicit_multirow", "aligns_p0_cardinality": false},
+    {"question": "list all open orders", "grain": "explicit_multirow", "aligns_p0_cardinality": false},
+    {"question": "top 10 invoices by value", "grain": "explicit_multirow", "aligns_p0_cardinality": false}
+  ],
+  "shape_check_primary_ac": {
+    "fail_when": "expected grain in {count_scalar, singular} AND successful sql_db_query row_count >= 2",
+    "reason_vocab": "row_count_mismatch (align scorer vocab; do not edit sql_exec_match)",
+    "do_not_fail_when": [
+      "explicit_multirow with 0 or 1 rows",
+      "ToolMessage content starts with Error:",
+      "tool name is sql_calendar_windows",
+      "empty successful payload \"\"",
+      "earlier sql_db_query was multirow but latest sql_db_query is 1-row success (latest-only)"
+    ]
+  },
+  "retry_feedback_payload": {
+    "carrier_xor": "ToolMessage_or_SystemMessage_body XOR TypedDict_shape_retries_plus_marker (ADR 0041 picks one)",
+    "required_fields": {
+      "kind": "shape_mismatch",
+      "reason": "row_count_mismatch",
+      "expected_grain": "grain enum from first HumanMessage",
+      "observed_row_count": "int >= 0 from latest sql_db_query only",
+      "shape_retry_index": "int >= 0 when carrier holds retry state; else TypedDict owns count"
+    },
+    "producer_ac": "A-graph retry must assert these fields — route-only green is insufficient"
+  },
+  "public_test_seams": [
+    "tests/rag/chains/test_sql_shape_validate.py (contract fixture table as oracle)",
+    "tests/rag/chains/test_sql_graph_shape_validate.py (FakeToolModel graph producer; includes stale-multirow-then-1-row + teaching-signal field asserts + first-Human grain)",
+    "_final_answer / run_with_clarifications exhaustion path",
+    "tests/rag/test_cardinality_rules.py (P0 singular agreement — not re-owned)"
+  ],
+  "acceptance": {
+    "unit_fake": "IMPLEMENTED when A1–A5 green against this contract",
+    "residual_canary": "INTEGRATED only if D10(b) unlocked",
+    "ACCEPTED": "never from unit alone"
+  }
+}

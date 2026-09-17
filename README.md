@@ -15,58 +15,75 @@ A finance user asks who owes us, opens an invoice, then asks about that selected
 This repository is the Ask API. The [record-links replay](docs/replays/demo-s2-who-owes-us.html) is the billing panel that calls it.
 
 ```mermaid
+%%{init: {'theme': 'neutral', 'flowchart': {'nodeSpacing': 25, 'rankSpacing': 35, 'subGraphTitleMargin': {'top': 10, 'bottom': 20}}}}%%
 flowchart TB
-  you[You]
-  recCtx[finance user account]
-  api["POST /api/ask"]
-  you --> recCtx --> api
+  subgraph request["1 · Request and context"]
+    you["You"] --> recCtx["finance user account"]
+    recCtx --> api["POST /api/ask"]
+    api --> jwt["Signed JWT<br/>record_access includes document_tiers"]
+    jwt --> redis[("Redis<br/>Transcript")]
+  end
 
-  jwt["Signed JWT: record_access includes document_tiers"]
-  api --> jwt
+  subgraph lg["2 · LangGraph coordinator"]
+    decide{"Orchestrator<br/>(Decide)"}
 
-  redis[Redis transcript]
-  jwt --> redis
-
-  subgraph lg [LangGraph coordinator]
-    decide["Orchestrator (Decide)"]
-    explain[explain_sources]
-    clarify[Clarify]
-    finish[Finish]
-    stop[Stop]
-    decide --> explain
-    decide --> clarify
-    decide --> finish
-    decide -.-> stop
-    explain --> decide
-
-    subgraph bqLine [ ]
-      direction LR
-      bqTool["tool: sql_query_business_records"]
-      cube[Cube compiler]
-      maria[MariaDb + views]
-      results[Results]
+    subgraph bqLine["Business records"]
+      bqTool["sql_query_business_records"]
+      cube["Cube compiler"]
+      maria[("MariaDb + views")]
+      results["Results"]
       bqTool --> cube --> maria --> results
     end
 
-    subgraph docLine [ ]
-      direction LR
-      docTool["tool: search_documents"]
-      chroma["ChromaDB (hybrid retrieval)"]
+    subgraph docLine["Document search"]
+      docTool["search_documents"]
+      chroma[("ChromaDB<br/>Hybrid retrieval")]
       docTool --> chroma
     end
 
-    decide --> bqTool
-    decide --> docTool
-    results --> decide
-    docTool --> decide
+    subgraph sourceLine["Source explanation"]
+      explain["explain_sources<br/>Restore cited evidence"]
+    end
+
+    decide -->|Call tool| bqTool
+    decide -->|Call tool| docTool
+    decide -->|Explain sources| explain
+    results -->|Return results| decide
+    docTool -->|Return passages| decide
+    explain -->|Return evidence| decide
+
+    subgraph outcomes["Turn outcomes"]
+      finish(["Finish"])
+      clarify(["Clarify"])
+      stop(["Stop"])
+    end
+    decide --> finish
+    decide --> clarify
+    decide -.-> stop
   end
+
   redis --> decide
 
-  sse["SSE: activity, thought, table, card"]
-  decide -.-> sse
-  finish --> persist[Persist transcript]
+  %% Response: streaming updates and the final answer
+    sse["Live SSE updates<br/>activity · thought · table · card"]
+    persist["Persist transcript"]
+    json["JSON answer"]
+    persist --> json
+
+  decide -.->|During the turn| sse
+  finish --> persist
   clarify --> persist
-  persist --> json[JSON answer]
+
+  classDef entry fill:#eff6ff,stroke:#2563eb,color:#172554
+  classDef coordinator fill:#f5f3ff,stroke:#7c3aed,color:#2e1065,stroke-width:2px
+  classDef tool fill:#f0fdfa,stroke:#0f766e,color:#134e4a
+  classDef storage fill:#f8fafc,stroke:#64748b,color:#0f172a
+  classDef output fill:#f0fdf4,stroke:#15803d,color:#14532d
+  class you,recCtx,api,jwt entry
+  class decide coordinator
+  class bqTool,docTool,explain,cube tool
+  class redis,maria,chroma storage
+  class finish,clarify,stop,sse,persist,json,results output
 ```
 
 LangGraph `Orchestrator (Decide)` owns the turn. It calls `tool: sql_query_business_records`, `tool: search_documents`, or `explain_sources`, then loops until it finishes, clarifies, or stops.
@@ -173,6 +190,22 @@ The replay is the billing Ask panel. This repository is the API behind it.
      -H "Content-Type: application/json" `
      -d "{\"question\":\"How many invoices in July 2025?\"}"
    ```
+
+## Evals
+
+This snapshot ships the Ask eval harness and suites:
+
+- `app/eval/` — scorers, judges, SQL agent, and business-query harness
+- `evals/` — case files (prod_ask, SQL, records, tool layer). Run artifacts under `evals/runs/` stay out
+- `scripts/eval/` — CLI entry points (`prod_ask_eval_run.py`, `business_query_eval_run.py`, and related)
+- `tests/eval/`, `tests/evals/`, `tests/harness/` — harness tests and Ask drivers
+
+```powershell
+python scripts/eval/prod_ask_eval_run.py --mode stub
+pytest tests/eval tests/evals
+```
+
+Paid live runs need `--confirm-spend`.
 
 ## Sample response screenshot
 

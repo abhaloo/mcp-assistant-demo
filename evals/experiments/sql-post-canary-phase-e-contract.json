@@ -1,0 +1,206 @@
+{
+  "schema_version": 1,
+  "status": "CONFIRMED",
+  "confirmed_by": "Adeel",
+  "confirmed_at": "2026-08-06",
+  "note": "Phase E UNLOCKED after Slice A D10a eval note (Adeel: proceed with deferred). Hand-labeled holdout residual fixtures for E1–E4; E5 is ops-only. D10(a) unit-only default — no live spend without Adeel unlock of D10(b). Do not co-spend with Slice A first residual canary.",
+  "contract_id": "sql-post-canary-phase-e",
+  "plan_path": "docs/superpowers/plans/2026-08-06-sql-post-canary-tools-tdd.md",
+  "unlock": {
+    "gate": "Slice A IMPLEMENTED (unit+fake) + D10a eval note recorded",
+    "eval_note": "docs/superpowers/reports/2026-08-06-sql-shape-validator-eval-note-d10a.md",
+    "unlocked_by": "Adeel",
+    "unlocked_at": "2026-08-06",
+    "deferred_until_resolved": false
+  },
+  "depends_on": {
+    "shape_contract": "evals/experiments/sql-post-canary-shape-contract.json",
+    "metric_contract": "evals/experiments/sql-post-canary-metric-contract.json",
+    "slice_a_status": "IMPLEMENTED (unit+fake graph) per D10a eval note",
+    "source_report": "docs/superpowers/reports/2026-08-06-sql-p0-full440-reasoning-trace-improvement-vectors.md",
+    "sole_attachment": "Phase E owns holdout vectors 3,4,6,7,8 not already in Slices A–D (V1→A, V2⊂A, V5→B)"
+  },
+  "observable_outcomes": [
+    "E1: Named-date questions resolve on-day vs from-day per hand oracle — stop multi-day GROUP BY dumps when single-day intended.",
+    "E2: Revenue/post_date queries exclude rows after Today pin unless user explicitly asks for future periods.",
+    "E3: Singular top/busiest answers verify winner or CLARIFY on ties — synthetic DB oracle, not live string match.",
+    "E4: After Error: only SELECT… ToolMessage, agent recovers via schema-in-thread or CLARIFY — fewer terminal no_agent_query.",
+    "E5: Gate cost ratio tracked as ops ledger item — not a Phase E quality Success Contract AC."
+  ],
+  "non_goals": [
+    "Re-opening P0 Tasks 1–5",
+    "Folding busiest / singular-winner verification into Slice A shape node",
+    "Third LLM-selectable tool",
+    "Gold customer names in prompts",
+    "Claim ACCEPTED from Phase E unit alone",
+    "Co-bundling E1–E4 into one live matrix",
+    "Co-spend with Slice A first residual canary (D10b)",
+    "Live spend while D10(a) unit-only default holds without Adeel unlock",
+    "Scorer / gold SQL / sql_exec_match reason renames",
+    "Cutting Slice A shape retry budget to satisfy cost ratio (E5 ops guard)"
+  ],
+  "locked_decisions": {
+    "note": "E0 gate CONFIRMED 2026-08-06 after D10a eval note",
+    "D10": "LOCKED (a) unit-only default — residual canary requires Adeel D10(b)",
+    "E1_default": "LOCKED 2026-08-06 residual CoT: explicit on → on_day; from/since/starting/for/other named-day → CLARIFY (general, not revenue-only); from_day only after user confirms open-ended in clarify reply",
+    "E2_today_pin": "LOCKED: fixture today 2026-06-16; future post_date excluded unless user asks future",
+    "E3_seam": "LOCKED: not inside Slice A shape node; ADR 0045 before code",
+    "E5_ops": "LOCKED: cost_ratio gate is ledger/ops — waiver = Adeel; do not cut shape retries"
+  },
+  "sub_slices": {
+    "E1_on_day_vs_from_day": {
+      "vector": 3,
+      "hand_fixtures": [
+        {
+          "question": "what was the revenue on June 9",
+          "expected_date_semantics": "on_day",
+          "sql_filter_pattern": "equality / single calendar day (DATE(post_date) = 'YYYY-06-09' or equivalent)",
+          "must_not": "open-ended >= filter; multi-day GROUP BY without user list intent"
+        },
+        {
+          "question": "break down the revenue from June 9",
+          "expected_date_semantics": "clarify",
+          "sql_filter_pattern": "CLARIFY: on-day vs from-day (general named-day — not revenue-only)",
+          "must_not": "silent open-ended >= or silent single-day equality"
+        },
+        {
+          "question": "revenue since June 9",
+          "expected_date_semantics": "clarify",
+          "sql_filter_pattern": "CLARIFY: on-day vs from-day",
+          "must_not": "silent open-ended >= without user confirm"
+        },
+        {
+          "question": "jobs from June 9",
+          "expected_date_semantics": "clarify",
+          "sql_filter_pattern": "CLARIFY: on-day vs from-day (non-revenue named-day)",
+          "must_not": "silent window choice"
+        },
+        {
+          "question": "break down the ledger revenue from june 9",
+          "expected_date_semantics": "clarify",
+          "sql_filter_pattern": "CLARIFY — matches prod-revenue-june9 Ask wording",
+          "must_not": "multi-day GROUP BY without clarify reply"
+        },
+        {
+          "question": "revenue for June 9",
+          "expected_date_semantics": "clarify",
+          "sql_filter_pattern": "CLARIFY: on-day vs from-day",
+          "must_not": "guess multi-day or single-day without explicit cue"
+        },
+        {
+          "question": "revenue from June 9 — open-ended from that day through today",
+          "expected_date_semantics": "from_day",
+          "sql_filter_pattern": "post_date >= after clarify confirmation",
+          "must_not": "single-day equality after open-ended confirm"
+        }
+      ],
+      "disambiguation_default": {
+        "explicit_on": "on_day — equality / single calendar day",
+        "explicit_from_since_starting_for_other": "CLARIFY — general named-day window (any domain)",
+        "after_clarify_open_ended_confirm": "from_day — open-ended lower bound"
+      },
+      "residual_watch_ids": ["prod-revenue-june9", "prod-jobs-june9"],
+      "xor_with_p0": "Do not retune calendar math in same PR as E1 prompt micro-rule"
+    },
+    "E2_future_post_date_guard": {
+      "vector": 4,
+      "today_pin": "2026-06-16",
+      "hand_fixtures": [
+        {
+          "question": "revenue by month this year",
+          "today": "2026-06-16",
+          "expected_filter": "exclude post_date > today unless month bucket explicitly includes future",
+          "must_not": "include July–December 2026 rows in aggregates without future intent"
+        },
+        {
+          "question": "revenue in July 2026",
+          "today": "2026-06-16",
+          "expected_filter": "future month allowed — user explicitly named future period",
+          "must_not": "clip to today when user names future month"
+        },
+        {
+          "question": "total revenue to date",
+          "today": "2026-06-16",
+          "expected_filter": "post_date <= today",
+          "must_not": "include future-dated journal rows"
+        }
+      ],
+      "residual_watch_ids": ["fin-revenue-by-month", "fin-revenue-month"],
+      "separate_pr_from": "E1"
+    },
+    "E3_singular_winner_verify": {
+      "vector": 6,
+      "non_goal_in_slice_a": true,
+      "hand_fixtures": [
+        {
+          "question": "which customer has the most jobs",
+          "fixture": "synthetic_db_top_with_near_tie",
+          "expected_outcome": "second constrained verify query OR CLARIFY on tie",
+          "must_not": "return wrong winner when tie within epsilon; must_not live Neptune string match"
+        },
+        {
+          "question": "who is our busiest customer",
+          "fixture": "synthetic_db_clear_winner",
+          "expected_outcome": "single verified winner row",
+          "must_not": "implement inside validate_result_shape / Slice A shape node"
+        }
+      ],
+      "residual_watch_ids": ["jobs-busiest-customer", "orders-top-customer", "cust-most-jobs"],
+      "design_before_code": "ADR 0045 consumer enum"
+    },
+    "E4_illegal_ddl_recovery": {
+      "vector": 7,
+      "hand_fixtures": [
+        {
+          "scenario": "fake_toolnode_inject",
+          "tool_message": "Error: only SELECT statements are allowed",
+          "expected_next_turn": "use schema already in thread → valid SELECT OR AIMessage(CLARIFY:) with no tool_calls",
+          "must_not": "terminal no_agent_query; repeat SHOW COLUMNS / DDL"
+        },
+        {
+          "scenario": "fake_toolnode_inject",
+          "tool_message": "Error: only SELECT statements are allowed",
+          "follow_up_assert": "is_safe_select remains fail-closed — no widening sql_guard.py"
+        }
+      ],
+      "residual_watch_ids": ["prod-dept-slowest", "prod-owes-most"],
+      "feeds_slice_c": "Does not unlock D7(a) allowlist-only dry_run"
+    },
+    "E5_cost_ops": {
+      "vector": 8,
+      "quality_ac": false,
+      "ops_only": true,
+      "ledger_path": "docs/superpowers/reports/2026-08-06-sql-phase-e-cost-ops-ledger.md",
+      "gate_reference": "app/experiments/sql_eval_gate.py DEFAULT_COST_RATIO_MAX (0.5 × Luna baseline)",
+      "rules": [
+        "Gate cost ratio is ops/ledger item — not Phase E quality Success Contract AC",
+        "Waiver vs hard ship blocker = Adeel decision only",
+        "Do not cut Slice A shape retry loops to satisfy cost ratio",
+        "Any retry-budget change after Slice A requires re-measure flip + holdout attribution"
+      ]
+    }
+  },
+  "d10_residual_policy": {
+    "default": "unit-only (D10a)",
+    "live_spend_requires": "Adeel unlock D10(b) per sub-slice",
+    "do_not_co_spend_with": "Slice A first residual canary matrix",
+    "suggested_residual_ids_if_armed": {
+      "E1": ["prod-revenue-june9"],
+      "E2": ["fin-revenue-by-month", "fin-revenue-month"],
+      "E3": ["jobs-busiest-customer"],
+      "E4": ["prod-dept-slowest", "prod-owes-most"]
+    }
+  },
+  "public_test_seams": [
+    "tests/rag/chains/test_sql_named_date_semantics.py (E1 — contract fixture table as oracle)",
+    "tests/rag/chains/test_sql_future_post_date_guard.py (E2)",
+    "tests/rag/chains/test_sql_singular_winner_verify.py (E3 — synthetic DB)",
+    "tests/rag/chains/test_sql_graph_ddl_recovery.py (E4 — FakeToolNode)",
+    "docs/adr/0045-sql-phase-e-holdout-consumers.md (consumer enum when first seam lands)"
+  ],
+  "acceptance": {
+    "unit_fake": "IMPLEMENTED when sub-slice tests green against hand fixtures",
+    "residual_canary": "INTEGRATED only if D10(b) unlocked for that sub-slice",
+    "ACCEPTED": "never from unit alone; never bundle E1–E4 live matrix"
+  }
+}

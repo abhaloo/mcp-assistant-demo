@@ -1,0 +1,20 @@
+id: openai-luna-xhigh
+arm_name: openai-luna-xhigh
+provider: openai
+api_class: responses
+requested_model: gpt-5.6-luna
+chat_deployment: gpt-5.6-luna
+allowed_actual_models:
+  - gpt-5.6-luna
+harness_output_cap_tokens: 16384
+attested_output_cap_tokens: null
+reasoning_effort: xhigh
+request_timeout_s: 300
+sql_request_timeout_s: null
+provider_order: []
+deployment_attestation:
+  source: openai_response_model
+  model: gpt-5.6-luna
+  allowed_response_models:
+    - gpt-5.6-luna
+est_answer_usd: 0.006

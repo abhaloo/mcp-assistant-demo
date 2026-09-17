@@ -1,0 +1,7 @@
+{
+  "suite": "business_query_v2_exposed_holdout",
+  "case_count": 12,
+  "status": "regression_only",
+  "sealed_holdout_gate": "rejected",
+  "reason": "These 12 cases were exposed during evaluator development and cannot satisfy the sealed-holdout gate. A new holdout must be authored outside this worktree after evaluator freeze."
+}

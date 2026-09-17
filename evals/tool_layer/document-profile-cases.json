@@ -1,0 +1,40 @@
+[
+  {
+    "id": "all-01",
+    "question": "What are the standard working hours at Multi Color Printers?",
+    "role": "user",
+    "permissions": [],
+    "expected_tier": "all",
+    "source_file": "data/corpus/company/all/company-handbook.md",
+    "expected_source_ids": [
+      "data/corpus/company/all/company-handbook.md"
+    ],
+    "expected_markers": []
+  },
+  {
+    "id": "all-02",
+    "question": "What paper stocks does Multi Color Printers offer and what finishing options are available?",
+    "role": "user",
+    "permissions": [],
+    "expected_tier": "all",
+    "source_file": "data/corpus/company/all/services-and-capabilities.md",
+    "expected_source_ids": [
+      "data/corpus/company/all/services-and-capabilities.md"
+    ],
+    "expected_markers": []
+  },
+  {
+    "id": "printing-01",
+    "question": "What is the daily startup procedure for the Heidelberg Speedmaster?",
+    "role": "user",
+    "permissions": [
+      "view job"
+    ],
+    "expected_tier": "printing",
+    "source_file": "data/corpus/company/printing/press-operating-procedures.md",
+    "expected_source_ids": [
+      "data/corpus/company/printing/press-operating-procedures.md"
+    ],
+    "expected_markers": []
+  }
+]

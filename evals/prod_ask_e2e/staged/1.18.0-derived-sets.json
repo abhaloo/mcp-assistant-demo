@@ -1,0 +1,707 @@
+{
+  "target_suite_version": "1.18.0",
+  "requires_prior_version": "1.17.0",
+  "why_staged": "D4 (2026-09-04): evals/prod_ask_e2e/suite.json is frozen until the planner-recovery plan merges its reserved 1.17.0. These cases were authored and oracle-verified on 2026-09-05 so the merge is mechanical: python scripts/eval/merge_staged_suite.py --fragment <this file> --write, then re-pin NEXT_SUITE_VERSION and the history assertions in tests/evals/test_prod_ask_e2e_run_plan.py. tests/evals/test_prod_ask_e2e_staged_fragments.py proves the fragment merges cleanly and leaks no answer key.",
+  "feature": "Derived-set filters (ADR 0073): in_set / not_in_set membership against a ranked or complete inner plan, with the membership sentence rendered as the receipt scope span.",
+  "source_evidence": [
+    "docs/superpowers/evidence/2026-09-04-derived-set-filters/browser-e2e/run-evidence-postfix.json (V-1..V-5)",
+    "docs/superpowers/evidence/2026-09-04-derived-set-filters/browser-e2e/run-evidence-resolved.json (DS-1R..DS-3R)",
+    "docs/superpowers/specs/2026-09-04-derived-set-filters-grill-record.md (tie, currency, NULL rules)"
+  ],
+  "oracle_snapshot": {
+    "database": "mcp_prod_wire_eval",
+    "derived_at": "2026-09-05",
+    "top_10_customers_by_invoiced_revenue_tzs": [8, 7, 295, 76, 57, 5, 12, 80, 75, 16],
+    "rank_10_vs_11_revenue": "209,763,237.50 vs 207,841,512.50 - no tie at the boundary",
+    "top_10_customers_by_orders_count": [755, 5, 295, 42, 57, 77, 12, 80, 8, 201],
+    "rank_10_vs_11_orders_count": "15 vs 13 - no tie at the boundary",
+    "top_10_customers_by_open_customer_orders": [755, 5, 42, 80, 12, 57, 222, 8, 201, 77],
+    "rank_10_vs_11_open_customer_orders": "11 vs 11 - a TIE, resolved by customer key ascending per the grill record",
+    "open_orders_with_null_customer": 0,
+    "invoice_currencies": "TZS only (3,520 invoices)",
+    "top_10_customers_by_invoiced_revenue_tzs_2024": [7, 8, 201, 80, 384, 57, 12, 295, 16, 5],
+    "rank_10_vs_11_revenue_2024": "56,263,750.00 vs 55,596,175.00 - no tie at the boundary",
+    "unpaid_invoices_all": 2589,
+    "jobs_all": 6113,
+    "unpaid_invoice_min_days_past_due": 45,
+    "customers_all": 812,
+    "customers_with_quotation": 464,
+    "customers_without_orders": 597,
+    "warning": "Re-derive with the oracle_sql_addendum after any ingest or restore. Every number below is a snapshot."
+  },
+  "revision_history_entry": "1.18.0 - derived-set filters (ADR 0073): appended ds-01 (open orders limited to the top 10 customers by invoiced revenue, receipt scope 'Limited to'), ds-02 (the exclusion mirror, 'Excludes'), ds-03 (the unrestricted open-orders denominator with no scope span), ds-04 (store persona, same question as ds-01, fails closed with no table and no count), ds-05 (bare 'top customers': clarify, or answer and name the basis), ds-06 (bare 'revenue' basis, diagnostic only until the owner rules on the bundle's 'clarify bare revenue' note), ds-07 (complete-mode set: customers with an unpaid invoice), ds-08 / ds-08b (invoices ranked by a customer_order measure: admin answers 682, sales is refused because the inner measure is outside its grants), ds-09 (jobs for customers with an invoice over 30 days overdue), ds-10 (customers with a quotation but no order: two sets, or one set plus has_orders), ds-11 (the inner plan carries its own period: top 10 by invoiced revenue in 2024 gives 101, the all-time set 89). Oracles computed against the ai_v1_bq_* views, never the planner. 104 cases.",
+  "dom_contract_additions": {
+    "receipt": "p.mcp-ask-v2__receipt - the result header above a v2 table or aggregate.",
+    "receipt_title": "strong.mcp-ask-v2__receipt-title inside the receipt.",
+    "receipt_scope": "span.mcp-ask-v2__receipt-scope - the derived-set membership sentence (ADR 0073). Rendered under the title ONLY when the answer was restricted by a derived set; absent on plain answers. Its text starts with 'Limited to' or 'Excludes'.",
+    "receipt_line": "span.mcp-ask-v2__receipt-line - the '<n> of <total> shown · <applied filters>' line."
+  },
+  "cases": [
+    {
+      "id": "ds-01",
+      "title": "Derived set (ranked, in_set) - open orders limited to the top 10 customers by invoiced revenue",
+      "dimensions": ["accuracy", "trust", "richtext"],
+      "persona": "admin",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "Show me open orders for our top 10 customers by invoiced revenue",
+      "expected_route": "sql",
+      "procedure": "Send the question in a new thread and wait for the terminal state. Record the receipt title, the receipt scope span text (or note that the span is absent), the receipt line, the table headers, every rendered row, the work label, and any clarification card with its options. Do not click a chip.",
+      "covers": ["measure:invoiced_revenue", "dimension:customer_order.computed_status"],
+      "oracle": {
+        "kind": "number_equals",
+        "value": 89,
+        "statement": "SELECT COUNT(id) FROM ai_v1_bq_order_fact WHERE entity_id = 1 AND computed_status IN ('NEW','IN_PROGRESS') AND customer_id IN (SELECT customer_id FROM (SELECT customer_id, SUM(items_total) AS revenue FROM ai_v1_bq_bill_fact WHERE entity_id = 1 AND type = 'Invoice' AND currency_code = 'TZS' AND customer_id IS NOT NULL GROUP BY customer_id ORDER BY revenue DESC, customer_id ASC LIMIT 10) ranked)",
+        "members": {
+          "top_10_customer_names": [
+            "Sea Cliff Resort & Spa",
+            "The Residence Hotel",
+            "Neptune Pwani Beach Resort & Spa",
+            "ZRA- ZANZIBAR REVENEW AUTHORITY",
+            "ZANZIBAR BEACH VILLAGE-TUI BLUE BAHARI",
+            "RIU PALACE LTD",
+            "RIU JAMBO",
+            "ZK VENTURES COMPANY LTD - LUX MARIJANI",
+            "ZANZIBAR PORTS CORPORATION (ZPC)",
+            "BLUE BAY BEACH RESORT"
+          ]
+        },
+        "scope_sentence": "Limited to the top 10 customers by Invoiced revenue (TZS)",
+        "why": "The product measure invoiced_revenue is SUM(items_total) on Invoice-type bills (bundle description). Open = computed_status NEW or IN_PROGRESS, the same population as open_customer_orders. Ranking ties break on customer key ascending and never widen past 10; there is no tie at rank 10/11 in this snapshot. All invoices are TZS, so the currency filter changes no member but must still be named."
+      },
+      "checks": [
+        {
+          "type": "receipt_text_matches",
+          "selector": ".mcp-ask-v2__receipt-line",
+          "pattern": "^20 of 89 shown",
+          "why": "The total is the derived-set result. 20 of 502 means the membership filter was dropped; 20 of 413 means it was inverted."
+        },
+        {
+          "type": "element_present",
+          "selector": ".mcp-ask-v2__receipt-scope",
+          "why": "ADR 0073 D1: a restricted answer must state its restriction. A table with no scope span is a silent narrowing, which is the incident this feature exists to prevent."
+        },
+        {
+          "type": "receipt_text_includes",
+          "selector": ".mcp-ask-v2__receipt-scope",
+          "value": "Limited to the top 10 customers by Invoiced revenue",
+          "why": "Inclusion wording. 'Excludes' here with 89 rows means the presenter described the inverse of the plan it ran (the M1 defect class)."
+        },
+        {
+          "type": "receipt_text_includes",
+          "selector": ".mcp-ask-v2__receipt-scope",
+          "value": "(TZS)",
+          "why": "Grill rule: one currency per monetary set, none chosen silently. The suffix is the only browser-visible proof the inner plan carried a currency filter."
+        },
+        {
+          "type": "rows_customer_names_subset_of",
+          "allowed": [
+            "Sea Cliff Resort & Spa",
+            "The Residence Hotel",
+            "Neptune Pwani Beach Resort & Spa",
+            "ZRA- ZANZIBAR REVENEW AUTHORITY",
+            "ZANZIBAR BEACH VILLAGE-TUI BLUE BAHARI",
+            "RIU PALACE LTD",
+            "RIU JAMBO",
+            "ZK VENTURES COMPANY LTD - LUX MARIJANI",
+            "ZANZIBAR PORTS CORPORATION (ZPC)",
+            "BLUE BAY BEACH RESORT"
+          ],
+          "why": "Every rendered customer name must be one of the ten. A name outside the set with the right total means the count and the rows came from different plans."
+        },
+        {
+          "type": "numbers_absent",
+          "values": ["502", "413"],
+          "why": "502 is the unrestricted total, 413 the exclusion mirror. Either one as this answer's total means the set was dropped or inverted."
+        },
+        {
+          "type": "dom_present",
+          "selector": ".mcp-ask-v2__table",
+          "why": "Entity rows render as a table. The V-2 run painted a 'Customer' column holding '5.00'; record the headers so a wrong-column regression is visible, but grade the population, not the column choice."
+        },
+        {
+          "type": "no_invented_number",
+          "why": "Only the statement above has a source."
+        }
+      ],
+      "pairs_with": ["ds-02", "ds-03", "ds-04"],
+      "escalate_if": "The total is 502 or 413, the scope span is absent on a table answer, or a rendered customer name is outside the ten."
+    },
+    {
+      "id": "ds-02",
+      "title": "Derived set (ranked, not_in_set) - open orders excluding the top 10 customers by invoiced revenue",
+      "dimensions": ["accuracy", "trust"],
+      "persona": "admin",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "Show me open orders from customers outside our top 10 by invoiced revenue",
+      "expected_route": "sql",
+      "procedure": "Send the question in a new thread and wait for the terminal state. Record the receipt title, the receipt scope span text (or note that the span is absent), the receipt line, the table headers, every rendered row, the work label, and any clarification card with its options. Do not click a chip.",
+      "oracle": {
+        "kind": "number_equals",
+        "value": 413,
+        "statement": "SELECT COUNT(id) FROM ai_v1_bq_order_fact WHERE entity_id = 1 AND computed_status IN ('NEW','IN_PROGRESS') AND customer_id IS NOT NULL AND customer_id NOT IN (SELECT customer_id FROM (SELECT customer_id, SUM(items_total) AS revenue FROM ai_v1_bq_bill_fact WHERE entity_id = 1 AND type = 'Invoice' AND currency_code = 'TZS' AND customer_id IS NOT NULL GROUP BY customer_id ORDER BY revenue DESC, customer_id ASC LIMIT 10) ranked)",
+        "scope_sentence": "Excludes the top 10 customers by Invoiced revenue (TZS)",
+        "why": "Same ranked set as ds-01, negated. Outer NULL customer keys are excluded for both operators (grill rule); this snapshot has none on open orders, so 89 + 413 = 502 exactly."
+      },
+      "checks": [
+        {
+          "type": "receipt_text_matches",
+          "selector": ".mcp-ask-v2__receipt-line",
+          "pattern": "^20 of 413 shown",
+          "why": "413 is the complement. 89 here means not_in_set compiled as in_set."
+        },
+        {
+          "type": "receipt_text_includes",
+          "selector": ".mcp-ask-v2__receipt-scope",
+          "value": "Excludes the top 10 customers by Invoiced revenue",
+          "why": "Exclusion wording. 'Limited to' on an exclusion plan is the M1 defect: the sentence describes the logical inverse of what ran."
+        },
+        {
+          "type": "forbidden_text_absent",
+          "values": [
+            "Sea Cliff Resort",
+            "The Residence Hotel",
+            "Neptune Pwani",
+            "ZANZIBAR REVENEW AUTHORITY",
+            "TUI BLUE BAHARI",
+            "RIU PALACE",
+            "RIU JAMBO",
+            "LUX MARIJANI",
+            "ZANZIBAR PORTS CORPORATION",
+            "BLUE BAY BEACH RESORT"
+          ],
+          "why": "None of the ten excluded customers may appear in the rendered rows. Only the first page is visible, so this is necessary, not sufficient."
+        },
+        {
+          "type": "cross_case",
+          "assert": "ds-01 total + ds-02 total == ds-03 total",
+          "why": "Inclusion plus exclusion must partition the unrestricted population (89 + 413 = 502 at authoring). Any other relationship means a set was inverted, dropped, or double-counted."
+        },
+        {
+          "type": "no_invented_number",
+          "why": "Only the statement above has a source."
+        }
+      ],
+      "pairs_with": ["ds-01", "ds-03"],
+      "escalate_if": "The total is 89 or 502, the scope span says 'Limited to', or one of the ten excluded names is rendered."
+    },
+    {
+      "id": "ds-03",
+      "title": "Denominator - unrestricted open orders carry no scope span",
+      "dimensions": ["accuracy", "trust"],
+      "persona": "admin",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "How many open orders do we have?",
+      "expected_route": "sql",
+      "procedure": "Send the question in a new thread and wait for the terminal state. Record the receipt title, the aggregate value, whether a receipt scope span exists anywhere in the answer article, and the work label.",
+      "covers": ["measure:open_customer_orders"],
+      "oracle": {
+        "kind": "number_equals",
+        "value": 502,
+        "statement": "SELECT COUNT(id) FROM ai_v1_bq_order_fact WHERE entity_id = 1 AND computed_status IN ('NEW','IN_PROGRESS')",
+        "why": "The open_customer_orders measure: status not FINISHED or CANCELLED, which the view exposes as computed_status NEW or IN_PROGRESS. This is the population ds-01 and ds-02 split."
+      },
+      "checks": [
+        {
+          "type": "number_equals",
+          "target": "open orders count",
+          "value": 502
+        },
+        {
+          "type": "dom_absent",
+          "selector": ".mcp-ask-v2__receipt-scope",
+          "why": "No derived set was asked for, so no membership sentence may render. A scope span here means the presenter emits the sentence unconditionally, which would make ds-01's element_present pass vacuously."
+        },
+        {
+          "type": "numbers_absent",
+          "values": ["89", "413"],
+          "why": "A restricted total on an unrestricted question means a derived set leaked in from planner defaults."
+        }
+      ],
+      "pairs_with": ["ds-01", "ds-02"],
+      "escalate_if": "A scope span renders on this answer."
+    },
+    {
+      "id": "ds-04",
+      "title": "Fail closed - store lacks `view customer order`, so the derived-set question yields no rows and no count",
+      "dimensions": ["rbac", "accuracy", "helpfulness"],
+      "persona": "store",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "Show me open orders for our top 10 customers by invoiced revenue",
+      "expected_route": "denied",
+      "procedure": "Send the question in a new thread and wait for the terminal state. Record the full answer text, whether any table or receipt rendered, whether the scope span exists, whether .mcp-ask-ai__error is present, whether a Try again control is present, and the work label.",
+      "oracle": {
+        "kind": "refusal",
+        "of": "any open-order rows or count",
+        "why": "store holds view invoice and view customer but not view customer order (persona contract in derive_oracles.sql). The outer resource is invisible to this caller, so the planner cannot bind it and must not fall back to a different resource. The V-5 run rendered the member_not_found copy as a plain message with no error element; grade the substance, not the shape."
+      },
+      "checks": [
+        {
+          "type": "refusal",
+          "why": "customer_order is outside this caller's grants; no plan may execute against it."
+        },
+        {
+          "type": "numbers_absent",
+          "values": ["89", "413", "502"],
+          "why": "Any of the three admin totals here is authorization leakage, whichever wording surrounds it."
+        },
+        {
+          "type": "dom_absent",
+          "selector": ".mcp-ask-v2__table, .mcp-ask-v2__receipt-scope",
+          "why": "No table and no membership sentence. A scope span without rows would still disclose that a top-10 set exists and was computed."
+        },
+        {
+          "type": "diagnostic_observation",
+          "what": "whether the refusal rendered as .mcp-ask-ai__error (rb-04's shape) or as a plain assistant message (V-5's shape), and whether a Try again control appeared",
+          "why": "Two denial shapes exist for capability gaps. Record which one fired so the product can converge; do not fail the case on shape."
+        },
+        {
+          "type": "rubric",
+          "dimension": "clarity_helpfulness",
+          "note": "Does the decline say what the caller CAN ask about, without SQL, policy, or manifest jargon?"
+        }
+      ],
+      "pairs_with": ["ds-01"],
+      "escalate_if": "Any open-order count or any order row renders for this caller."
+    },
+    {
+      "id": "ds-05",
+      "title": "Bare 'top customers' - clarify the basis, or answer and name it in the scope span",
+      "dimensions": ["helpfulness", "uncertainty", "trust"],
+      "persona": "admin",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "Show me open orders for our top customers",
+      "expected_route": "sql",
+      "procedure": "Send the question in a new thread and wait for the terminal state. If a clarification card appears, record its prompt and every option label, then choose the option whose label contains 'Invoiced revenue' (or the first option if none does) and wait for the second terminal state. For every completed answer record the receipt title, the receipt scope span text (or its absence), the receipt line, and every rendered row.",
+      "oracle": {
+        "kind": "ambiguity_handling",
+        "readings": [
+          {
+            "basis": "Invoiced revenue",
+            "scope_sentence": "Limited to the top 10 customers by Invoiced revenue (TZS)",
+            "value": 89,
+            "statement": "as ds-01"
+          },
+          {
+            "basis": "Orders count",
+            "scope_sentence": "Limited to the top 10 customers by Orders count",
+            "value": 137,
+            "statement": "SELECT COUNT(id) FROM ai_v1_bq_order_fact WHERE entity_id = 1 AND computed_status IN ('NEW','IN_PROGRESS') AND customer_id IN (SELECT customer_id FROM (SELECT customer_id, COUNT(id) AS n FROM ai_v1_bq_order_fact WHERE entity_id = 1 AND customer_id IS NOT NULL GROUP BY customer_id ORDER BY n DESC, customer_id ASC LIMIT 10) ranked)"
+          },
+          {
+            "basis": "Open customer orders",
+            "scope_sentence": "Limited to the top 10 customers by Open customer orders",
+            "value": 139,
+            "statement": "SELECT COUNT(id) FROM ai_v1_bq_order_fact WHERE entity_id = 1 AND computed_status IN ('NEW','IN_PROGRESS') AND customer_id IN (SELECT customer_id FROM (SELECT customer_id, COUNT(id) AS n FROM ai_v1_bq_order_fact WHERE entity_id = 1 AND computed_status IN ('NEW','IN_PROGRESS') AND customer_id IS NOT NULL GROUP BY customer_id ORDER BY n DESC, customer_id ASC LIMIT 10) ranked)",
+            "note": "Ranks 10 and 11 tie at 11 open orders; the grill rule breaks the tie on customer key ascending and never widens past 10. 139 assumes that rule."
+          }
+        ],
+        "why": "'Top' names no measure. The V-1 run (after the planner fixes) answered directly with 'Orders count' and said so in the scope span; the earlier DS-1 run asked a four-option clarification. Both handle the ambiguity honestly. What may never happen is a table whose basis is unstated, or a total that matches no basis the bundle can rank by."
+      },
+      "checks": [
+        {
+          "type": "rubric",
+          "dimension": "uncertainty_handling",
+          "note": "Grade 2 for a clarification card that names ranking bases, OR a direct answer whose scope span names the basis used. Grade 0 for a table with no scope span."
+        },
+        {
+          "type": "scope_names_basis",
+          "why": "When the answer is direct, the receipt scope span must start with 'Limited to the top' and name a measure title from the readings above."
+        },
+        {
+          "type": "numbers_traceable",
+          "why": "The rendered total must equal the reading whose basis the scope span names (89, 137 or 139 at authoring). A total matching none of them is an unverifiable ranking."
+        },
+        {
+          "type": "no_invented_number",
+          "why": "Only the readings' statements have a source."
+        }
+      ],
+      "pairs_with": ["ds-01"],
+      "escalate_if": "A table renders with no scope span, or the total matches no enumerated reading."
+    },
+    {
+      "id": "ds-06",
+      "title": "Bare 'revenue' basis - diagnostic until the owner rules on the bundle's 'clarify bare revenue' note",
+      "dimensions": ["helpfulness", "uncertainty", "diagnostic"],
+      "persona": "admin",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "Show me open orders for our top 10 customers by revenue",
+      "expected_route": "sql",
+      "diagnostic_only": true,
+      "procedure": "Send the question in a new thread and wait for the terminal state. If a clarification card appears, record its prompt and every option label, then choose the option whose label contains 'Invoiced revenue' (or the first option if none does) and wait for the second terminal state. For every completed answer record the receipt title, the receipt scope span text (or its absence), the receipt line, and every rendered row.",
+      "oracle": {
+        "kind": "diagnostic_follow_up",
+        "readings": [
+          {
+            "basis": "Invoiced revenue",
+            "scope_sentence": "Limited to the top 10 customers by Invoiced revenue (TZS)",
+            "value": 89,
+            "statement": "as ds-01"
+          },
+          {
+            "basis": "Ledger revenue",
+            "note": "ledger_entry carries no customer key in the bundle, so a ledger ranking of customers may be unexpressible. If the product chooses it, record the total and derive the oracle at grading time."
+          }
+        ],
+        "why": "The bundle's invoiced_revenue description ends 'Clarify bare \"revenue\" asks.' The V-2/V-3 runs (after planner fix 7) defaulted to Invoiced revenue without asking; the earlier DS-2/DS-3 runs clarified. Which behaviour the product should have is an open owner decision (the fix-7 A/B item). Until it is decided this case records what happened and gates only traceability."
+      },
+      "checks": [
+        {
+          "type": "diagnostic_observation",
+          "what": "clarified or answered directly; if directly, the basis named in the scope span",
+          "why": "This observation is the input to the owner's decision. Do not grade it as pass or fail."
+        },
+        {
+          "type": "numbers_traceable",
+          "why": "Whatever basis was used, the total must be derivable from the views. 89 for Invoiced revenue at authoring."
+        }
+      ],
+      "pairs_with": ["ds-05"],
+      "note": "Convert to a gated case (clarification_card OR number_equals 89 with the Invoiced revenue scope) once the owner records the decision. Leave the diagnostic record in revision_history."
+    },
+    {
+      "id": "ds-07",
+      "title": "Derived set (complete, in_set) - open orders from customers who have an unpaid invoice",
+      "dimensions": ["accuracy", "trust"],
+      "persona": "admin",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "Show me open orders from customers who have an unpaid invoice",
+      "expected_route": "sql",
+      "procedure": "Send the question in a new thread and wait for the terminal state. Record the receipt title, the receipt scope span text (or note that the span is absent), the receipt line, the table headers, every rendered row, the work label, and any clarification card with its options. Do not click a chip.",
+      "covers": ["measure:invoices_unpaid"],
+      "oracle": {
+        "kind": "number_equals",
+        "value": 363,
+        "statement": "SELECT COUNT(id) FROM ai_v1_bq_order_fact WHERE entity_id = 1 AND computed_status IN ('NEW','IN_PROGRESS') AND customer_id IN (SELECT DISTINCT customer_id FROM ai_v1_bq_bill_fact WHERE entity_id = 1 AND type = 'Invoice' AND outstanding > 0 AND customer_id IS NOT NULL)",
+        "complement": 139,
+        "member_count": 284,
+        "why": "Complete mode: every customer with at least one Invoice-type bill whose outstanding is above zero (the product's invoices_unpaid filter), no ranking and no limit. 284 such customers exist; their open orders number 363. 'Unpaid' was chosen over 'overdue' because the bundle carries two overdue measures (30-day and past-due-date) and only one unpaid one."
+      },
+      "checks": [
+        {
+          "type": "receipt_text_matches",
+          "selector": ".mcp-ask-v2__receipt-line",
+          "pattern": "^20 of 363 shown",
+          "why": "363 is the derived-set result. 502 means the membership filter was dropped; 139 means it was inverted."
+        },
+        {
+          "type": "receipt_text_includes",
+          "selector": ".mcp-ask-v2__receipt-scope",
+          "value": "Limited to customers with",
+          "why": "Complete-mode wording has no 'the top N'. 'Limited to the top' here means the planner ranked when it should have enumerated."
+        },
+        {
+          "type": "numbers_absent",
+          "values": ["502", "139", "284"],
+          "why": "502 is unrestricted, 139 is the complement, and 284 is the customer count - an answer of 284 means the grain slipped from orders to customers (the grain_unexpressible class)."
+        },
+        {
+          "type": "no_invented_number",
+          "why": "Only the statement above has a source."
+        }
+      ],
+      "pairs_with": ["ds-01", "ds-03"],
+      "escalate_if": "The total is 502, 139 or 284, or a table renders with no scope span."
+    },
+    {
+      "id": "ds-08",
+      "title": "Derived set on invoices - unpaid invoices limited to the top 10 customers by orders count",
+      "dimensions": ["accuracy", "trust"],
+      "persona": "admin",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "Show me unpaid invoices for our top 10 customers by number of orders",
+      "expected_route": "sql",
+      "procedure": "Send the question in a new thread and wait for the terminal state. Record the receipt title, the receipt scope span text (or note that the span is absent), the receipt line, the table headers, every rendered row, the work label, and any clarification card with its options. Do not click a chip.",
+      "covers": ["measure:orders_count", "measure:invoices_unpaid"],
+      "oracle": {
+        "kind": "number_equals",
+        "value": 682,
+        "statement": "SELECT COUNT(id) FROM ai_v1_bq_bill_fact WHERE entity_id = 1 AND type = 'Invoice' AND outstanding > 0 AND customer_id IN (SELECT customer_id FROM (SELECT customer_id, COUNT(id) AS n FROM ai_v1_bq_order_fact WHERE entity_id = 1 AND customer_id IS NOT NULL GROUP BY customer_id ORDER BY n DESC, customer_id ASC LIMIT 10) ranked)",
+        "scope_sentence": "Limited to the top 10 customers by Orders count",
+        "why": "The outer resource is invoice (invoices_unpaid: outstanding > 0, 2,589 in all) and the inner ranking is the customer_order measure orders_count, so the set crosses two resources on customer_id. Orders count carries no currency dimension, so the scope sentence has no currency suffix - a '(TZS)' here means the presenter attached a currency the ranking never used. No tie at rank 10/11 (15 vs 13 orders)."
+      },
+      "checks": [
+        {
+          "type": "receipt_text_matches",
+          "selector": ".mcp-ask-v2__receipt-line",
+          "pattern": "^20 of 682 shown",
+          "why": "682 is the derived-set result. 2,589 means the membership filter was dropped."
+        },
+        {
+          "type": "receipt_text_includes",
+          "selector": ".mcp-ask-v2__receipt-scope",
+          "value": "Limited to the top 10 customers by Orders count",
+          "why": "The ranking basis must be the one asked for. 'Invoiced revenue' here means the planner substituted a same-resource measure for the cross-resource one."
+        },
+        {
+          "type": "strings_absent",
+          "selector": ".mcp-ask-v2__receipt-scope",
+          "values": ["(TZS)"],
+          "why": "A count ranking has no currency. The suffix appearing means the currency rule fired on the wrong plan."
+        },
+        {
+          "type": "numbers_absent",
+          "values": ["2,589", "2589"],
+          "why": "The unrestricted unpaid count. Its appearance as the total means the set was dropped."
+        },
+        {
+          "type": "no_invented_number",
+          "why": "Only the statement above has a source."
+        }
+      ],
+      "pairs_with": ["ds-08b", "ds-05"],
+      "escalate_if": "The total is 2,589, the scope span is absent, or the scope span names a basis other than Orders count."
+    },
+    {
+      "id": "ds-08b",
+      "title": "Fail closed on the inner plan - sales sees invoices but not orders, so the ranking is refused, never substituted",
+      "dimensions": ["rbac", "accuracy", "helpfulness"],
+      "persona": "sales",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "Show me unpaid invoices for our top 10 customers by number of orders",
+      "expected_route": "denied",
+      "procedure": "Send the question in a new thread and wait for the terminal state. Record the full answer text, whether any table or receipt rendered, the receipt scope span text if one exists, whether .mcp-ask-ai__error is present, whether a Try again control is present, and the work label.",
+      "oracle": {
+        "kind": "refusal",
+        "of": "any invoice rows or count",
+        "why": "sales holds view invoice and view customer but not view customer order (persona contract in derive_oracles.sql). The OUTER resource is visible to this caller; the INNER ranking measure is not. apply_role_scope must fail the inner plan closed. The dangerous wrong answer is not a leak of order data - it is a table of unpaid invoices ranked by a measure the caller CAN see (invoiced revenue), presented as if it were what was asked."
+      },
+      "checks": [
+        {
+          "type": "refusal",
+          "why": "orders_count lives on customer_order, which is outside this caller's grants; no ranking over it may execute."
+        },
+        {
+          "type": "no_silent_substitution",
+          "why": "If a table renders at all, the case fails - even with a scope span naming another basis. Answering a different question than the one asked, without saying so, is the failure this pair exists to catch."
+        },
+        {
+          "type": "numbers_absent",
+          "values": ["682", "2,589", "2589"],
+          "why": "682 is the admin answer (order data leaked into the ranking); 2,589 is the unrestricted unpaid count (the set was dropped and the caller's own invoices were listed as if restricted)."
+        },
+        {
+          "type": "dom_absent",
+          "selector": ".mcp-ask-v2__table, .mcp-ask-v2__receipt-scope",
+          "why": "No table and no membership sentence."
+        },
+        {
+          "type": "rubric",
+          "dimension": "clarity_helpfulness",
+          "note": "Does the decline name what this caller CAN rank invoices by, without SQL, policy, or manifest jargon?"
+        }
+      ],
+      "pairs_with": ["ds-08"],
+      "escalate_if": "Any invoice table or count renders for this caller, whatever the scope span says."
+    },
+    {
+      "id": "ds-09",
+      "title": "Derived set on jobs - jobs for customers with an invoice more than 30 days overdue",
+      "dimensions": ["accuracy", "trust"],
+      "persona": "admin",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "Show me jobs for customers with an invoice more than 30 days overdue",
+      "expected_route": "sql",
+      "procedure": "Send the question in a new thread and wait for the terminal state. Record the receipt title, the receipt scope span text (or note that the span is absent), the receipt line, the table headers, every rendered row, the work label, and any clarification card with its options. Do not click a chip.",
+      "covers": ["measure:invoices_overdue_unpaid"],
+      "oracle": {
+        "kind": "number_equals",
+        "value": 4761,
+        "statement": "SELECT COUNT(id) FROM ai_v1_bq_job_fact WHERE entity_id = 1 AND customer_id IN (SELECT DISTINCT customer_id FROM ai_v1_bq_bill_fact WHERE entity_id = 1 AND type = 'Invoice' AND days_past_due IS NOT NULL AND days_past_due > 30 AND outstanding > 0 AND customer_id IS NOT NULL)",
+        "member_count": 284,
+        "unrestricted": 6113,
+        "why": "Outer resource job (admin carries no department, so no department predicate), inner complete-mode set on invoice using the product's invoices_overdue_unpaid filter (days_past_due > 30 AND outstanding > 0). Every unpaid invoice in this snapshot is already at least 45 days past due, so this set equals the unpaid-customer set of ds-07 (284 customers) and the value only moves if the snapshot is re-ingested; days_past_due grows with the calendar but cannot drop a member out."
+      },
+      "checks": [
+        {
+          "type": "receipt_text_matches",
+          "selector": ".mcp-ask-v2__receipt-line",
+          "pattern": "^20 of 4,761 shown",
+          "why": "4,761 is the derived-set result. 6,113 means the membership filter was dropped and every job was listed."
+        },
+        {
+          "type": "receipt_text_includes",
+          "selector": ".mcp-ask-v2__receipt-scope",
+          "value": "Limited to customers with",
+          "why": "Complete-mode wording. 'Limited to the top' means the planner ranked when it should have enumerated."
+        },
+        {
+          "type": "numbers_absent",
+          "values": ["6,113", "6113", "284"],
+          "why": "6,113 is every job (rb-03's unscoped total); 284 is the customer count, the wrong-grain answer."
+        },
+        {
+          "type": "no_invented_number",
+          "why": "Only the statement above has a source."
+        }
+      ],
+      "pairs_with": ["ds-07", "rb-03"],
+      "escalate_if": "The total is 6,113 or 284, or a table renders with no scope span."
+    },
+    {
+      "id": "ds-10",
+      "title": "Two sets on customers - customers who have a quotation but no order",
+      "dimensions": ["accuracy", "trust"],
+      "persona": "admin",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "Which customers have a quotation but no order?",
+      "expected_route": "sql",
+      "procedure": "Send the question in a new thread and wait for the terminal state. Record the receipt title, the receipt scope span text (or note that the span is absent), the receipt line, the table headers, every rendered row, the work label, and any clarification card with its options. Do not click a chip.",
+      "oracle": {
+        "kind": "number_equals",
+        "value": 331,
+        "statement": "SELECT COUNT(id) FROM ai_v1_bq_customer_fact WHERE entity_id = 1 AND id IN (SELECT DISTINCT customer_id FROM ai_v1_bq_bill_fact WHERE entity_id = 1 AND type = 'Quotation' AND customer_id IS NOT NULL) AND id NOT IN (SELECT DISTINCT customer_id FROM ai_v1_bq_order_fact WHERE entity_id = 1 AND customer_id IS NOT NULL)",
+        "wrong_answers": {"quotation_only": 464, "no_order_only": 597, "all_customers": 812},
+        "why": "Outer resource customer. Two valid plan shapes exist: in_set(quotation customers) AND not_in_set(order customers), or in_set(quotation customers) AND customer.has_orders = false. Both give 331 in this snapshot (has_orders is derived from the same orders). The count is the gate; the shape is recorded, not graded."
+      },
+      "checks": [
+        {
+          "type": "receipt_text_matches",
+          "selector": ".mcp-ask-v2__receipt-line",
+          "pattern": "^20 of 331 shown",
+          "why": "331 is the intersection. 464 means the 'no order' half was dropped; 597 means the quotation half was dropped."
+        },
+        {
+          "type": "element_present",
+          "selector": ".mcp-ask-v2__receipt-scope",
+          "why": "At least one membership restriction ran, so the sentence must render."
+        },
+        {
+          "type": "numbers_absent",
+          "values": ["464", "597", "812"],
+          "why": "Each is one half of the question, or all customers. Any of them as the total means a clause was dropped."
+        },
+        {
+          "type": "diagnostic_observation",
+          "what": "whether the scope span names two restrictions (a quotation set and an order exclusion) or one restriction plus a plain has-orders filter",
+          "why": "Both are correct. Recording the shape shows whether the planner reaches for a second set or for the cheaper dimension, which decides whether the two-set ceiling is ever exercised."
+        },
+        {
+          "type": "no_invented_number",
+          "why": "Only the statement above has a source."
+        }
+      ],
+      "pairs_with": ["ds-07"],
+      "escalate_if": "The total is 464, 597 or 812, or a table renders with no scope span."
+    },
+    {
+      "id": "ds-11",
+      "title": "Period inside the set - open orders from customers who were top 10 by invoiced revenue in 2024",
+      "dimensions": ["accuracy", "trust", "uncertainty"],
+      "persona": "admin",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "Show me open orders from customers who were in our top 10 by invoiced revenue in 2024",
+      "expected_route": "sql",
+      "procedure": "Send the question in a new thread and wait for the terminal state. Record the receipt title, the receipt scope span text (or note that the span is absent), the receipt line in full, the table headers, every rendered row, the work label, and any clarification card with its options. Do not click a chip.",
+      "oracle": {
+        "kind": "number_equals",
+        "value": 101,
+        "statement": "SELECT COUNT(id) FROM ai_v1_bq_order_fact WHERE entity_id = 1 AND computed_status IN ('NEW','IN_PROGRESS') AND customer_id IN (SELECT customer_id FROM (SELECT customer_id, SUM(items_total) AS revenue FROM ai_v1_bq_bill_fact WHERE entity_id = 1 AND type = 'Invoice' AND currency_code = 'TZS' AND customer_id IS NOT NULL AND created_at >= '2024-01-01' AND created_at < '2025-01-01' GROUP BY customer_id ORDER BY revenue DESC, customer_id ASC LIMIT 10) ranked)",
+        "members": {
+          "top_10_customer_names_2024": [
+            "The Residence Hotel",
+            "Sea Cliff Resort & Spa",
+            "Kwanza Aldiana",
+            "ZK VENTURES COMPANY LTD - LUX MARIJANI",
+            "Zanzibar MultiPurpose Port",
+            "ZANZIBAR BEACH VILLAGE-TUI BLUE BAHARI",
+            "RIU JAMBO",
+            "Neptune Pwani Beach Resort & Spa",
+            "BLUE BAY BEACH RESORT",
+            "RIU PALACE LTD"
+          ]
+        },
+        "all_time_set_gives": 89,
+        "why": "The inner plan carries its own period (invoice.created_at within 2024) while the outer plan has none. The 2024 set differs from the all-time set by two members (Kwanza Aldiana and Zanzibar MultiPurpose Port in; ZRA and ZPC out), so 101 versus 89 tells whether the period reached the inner plan. No tie at rank 10/11 (56,263,750 vs 55,596,175). An explicit year is used instead of 'last quarter' so the oracle does not move with the calendar."
+      },
+      "checks": [
+        {
+          "type": "receipt_text_matches",
+          "selector": ".mcp-ask-v2__receipt-line",
+          "pattern": "^20 of 101 shown",
+          "why": "101 is the 2024 set. 89 means the period was dropped from the inner plan and the all-time ranking was used."
+        },
+        {
+          "type": "receipt_text_includes",
+          "selector": ".mcp-ask-v2__receipt-scope",
+          "value": "Limited to the top 10 customers by Invoiced revenue",
+          "why": "Inclusion wording with the asked-for basis."
+        },
+        {
+          "type": "rows_customer_names_subset_of",
+          "allowed": [
+            "The Residence Hotel",
+            "Sea Cliff Resort & Spa",
+            "Kwanza Aldiana",
+            "ZK VENTURES COMPANY LTD - LUX MARIJANI",
+            "Zanzibar MultiPurpose Port",
+            "ZANZIBAR BEACH VILLAGE-TUI BLUE BAHARI",
+            "RIU JAMBO",
+            "Neptune Pwani Beach Resort & Spa",
+            "BLUE BAY BEACH RESORT",
+            "RIU PALACE LTD"
+          ],
+          "why": "ZRA or ZPC in the rows means the all-time set was used even if the count happens to match."
+        },
+        {
+          "type": "numbers_absent",
+          "values": ["502"],
+          "why": "The unrestricted total."
+        },
+        {
+          "type": "diagnostic_observation",
+          "what": "whether the scope span or the receipt line states the 2024 period anywhere",
+          "why": "At authoring the presenter's ranked-set sentence carries the limit, subject, measure and currency but NOT the inner plan's period, so 'in 2024' is probably unstated. ADR 0073 D1 requires the restriction to be stated; a correct count with the year missing is a candidate product gap, recorded here for the owner, not graded as a failure of this case."
+        },
+        {
+          "type": "no_invented_number",
+          "why": "Only the statement above has a source."
+        }
+      ],
+      "pairs_with": ["ds-01"],
+      "escalate_if": "The total is 89 or 502, or a table renders with no scope span."
+    }
+  ],
+  "release_gates_additions": [
+    "ds-01 + ds-02 must equal ds-03 (89 + 413 = 502 at authoring). Inclusion and exclusion partition the unrestricted population; any other relationship means a derived set was inverted, dropped, or double-counted.",
+    "ds-04 (store) must render no open-order count and no table for the question ds-01 (admin) answers with a table. Both halves are required: a failing ds-01 makes ds-04's denial vacuous, exactly as with rb-01/rb-04.",
+    "ds-08 (admin) must answer 682 while ds-08b (sales) renders no invoice table at all for the same question. ds-08b is the inner-plan half of fail-closed: the caller can see invoices but not the orders the ranking needs, and a table ranked by any other basis is a silent substitution, not a helpful fallback.",
+    "Any table answer whose plan carried a derived set must render the receipt scope span (ds-01, ds-02, ds-07, ds-08, ds-09, ds-10, ds-11). A restricted table with no membership sentence fails regardless of the count - it is the silent narrowing ADR 0073 forbids.",
+    "ds-11 must return 101, not 89. The two sets differ by two members; 89 means the inner plan's period was dropped and the all-time ranking was silently used."
+  ],
+  "coverage_gaps_additions": [
+    {
+      "gap": "The inner-plan permission path is browser-observable in one direction only.",
+      "detail": "ds-08b covers 'outer visible, inner invisible' for invoices ranked by an order measure (sales holds view invoice, not view customer order). The mirror - orders ranked by an invoice measure for a caller who holds view customer order but not view invoice - has no seeded persona, so that deny half is covered by tests/integration/test_derived_set_filters_mysql.py only.",
+      "fix": "Seed a persona with view customer order and no view invoice, then add the mirror deny half against ds-01's question."
+    },
+    {
+      "gap": "The NULL-key exclusion rule is unobservable in this snapshot.",
+      "detail": "Zero open orders carry a NULL customer_id, so excluding outer NULLs for both operators changes no browser answer. ds-01 + ds-02 = ds-03 would still hold if NULL handling were wrong.",
+      "fix": "Seed one open order with a NULL customer and re-derive; the partition must then leave that order out of both halves."
+    },
+    {
+      "gap": "The D1 text-budget rule (membership sentence never shortened) is not forceable from the browser.",
+      "detail": "Forcing the answer body past the budget while a derived set is present needs a synthetic plan. Covered by tests/business_query/test_derived_sets_contract.py.",
+      "fix": "None in the browser; keep the unit gate."
+    },
+    {
+      "gap": "Ranking tie-break is pinned only on paper.",
+      "detail": "The only basis with a rank-10/11 tie in this snapshot is Open customer orders (11 = 11). ds-05 enumerates that reading with the customer-key-ascending rule applied (139), but the planner chooses the basis, so the tie path runs only if it picks that measure.",
+      "fix": "Once ds-05's basis behaviour is decided, add a case that names the basis explicitly: 'top 10 customers by open orders'."
+    }
+  ],
+  "oracle_sql_addendum": "-- ds-01 / ds-02 / ds-03: derived-set partition. Open = computed_status NEW or IN_PROGRESS\n-- (the open_customer_orders measure). The ranked set is the product's invoiced_revenue:\n-- SUM(items_total) on Invoice bills, one currency, ties on customer key ascending, never\n-- wider than 10. ds-01 + ds-02 must equal ds-03.\nSELECT 'ds-03  open orders (unrestricted)' AS oracle, COUNT(id) AS value\nFROM ai_v1_bq_order_fact WHERE entity_id = 1 AND computed_status IN ('NEW','IN_PROGRESS')\nUNION ALL\nSELECT 'ds-01  open orders, top 10 customers by invoiced revenue (TZS)', COUNT(id)\nFROM ai_v1_bq_order_fact\nWHERE entity_id = 1 AND computed_status IN ('NEW','IN_PROGRESS')\n  AND customer_id IN (\n      SELECT customer_id FROM (\n          SELECT customer_id, SUM(items_total) AS revenue\n          FROM ai_v1_bq_bill_fact\n          WHERE entity_id = 1 AND type = 'Invoice' AND currency_code = 'TZS' AND customer_id IS NOT NULL\n          GROUP BY customer_id\n          ORDER BY revenue DESC, customer_id ASC\n          LIMIT 10\n      ) ranked)\nUNION ALL\nSELECT 'ds-02  open orders, outside the top 10 by invoiced revenue (TZS)', COUNT(id)\nFROM ai_v1_bq_order_fact\nWHERE entity_id = 1 AND computed_status IN ('NEW','IN_PROGRESS') AND customer_id IS NOT NULL\n  AND customer_id NOT IN (\n      SELECT customer_id FROM (\n          SELECT customer_id, SUM(items_total) AS revenue\n          FROM ai_v1_bq_bill_fact\n          WHERE entity_id = 1 AND type = 'Invoice' AND currency_code = 'TZS' AND customer_id IS NOT NULL\n          GROUP BY customer_id\n          ORDER BY revenue DESC, customer_id ASC\n          LIMIT 10\n      ) ranked);\n\n-- ds-01 members: the ten names the rendered rows must stay inside (ds-02 must avoid them).\n-- Also prove there is no tie at rank 10/11 - a tie would make the membership depend on the\n-- customer-key rule, which the browser cannot see.\nSELECT 'ds-01  ranked member' AS oracle, customer_id, customer_name, ROUND(SUM(items_total), 2) AS revenue\nFROM ai_v1_bq_bill_fact\nWHERE entity_id = 1 AND type = 'Invoice' AND currency_code = 'TZS' AND customer_id IS NOT NULL\nGROUP BY customer_id, customer_name\nORDER BY revenue DESC, customer_id ASC\nLIMIT 11;\n\n-- ds-05: the bare 'top customers' readings. Orders count has no tie at 10/11. Open customer\n-- orders ties (11 = 11) and the value assumes customer key ascending.\nSELECT 'ds-05  open orders, top 10 customers by orders count' AS oracle, COUNT(id) AS value\nFROM ai_v1_bq_order_fact\nWHERE entity_id = 1 AND computed_status IN ('NEW','IN_PROGRESS')\n  AND customer_id IN (\n      SELECT customer_id FROM (\n          SELECT customer_id, COUNT(id) AS n FROM ai_v1_bq_order_fact\n          WHERE entity_id = 1 AND customer_id IS NOT NULL\n          GROUP BY customer_id ORDER BY n DESC, customer_id ASC LIMIT 10\n      ) ranked)\nUNION ALL\nSELECT 'ds-05  open orders, top 10 customers by open customer orders (tie at 10/11)', COUNT(id)\nFROM ai_v1_bq_order_fact\nWHERE entity_id = 1 AND computed_status IN ('NEW','IN_PROGRESS')\n  AND customer_id IN (\n      SELECT customer_id FROM (\n          SELECT customer_id, COUNT(id) AS n FROM ai_v1_bq_order_fact\n          WHERE entity_id = 1 AND computed_status IN ('NEW','IN_PROGRESS') AND customer_id IS NOT NULL\n          GROUP BY customer_id ORDER BY n DESC, customer_id ASC LIMIT 10\n      ) ranked);\n\n-- ds-07: complete-mode set - every customer with an unpaid invoice (the invoices_unpaid\n-- filter, outstanding > 0), no ranking, no limit. The member count (284) is the wrong-grain\n-- answer and must not appear.\nSELECT 'ds-07  open orders, customers with an unpaid invoice' AS oracle, COUNT(id) AS value\nFROM ai_v1_bq_order_fact\nWHERE entity_id = 1 AND computed_status IN ('NEW','IN_PROGRESS')\n  AND customer_id IN (SELECT DISTINCT customer_id FROM ai_v1_bq_bill_fact\n                      WHERE entity_id = 1 AND type = 'Invoice' AND outstanding > 0 AND customer_id IS NOT NULL)\nUNION ALL\nSELECT 'ds-07  customers with an unpaid invoice (must NOT be the answer)', COUNT(DISTINCT customer_id)\nFROM ai_v1_bq_bill_fact\nWHERE entity_id = 1 AND type = 'Invoice' AND outstanding > 0 AND customer_id IS NOT NULL;\n\n-- ds-08: unpaid invoices (outstanding > 0) for the top 10 customers by orders count. The\n-- ranking lives on customer_order, the rows on invoice. ds-08b (sales) must refuse this.\nSELECT 'ds-08  unpaid invoices, top 10 customers by orders count' AS oracle, COUNT(id) AS value\nFROM ai_v1_bq_bill_fact\nWHERE entity_id = 1 AND type = 'Invoice' AND outstanding > 0\n  AND customer_id IN (\n      SELECT customer_id FROM (\n          SELECT customer_id, COUNT(id) AS n FROM ai_v1_bq_order_fact\n          WHERE entity_id = 1 AND customer_id IS NOT NULL\n          GROUP BY customer_id ORDER BY n DESC, customer_id ASC LIMIT 10\n      ) ranked)\nUNION ALL\nSELECT 'ds-08  unpaid invoices, unrestricted (must NOT be the answer)', COUNT(id)\nFROM ai_v1_bq_bill_fact WHERE entity_id = 1 AND type = 'Invoice' AND outstanding > 0;\n\n-- ds-09: jobs (no department predicate for admin) for customers with an invoice more than\n-- 30 days overdue - the product's invoices_overdue_unpaid filter. Every unpaid invoice in\n-- this snapshot is at least 45 days past due, so the set equals ds-07's; re-check the MIN.\nSELECT 'ds-09  jobs, customers with an invoice over 30 days overdue' AS oracle, COUNT(id) AS value\nFROM ai_v1_bq_job_fact\nWHERE entity_id = 1\n  AND customer_id IN (SELECT DISTINCT customer_id FROM ai_v1_bq_bill_fact\n                      WHERE entity_id = 1 AND type = 'Invoice' AND days_past_due IS NOT NULL\n                        AND days_past_due > 30 AND outstanding > 0 AND customer_id IS NOT NULL)\nUNION ALL\nSELECT 'ds-09  minimum days_past_due on an unpaid invoice (must stay above 30)', MIN(days_past_due)\nFROM ai_v1_bq_bill_fact WHERE entity_id = 1 AND type = 'Invoice' AND outstanding > 0;\n\n-- ds-10: customers with a quotation but no order. Two sets, or one set plus has_orders.\n-- The three wrong answers are each half of the question and the whole customer count.\nSELECT 'ds-10  customers with a quotation and no order' AS oracle, COUNT(id) AS value\nFROM ai_v1_bq_customer_fact\nWHERE entity_id = 1\n  AND id IN (SELECT DISTINCT customer_id FROM ai_v1_bq_bill_fact\n             WHERE entity_id = 1 AND type = 'Quotation' AND customer_id IS NOT NULL)\n  AND id NOT IN (SELECT DISTINCT customer_id FROM ai_v1_bq_order_fact\n                 WHERE entity_id = 1 AND customer_id IS NOT NULL)\nUNION ALL\nSELECT 'ds-10  customers with a quotation (must NOT be the answer)', COUNT(DISTINCT customer_id)\nFROM ai_v1_bq_bill_fact WHERE entity_id = 1 AND type = 'Quotation' AND customer_id IS NOT NULL\nUNION ALL\nSELECT 'ds-10  customers without orders (must NOT be the answer)', SUM(has_orders = 0)\nFROM ai_v1_bq_customer_fact WHERE entity_id = 1;\n\n-- ds-11: the inner plan carries its own period. Top 10 by invoiced revenue in 2024, then\n-- open orders today. Must differ from ds-01 (all-time set): 101 vs 89 at authoring.\nSELECT 'ds-11  open orders, top 10 customers by invoiced revenue in 2024' AS oracle, COUNT(id) AS value\nFROM ai_v1_bq_order_fact\nWHERE entity_id = 1 AND computed_status IN ('NEW','IN_PROGRESS')\n  AND customer_id IN (\n      SELECT customer_id FROM (\n          SELECT customer_id, SUM(items_total) AS revenue\n          FROM ai_v1_bq_bill_fact\n          WHERE entity_id = 1 AND type = 'Invoice' AND currency_code = 'TZS' AND customer_id IS NOT NULL\n            AND created_at >= '2024-01-01' AND created_at < '2025-01-01'\n          GROUP BY customer_id\n          ORDER BY revenue DESC, customer_id ASC\n          LIMIT 10\n      ) ranked);\nSELECT 'ds-11  ranked member 2024' AS oracle, customer_id, customer_name, ROUND(SUM(items_total), 2) AS revenue\nFROM ai_v1_bq_bill_fact\nWHERE entity_id = 1 AND type = 'Invoice' AND currency_code = 'TZS' AND customer_id IS NOT NULL\n  AND created_at >= '2024-01-01' AND created_at < '2025-01-01'\nGROUP BY customer_id, customer_name\nORDER BY revenue DESC, customer_id ASC\nLIMIT 11;\n"
+}

@@ -1,0 +1,133 @@
+[
+  {
+    "case_id": "sample-01",
+    "persona": "adeel",
+    "question": "How many jobs do we have?",
+    "answer": "jobs_count: 6113",
+    "answer_html": "  <div class=\"mcp-ask-ai__msg-body\"><p>jobs_count: 6113</p>\n</div><div class=\"mcp-ask-ai__trust-section\">  <div class=\"mcp-ask-ai__trust-header\">    <span class=\"mcp-ask-ai__trust-badge\" title=\"Query generated and verified via structured schema AST\"><i class=\"fa fa-circle-check\" aria-hidden=\"true\"></i> Verified Query</span>    <button type=\"button\" class=\"mcp-ask-ai__trust-toggle\" aria-expanded=\"false\" aria-controls=\"trust-drawer-msg-18\">      <i class=\"fa fa-circle-info\" aria-hidden=\"true\"></i> Explain Query    </button>  </div>  <div class=\"mcp-ask-ai__trust-drawer\" id=\"trust-drawer-msg-18\" hidden=\"\">    <div class=\"mcp-ask-ai__trust-support-reference\"><span>Support reference (Answer Query ID): <code>aq_9cdc17c8a985870b63538a48540e337d</code></span><button type=\"button\" class=\"mcp-btn mcp-btn--xs mcp-btn--secondary\" data-copy-answer-query-id=\"aq_9cdc17c8a985870b63538a48540e337d\" aria-label=\"Copy Answer Query ID\"><i class=\"fa fa-copy\" aria-hidden=\"true\"></i> Copy</button></div>    <p class=\"mcp-ask-ai__trust-plain-english\">Summary metrics calculated from matching business records.</p>        <div class=\"mcp-ask-ai__trust-meta\"><span class=\"mcp-ask-ai__trust-count\">1 of 1 matched</span></div>      </div></div><div class=\"mcp-ask-ai__actions\"><button type=\"button\" class=\"mcp-ask-ai__thumb\" data-copy=\"msg-18\" aria-label=\"Copy answer\" data-mcp-tip=\"Copy\"><i class=\"fa fa-copy\" aria-hidden=\"true\"></i></button><button type=\"button\" class=\"mcp-ask-ai__thumb mcp-ask-ai__thumb--up\" data-feedback=\"up\" data-msg-id=\"msg-18\" aria-pressed=\"false\" aria-label=\"Helpful answer\" data-mcp-tip=\"Helpful\"><i class=\"fa fa-thumbs-up\" aria-hidden=\"true\"></i></button><button type=\"button\" class=\"mcp-ask-ai__thumb mcp-ask-ai__thumb--down\" data-feedback=\"down\" data-msg-id=\"msg-18\" aria-pressed=\"false\" aria-label=\"Not helpful\" data-mcp-tip=\"Not helpful\"><i class=\"fa fa-thumbs-down\" aria-hidden=\"true\"></i></button><button type=\"button\" class=\"mcp-ask-ai__thumb\" data-regenerate=\"msg-18\" aria-label=\"Regenerate answer\" data-mcp-tip=\"Regenerate\"><i class=\"fa fa-refresh\" aria-hidden=\"true\"></i></button></div><div class=\"mcp-ask-ai__chips\"><button type=\"button\" class=\"mcp-ask-ai__chip mcp-ask-ai__follow-up-pill\" data-chip-index=\"0\" data-chip-message-id=\"msg-18\"><span class=\"mcp-ask-ai__chip-icon\" aria-hidden=\"true\"><i class=\"fa fa-comment-dots\"></i></span>Show the most recent jobs<i class=\"fa fa-arrow-right mcp-ask-ai__chip-arrow\" aria-hidden=\"true\"></i></button></div>",
+    "message_pair": {
+      "user_message_id": "msg-17",
+      "assistant_message_id": "msg-18",
+      "preceding_user_text": "How many jobs do we have?",
+      "verified": true
+    },
+    "page_context_observation": null,
+    "phases": [],
+    "record_links": [],
+    "citations": [],
+    "citation_note": null,
+    "suggestions": [
+      "Show the most recent jobs"
+    ],
+    "errors": null,
+    "has_try_again": false,
+    "timing_ms": {
+      "first_status": null,
+      "first_content": 56,
+      "complete": 6681,
+      "source": "harness_upper_bound"
+    },
+    "pipeline_observed": "sql",
+    "pipeline_observation_basis": "Verified Query trust badge rendered in DOM with Answer Query ID aq_9cdc17c8a985870b63538a48540e337d",
+    "result_metadata": {
+      "answer_query_id": "aq_9cdc17c8a985870b63538a48540e337d",
+      "surfaces_inspected": [
+        "article[aria-label='AI answer']",
+        ".mcp-ask-ai__msg-body",
+        ".mcp-ask-ai__trust-section",
+        ".mcp-ask-ai__trust-drawer"
+      ]
+    },
+    "pagination_observation": null,
+    "screenshots": [
+      "C:\\Users\\Adeel\\Desktop\\MCP Connect\\mcp-rag-qa-prod-wire-eval\\evals\\prod_ask_e2e\\evidence\\screenshots\\sample-01.png"
+    ]
+  },
+  {
+    "case_id": "sample-02",
+    "persona": "adeel",
+    "question": "Who are our top customers?",
+    "answer": "Top customers by which measure—revenue, invoice amount, or order count?",
+    "answer_html": "  <div class=\"mcp-ask-ai__msg-body\"><p>Top customers by which measure—revenue, invoice amount, or order count?</p>\n</div><div class=\"mcp-ask-ai__actions\"><button type=\"button\" class=\"mcp-ask-ai__thumb\" data-copy=\"msg-20\" aria-label=\"Copy answer\" data-mcp-tip=\"Copy\"><i class=\"fa fa-copy\" aria-hidden=\"true\"></i></button><button type=\"button\" class=\"mcp-ask-ai__thumb mcp-ask-ai__thumb--up\" data-feedback=\"up\" data-msg-id=\"msg-20\" aria-pressed=\"false\" aria-label=\"Helpful answer\" data-mcp-tip=\"Helpful\"><i class=\"fa fa-thumbs-up\" aria-hidden=\"true\"></i></button><button type=\"button\" class=\"mcp-ask-ai__thumb mcp-ask-ai__thumb--down\" data-feedback=\"down\" data-msg-id=\"msg-20\" aria-pressed=\"false\" aria-label=\"Not helpful\" data-mcp-tip=\"Not helpful\"><i class=\"fa fa-thumbs-down\" aria-hidden=\"true\"></i></button><button type=\"button\" class=\"mcp-ask-ai__thumb\" data-regenerate=\"msg-20\" aria-label=\"Regenerate answer\" data-mcp-tip=\"Regenerate\"><i class=\"fa fa-refresh\" aria-hidden=\"true\"></i></button></div><div class=\"mcp-ask-ai__chips\"><button type=\"button\" class=\"mcp-ask-ai__chip mcp-ask-ai__follow-up-pill\" data-chip-index=\"0\" data-chip-message-id=\"msg-20\"><span class=\"mcp-ask-ai__chip-icon\" aria-hidden=\"true\"><i class=\"fa fa-comment-dots\"></i></span>Show the most recent customers<i class=\"fa fa-arrow-right mcp-ask-ai__chip-arrow\" aria-hidden=\"true\"></i></button></div>",
+    "message_pair": {
+      "user_message_id": "msg-19",
+      "assistant_message_id": "msg-20",
+      "preceding_user_text": "Who are our top customers?",
+      "verified": true
+    },
+    "page_context_observation": null,
+    "phases": [],
+    "record_links": [],
+    "citations": [],
+    "citation_note": null,
+    "suggestions": [
+      "Show the most recent customers"
+    ],
+    "errors": null,
+    "has_try_again": false,
+    "timing_ms": {
+      "first_status": null,
+      "first_content": 64,
+      "complete": 8522,
+      "source": "harness_upper_bound"
+    },
+    "pipeline_observed": "uncertain",
+    "pipeline_observation_basis": "Clarification/conversational response rendered without trust drawer or citation marker",
+    "result_metadata": {
+      "answer_query_id": null,
+      "surfaces_inspected": [
+        "article[aria-label='AI answer']",
+        ".mcp-ask-ai__msg-body",
+        ".mcp-ask-ai__trust-section"
+      ]
+    },
+    "pagination_observation": null,
+    "screenshots": [
+      "C:\\Users\\Adeel\\Desktop\\MCP Connect\\mcp-rag-qa-prod-wire-eval\\evals\\prod_ask_e2e\\evidence\\screenshots\\sample-02.png"
+    ]
+  },
+  {
+    "case_id": "sample-03",
+    "persona": "adeel",
+    "question": "Show invoices for Acme",
+    "answer": "No matching rows.",
+    "answer_html": "  <div class=\"mcp-ask-ai__msg-body\"><p>No matching rows.</p>\n</div><div class=\"mcp-ask-ai__trust-section\">  <div class=\"mcp-ask-ai__trust-header\">    <span class=\"mcp-ask-ai__trust-badge\" title=\"Query generated and verified via structured schema AST\"><i class=\"fa fa-circle-check\" aria-hidden=\"true\"></i> Verified Query</span>    <button type=\"button\" class=\"mcp-ask-ai__trust-toggle\" aria-expanded=\"false\" aria-controls=\"trust-drawer-msg-22\">      <i class=\"fa fa-circle-info\" aria-hidden=\"true\"></i> Explain Query    </button>  </div>  <div class=\"mcp-ask-ai__trust-drawer\" id=\"trust-drawer-msg-22\" hidden=\"\">    <div class=\"mcp-ask-ai__trust-support-reference\"><span>Support reference (Answer Query ID): <code>aq_1b235474c25bc6f76af70e85de317d6b</code></span><button type=\"button\" class=\"mcp-btn mcp-btn--xs mcp-btn--secondary\" data-copy-answer-query-id=\"aq_1b235474c25bc6f76af70e85de317d6b\" aria-label=\"Copy Answer Query ID\"><i class=\"fa fa-copy\" aria-hidden=\"true\"></i> Copy</button></div>    <p class=\"mcp-ask-ai__trust-plain-english\">Showing invoices for customer Acme.</p>    <div class=\"mcp-ask-ai__trust-filters\"><span class=\"mcp-ask-ai__trust-filter\">Customer: Acme</span></div>    <div class=\"mcp-ask-ai__trust-meta\"><span class=\"mcp-ask-ai__trust-count\">0 of 0 matched</span></div>      </div></div><div class=\"mcp-ask-ai__actions\"><button type=\"button\" class=\"mcp-ask-ai__thumb\" data-copy=\"msg-22\" aria-label=\"Copy answer\" data-mcp-tip=\"Copy\"><i class=\"fa fa-copy\" aria-hidden=\"true\"></i></button><button type=\"button\" class=\"mcp-ask-ai__thumb mcp-ask-ai__thumb--up\" data-feedback=\"up\" data-msg-id=\"msg-22\" aria-pressed=\"false\" aria-label=\"Helpful answer\" data-mcp-tip=\"Helpful\"><i class=\"fa fa-thumbs-up\" aria-hidden=\"true\"></i></button><button type=\"button\" class=\"mcp-ask-ai__thumb mcp-ask-ai__thumb--down\" data-feedback=\"down\" data-msg-id=\"msg-22\" aria-pressed=\"false\" aria-label=\"Not helpful\" data-mcp-tip=\"Not helpful\"><i class=\"fa fa-thumbs-down\" aria-hidden=\"true\"></i></button><button type=\"button\" class=\"mcp-ask-ai__thumb\" data-regenerate=\"msg-22\" aria-label=\"Regenerate answer\" data-mcp-tip=\"Regenerate\"><i class=\"fa fa-refresh\" aria-hidden=\"true\"></i></button></div><div class=\"mcp-ask-ai__chips\"><button type=\"button\" class=\"mcp-ask-ai__chip mcp-ask-ai__follow-up-pill\" data-chip-index=\"0\" data-chip-message-id=\"msg-22\"><span class=\"mcp-ask-ai__chip-icon\" aria-hidden=\"true\"><i class=\"fa fa-comment-dots\"></i></span>Show the most recent invoices<i class=\"fa fa-arrow-right mcp-ask-ai__chip-arrow\" aria-hidden=\"true\"></i></button></div>",
+    "message_pair": {
+      "user_message_id": "msg-21",
+      "assistant_message_id": "msg-22",
+      "preceding_user_text": "Show invoices for Acme",
+      "verified": true
+    },
+    "page_context_observation": null,
+    "phases": [],
+    "record_links": [],
+    "citations": [],
+    "citation_note": null,
+    "suggestions": [
+      "Show the most recent invoices"
+    ],
+    "errors": null,
+    "has_try_again": false,
+    "timing_ms": {
+      "first_status": null,
+      "first_content": 54,
+      "complete": 8642,
+      "source": "harness_upper_bound"
+    },
+    "pipeline_observed": "sql",
+    "pipeline_observation_basis": "Verified Query trust badge rendered in DOM with Answer Query ID aq_1b235474c25bc6f76af70e85de317d6b",
+    "result_metadata": {
+      "answer_query_id": "aq_1b235474c25bc6f76af70e85de317d6b",
+      "surfaces_inspected": [
+        "article[aria-label='AI answer']",
+        ".mcp-ask-ai__msg-body",
+        ".mcp-ask-ai__trust-section",
+        ".mcp-ask-ai__trust-drawer"
+      ]
+    },
+    "pagination_observation": null,
+    "screenshots": [
+      "C:\\Users\\Adeel\\Desktop\\MCP Connect\\mcp-rag-qa-prod-wire-eval\\evals\\prod_ask_e2e\\evidence\\screenshots\\sample-03.png"
+    ]
+  }
+]

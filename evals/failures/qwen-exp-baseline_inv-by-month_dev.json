@@ -1,0 +1,23 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": null,
+  "case_id": "inv-by-month",
+  "role": "finance",
+  "mode": "dev",
+  "run_id": "qwen-exp-baseline",
+  "question": "show invoice totals by month this year",
+  "gold_sql": "SELECT DATE_FORMAT(b.created_at,'%Y-%m') ym, ROUND(SUM((bi.price*bi.quantity-COALESCE(bi.discount,0))*(1+COALESCE(bi.tax,0)/100)),0) total FROM bills b JOIN bill_items bi ON bi.bill_id=b.id WHERE b.type='Invoice' AND YEAR(b.created_at)=2026 GROUP BY ym",
+  "agent_sql_scrubbed": "SELECT DATE_FORMAT(created_at, ?) AS ym, ROUND(SUM((bi.price * bi.quantity - COALESCE(bi.discount, 0)) * (1 + COALESCE(bi.tax, 0) / 100)), 0) AS total\nFROM bills b JOIN bill_items bi ON bi.bill_id = b.id\nWHERE b.type = ? AND YEAR(b.created_at) = 2026\nGROUP BY ym ORDER BY ym;",
+  "error_category": "OperationalError",
+  "reason": "invalid_sql",
+  "valid_sql_rate": 0.6,
+  "pass_rate": 0.6,
+  "flaky": true,
+  "chat_deployment": "gpt-4o-mini",
+  "failure_kind": null,
+  "lever": null,
+  "root_cause": null,
+  "rule": null
+}

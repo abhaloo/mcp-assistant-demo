@@ -1,0 +1,43 @@
+{
+  "case_id": "bq-10",
+  "family": "overdue_invoice_total",
+  "phrasing": "noisy_english",
+  "expected": "answered",
+  "actual": "answered",
+  "passed": false,
+  "detail": "values differ from answer key (1 expected row(s))",
+  "reason_code": "",
+  "failure_layer": null,
+  "failure_detail": null,
+  "planner_repair_count": 0,
+  "tokens_prompt": 6159,
+  "tokens_completion": 975,
+  "tokens_reasoning": 849,
+  "missing_members": [],
+  "plan": {
+    "measures": [
+      "overdue_outstanding"
+    ],
+    "dimensions": [
+      "invoice.currency_code"
+    ],
+    "bucket_set": null,
+    "filters": null,
+    "having": null,
+    "period": null,
+    "grain": "grouped",
+    "order": [
+      {
+        "member": "overdue_outstanding",
+        "direction": "desc"
+      }
+    ],
+    "limit": 20
+  },
+  "message": "",
+  "outcome_match": true,
+  "literal_match": false,
+  "repeat_index": 26,
+  "arm": "deepseek-direct-plan",
+  "reasoning_redacted": true
+}

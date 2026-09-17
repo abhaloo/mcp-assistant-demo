@@ -1,0 +1,9 @@
+{
+  "run_id": "2026-07-07-semantic-rebaseline",
+  "case_id": "finance-06",
+  "mode": "semantic",
+  "question": "What was the total invoiced revenue for Q2 2024?",
+  "citation_parsed": 0,
+  "citation_precision": 0.0,
+  "source_file": "data/corpus/company/finance/q2-2024-budget-report.md"
+}

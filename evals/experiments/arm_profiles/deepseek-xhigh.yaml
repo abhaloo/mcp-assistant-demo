@@ -1,0 +1,4 @@
+id: deepseek-xhigh
+extends: deepseek-low
+reasoning_effort: xhigh
+est_answer_usd: 0.008

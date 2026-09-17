@@ -1,0 +1,174 @@
+{
+  "id": "bq-query-performance",
+  "schema_version": 1,
+  "status": "matched_mariadb_baseline",
+  "budget": {
+    "id": "D-Q1-BUDGET",
+    "hot_shape_p95_seconds": 5,
+    "zero_product_timeouts": true,
+    "easy_control_p95_regression": 0.2
+  },
+  "bundle": {
+    "content_hash": "sha256:a072049dc99808f77b81786ae2d4bf3b41d1e7e8661ae585e66988c46359663e",
+    "fixture": "tests/fixtures/business_query/s1-billing-bundle-a072049d.json",
+    "compatible_policy_manifest_hashes": [
+      "sha256:5952d8152cd18f1dea5b998a3e2869365fc27283795d3c444d29b115a1fe149b"
+    ],
+    "live_rag_must_not_vendor": true
+  },
+  "business_date": "2026-08-10",
+  "business_timezone": "Africa/Dar_es_Salaam",
+    "principal": {
+    "permissions": ["view invoice"],
+    "department_id": null,
+    "cross_entity": false,
+    "entity_id": 9101
+  },
+  "matched_dataset_identity": "mcp_bq_eval|11.4.12-MariaDB|bills_entity1=4830|view_sha256=6eb8dc649721c226a376c0d6e5df5bbd5aa21424e4066de9963cee5d753cafda",
+  "mariadb_execute_entity_id": 1,
+  "shape_compiled_query_digests": {
+    "overdue_outstanding": "b12a2677fa5d3673c7e2437a550b243df46accfd4dc97ff0509deeb33d350f79",
+    "ar_aging": "a0af4f49efaec71c8439473e02cac375ab95b7d54727bb20624b9d9936a288bc",
+    "invoices_count": "f3e759a4d43de6d8bd61855bb87e3c155e728e179e9337b252e1dca2f7e6032a"
+  },
+  "mariadb_result_identity": {
+    "overdue_outstanding": {
+      "member_schema": [
+        {"name": "overdue_outstanding", "value_kind": "currency", "nullable": true}
+      ],
+      "row_sha256": "ad2c6e19b1f30d6cedd312a2c7f53750941b28d00690a0e740127224be24acd3",
+      "product_timeout": false,
+      "diagnostic_timeout": null
+    },
+    "ar_aging": {
+      "member_schema": [
+        {"name": "invoices_count", "value_kind": "integer", "nullable": false},
+        {"name": "bill_outstanding", "value_kind": "currency", "nullable": true},
+        {"name": "invoice.currency_code", "value_kind": "string", "nullable": true},
+        {"name": "ar_aging", "value_kind": "string", "nullable": false}
+      ],
+      "row_sha256": "cda701d828ca6fa432637188d616cb93e6e42be84a8d12ba5deba30952da6ee2",
+      "product_timeout": false,
+      "diagnostic_timeout": null
+    },
+    "invoices_count": {
+      "member_schema": [
+        {"name": "invoices_count", "value_kind": "integer", "nullable": false}
+      ],
+      "row_sha256": "4f2ecb2a03b106da501f3755643558d2e998a74ce6905ed614cff9647c60dfa7",
+      "product_timeout": false,
+      "diagnostic_timeout": null
+    }
+  },
+  "protocol": {
+    "untimed_warmups": 5,
+    "measured_executions_per_shape_arm": 30,
+    "p95_estimator": "nearest_rank",
+    "interleave": {
+      "mode": "fixed_seeded",
+      "seed": 20260813,
+      "arms": ["baseline", "candidate"]
+    },
+    "cache": {
+      "warm_gate": true,
+      "cold_start_label": "diagnostic",
+      "cold_start_requires": "documented_buffer_pool_restart"
+    }
+  },
+  "load": {
+    "pool_size": 5,
+    "overflow": false,
+    "concurrent_target_requests": 5,
+    "rounds": 10,
+    "product_timeout_seconds": 10,
+    "concurrent_p95_seconds": 7.5
+  },
+  "allowed_causal_differences": ["semantic_view_shape", "named_migration_index"],
+  "declared_causal_difference": "semantic_view_shape",
+  "arms": {
+    "baseline": {
+      "compiled_query_digest": "b12a2677fa5d3673c7e2437a550b243df46accfd4dc97ff0509deeb33d350f79",
+      "environment_fingerprint": "26796f4e0e09c0d560e6a5d6153e1037422b3052fde19b06b488dd9e366e46e1",
+      "index_fingerprint": "b492b0d546b624e5bba97f420c458eeff5b072042511f83ee92849542f02fccb",
+      "mariadb_version": "11.4.12-MariaDB",
+      "mariadb_config": "65f54437e6e7faae2a4f292b06250cdc2b7871c6aec4b24a4b02034e3d7d8743"
+    },
+    "candidate": {
+      "compiled_query_digest": "b12a2677fa5d3673c7e2437a550b243df46accfd4dc97ff0509deeb33d350f79",
+      "environment_fingerprint": "26796f4e0e09c0d560e6a5d6153e1037422b3052fde19b06b488dd9e366e46e1",
+      "index_fingerprint": "b492b0d546b624e5bba97f420c458eeff5b072042511f83ee92849542f02fccb",
+      "mariadb_version": "11.4.12-MariaDB",
+      "mariadb_config": "65f54437e6e7faae2a4f292b06250cdc2b7871c6aec4b24a4b02034e3d7d8743"
+    }
+  },
+  "shapes": [
+    {
+      "id": "overdue_outstanding",
+      "role": "hot",
+      "plan": {
+        "measures": ["overdue_outstanding"],
+        "grain": "scalar",
+        "filters": {
+          "all": [
+            {
+              "member": "invoice.currency_code",
+              "operator": "eq",
+              "values": ["TZS"]
+            }
+          ]
+        }
+      },
+      "member_schema": [
+        {"name": "overdue_outstanding", "value_kind": "currency", "nullable": true}
+      ],
+      "oracle": {
+        "source": "tests/integration/test_billing_projection_contract.py AR aging buckets 31-60+61-90+91+ on AiBusinessQueryOracleSeeder",
+        "dataset": "billing_oracle_seeder",
+        "expected_rows": [{"overdue_outstanding": "500.0100"}]
+      }
+    },
+    {
+      "id": "ar_aging",
+      "role": "hot",
+      "plan": {
+        "measures": ["invoices_count", "bill_outstanding"],
+        "dimensions": ["invoice.currency_code"],
+        "bucket_set": "ar_aging",
+        "grain": "grouped"
+      },
+      "member_schema": [
+        {"name": "invoices_count", "value_kind": "integer", "nullable": false},
+        {"name": "bill_outstanding", "value_kind": "currency", "nullable": true},
+        {"name": "invoice.currency_code", "value_kind": "string", "nullable": true},
+        {"name": "ar_aging", "value_kind": "string", "nullable": false}
+      ],
+      "oracle": {
+        "source": "tests/integration/test_billing_projection_contract.py test_business_query_ar_aging_excludes_null_due_and_paid_overdue",
+        "dataset": "billing_oracle_seeder",
+        "expected_buckets": {
+          "Current/not due": [1, "100.00"],
+          "1-30": [2, "200.00"],
+          "31-60": [3, "200.01"],
+          "61-90": [2, "200.00"],
+          "91+": [1, "100.00"]
+        }
+      }
+    },
+    {
+      "id": "invoices_count",
+      "role": "easy_control",
+      "plan": {
+        "measures": ["invoices_count"],
+        "grain": "scalar"
+      },
+      "member_schema": [
+        {"name": "invoices_count", "value_kind": "integer", "nullable": false}
+      ],
+      "oracle": {
+        "source": "tests/business_query/test_internal_adapter.py invoices_count scalar member schema",
+        "dataset": null,
+        "expected_rows": null
+      }
+    }
+  ]
+}

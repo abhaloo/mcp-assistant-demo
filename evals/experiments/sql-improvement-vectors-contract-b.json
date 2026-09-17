@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "status": "CONFIRMED",
+  "confirmed_by": "Adeel",
+  "confirmed_at": "2026-08-05T18:09:00Z",
+  "revised_at": "2026-08-05T21:00:00Z",
+  "revision_note": "Delta Pass 3: clarify_answer cases expect post-reply SQL (no clarify_ok credit); clarify_ok excluded from exec-match pass_rate",
+  "contract_id": "sql-improvement-vectors-B",
+  "observable_outcome": "Under prod SQL default Luna-high: (B2-1) Prompt carries two named money metrics — invoiced value (bills/bill_items; this is what gold cases labeled revenue use) and ledger revenue (journals). When the user question uses bare/ambiguous 'revenue' with no cue, the agent asks a clarifying question instead of guessing. Eval cases are either reworded to name invoiced vs ledger, and/or tagged clarify-OK so a correct clarify is not scored as an exec-match miss. Gold SQL for cust-top-revenue and sibling invoiced cases remains invoice-based (not journals). (B2-2) After B2-1 green+holdout (or Adeel authorizes parallel), pin finished-unbilled definition; oracle jobs-finished-unbilled only; prod-jobs-delayed excluded as unanswerable.",
+  "lever": "B2",
+  "prod_sql_default": "luna-high",
+  "b1_scope": null,
+  "b2_family": "sequential",
+  "b2_slices": [
+    {
+      "slice_id": "B2-1",
+      "family": "revenue_disambiguation",
+      "order": 1,
+      "status": "UNIT_GREEN",
+      "o1_lock": {
+        "prod_behavior": "clarify_when_bare_revenue",
+        "named_metrics": [
+          "invoiced_value = Invoice bill_items formula (gold for cust-top-revenue)",
+          "ledger_revenue = journals SUM(credit-debit) on revenue accounts"
+        ],
+        "gold_policy": "revenue-labeled gold cases keep invoiced/bills SQL — do not rewrite cust-top-revenue to journals",
+        "eval_policy": "disambiguate case wording; bare+clarify_answer cases expect SQL after oracle reply (no clarify_ok credit); pure clarify-ok tag is diagnostic-only and excluded from exec-match pass_rate",
+        "implemented": "REVENUE_METRIC_RULES; cases reworded; score_case has_clarify_answer; row_counts_toward_exec_match"
+      },
+      "named_oracle_cases": {
+        "exec_match_after_disambiguation": ["cust-top-revenue", "fin-revenue-vs-last"],
+        "clarify_ok_diagnostic_only": ["cases tagged clarify-OK without clarify_answer"]
+      },
+      "prompt_change": "Replace single 'revenue = journals only' monopoly with dual named definitions + clarify rule for bare 'revenue'; keep ledger path for fin-revenue-* when question cues ledger/journals/accounts"
+    },
+    {
+      "slice_id": "B2-2",
+      "family": "jobs_finished_unbilled",
+      "order": 2,
+      "status": "UNIT_GREEN",
+      "depends_on": "B2-1 unit green (live holdout still required for ACCEPTED)",
+      "named_oracle_cases": ["jobs-finished-unbilled"],
+      "excluded_oracles": {
+        "prod-jobs-delayed": "unanswerable empty-gold — not an accuracy pin"
+      },
+      "definition_target": "finished but unbilled = status FINISHED AND bill_id IS NULL (prose, no gold SQL paste)",
+      "implemented": "JOBS_FINISHED_UNBILLED_RULES in sql_chain"
+    }
+  ],
+  "locked_decisions": {
+    "d1": "luna-high",
+    "d2": "B2",
+    "d3": "N/A",
+    "d4": "sequential_revenue_clarify_then_jobs_unbilled",
+    "o1": "dual_metrics_clarify_gold_stays_invoiced_eval_disambiguate_or_clarify_ok",
+    "deferred_families": ["AR overdue", "jobs delayed delivery-tracking until gold/schema exists"]
+  },
+  "non_goals": [
+    "Do not rewrite cust-top-revenue gold to journals",
+    "Do not implement B1 answer-shape in this contract",
+    "Do not merge B2-1 and B2-2 into one accuracy commit",
+    "Do not paste gold SQL into prompts",
+    "Do not pin AR overdue in this contract",
+    "Do not use prod-jobs-delayed as exec-match accuracy oracle",
+    "Do not claim ACCEPTED from unit tests alone",
+    "Do not credit clarify_ok on cases with clarify_answer",
+    "Do not fold clarify_ok into exec-match pass_rate"
+  ],
+  "named_oracles": {
+    "shared_zero_slice_1_exec": ["cust-top-revenue"],
+    "shared_zero_slice_2": ["jobs-finished-unbilled"],
+    "excluded_unanswerable": ["prod-jobs-delayed"]
+  },
+  "holdout_guardrail": "paired CI / sql_eval_gate no-regression after each B2 slice; fin-revenue-* must not silently break when dual metrics land",
+  "public_test_seams": [
+    "sql_chain dual metric + clarify prose",
+    "case wording / clarify-OK tag in eval cases",
+    "sql_eval_gate holdout",
+    "named case exec-match vs gold when disambiguated"
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "status": "CONFIRMED",
+  "confirmed_by": "Adeel",
+  "confirmed_at": "2026-08-06",
+  "note": "Slice C C0 gate: Adeel unlock 2026-08-06 ('proceed with deferred'). D7(b) EXPLAIN (or connector-equivalent) behind fail-closed flag default OFF on pre-transform query (ADR 0043). D6(a) middleware-only; D7(a) parse+allowlist REJECTED. Reject ToolMessages use sanitized dry_run_failed: … stable strings — no DSN/password/raw driver dumps. dry_run Error: skipped by Slice A shape gate (must not burn shape retry). Honor-system: annotation-only READY without execute_tool validate wire + spy = PARTIAL / forbidden greens. Pass 1k REVISE patched; awaiting /adversarial-review --delta re-APPROVE before C1 code.",
+  "contract_id": "sql-post-canary-dry-run",
+  "plan_path": "docs/superpowers/plans/2026-08-06-sql-post-canary-tools-tdd.md",
+  "depends_on": {
+    "shape_contract": "evals/experiments/sql-post-canary-shape-contract.json",
+    "metric_contract": "evals/experiments/sql-post-canary-metric-contract.json",
+    "sole_attachment": "Slice C owns pre-execute dry_run depth in execute_tool validate for sql_db_query only; does not re-own post-exec shape (Slice A) or metric pre-inject (Slice B)"
+  },
+  "config_flag": {
+    "name": "sql_dry_run_explain",
+    "type": "bool",
+    "default": false,
+    "surfaces": [
+      "app/config.py Settings.sql_dry_run_explain (production default)",
+      "build_sql_graph(..., sql_dry_run_explain: bool | None = None) — None inherits settings"
+    ],
+    "fail_closed": "Default OFF: no EXPLAIN / connector validate call; behavior identical to pre-Slice-C. Flag ON without wired validate hook is PARTIAL — not IMPLEMENTED."
+  },
+  "observable_outcomes": [
+    "When sql_dry_run_explain=True: SQL passing _validate_sql_query / is_safe_select / tier allowlist but failing EXPLAIN (or connector-equivalent validate) is rejected in execute_tool validate phase before db.run_bounded — ToolMessage Error: prefix, run spy not called.",
+    "When sql_dry_run_explain=True: producer tests spy EXPLAIN (or db.validate_query / connector dry_plan equivalent) invoked once per sql_db_query attempt that cleared static validate.",
+    "When sql_dry_run_explain=False (default): no EXPLAIN / connector validate call on any path — spy proves zero dry_run invocations; graph behavior unchanged vs pre-Slice-C.",
+    "Middleware only (D6a): dry_run lives inside sql_db_query validate hook wired through execute_tool — no new LLM-selectable tool, no bind_tools widen.",
+    "Complements Slice A post-exec shape gate — does not replace or duplicate _validate_sql_query allowlist/DROP checks as 'dry_run'.",
+    "dry_run reject surfaces as ToolMessage Error: dry_run_failed: <stable_reason> — no DSN, password, connection URL, or raw driver exception dump in content.",
+    "Slice A shape gate skips Error: ToolMessages — dry_run failure must not consume shape retry budget (same skip rule as other tool rejects)."
+  ],
+  "non_goals": [
+    "Re-wrapping _validate_sql_query / is_safe_select / tier allowlist as dry_run (D7a rejected — gameable green)",
+    "LLM-selectable dry_run tool (D6b rejected)",
+    "Replacing or weakening Slice A validate_result_shape post-exec gate",
+    "Claim ACCEPTED from unit+seam tests alone (D10a unit-only default)",
+    "Annotation-only contract READY / IMPLEMENTED bit without same-commit execute_tool validate wire + spy AC",
+    "Live residual canary without Adeel unlock of D10(b)",
+    "Post-RLS EXPLAIN in C1 (pre-transform EXPLAIN only)"
+  ],
+  "locked_decisions": {
+    "note": "Adeel unlock Slice C 2026-08-06 with D7(b); D6 unchanged middleware-only",
+    "D6": "LOCKED (a) middleware-only — validate hook on sql_db_query via execute_tool",
+    "D7": "LOCKED (b) +EXPLAIN (or connector-equivalent) behind sql_dry_run_explain flag default OFF",
+    "D7a": "REJECTED — parse+allowlist-only duplicates _validate_sql_query",
+    "D10": "LOCKED (a) unit-only default"
+  },
+  "dry_run_fixture_oracle": {
+    "passes_static_validate": "SELECT nonexistent_column FROM <allowed_table> — passes is_safe_select + referenced_tables allowlist; fails EXPLAIN at connector",
+    "passes_static_and_explain": "SELECT COUNT(*) FROM <allowed_table> — control when flag ON",
+    "reject_surface": "ToolRejection from validate → execute_tool returns Error: dry_run_failed: <stable_reason>; run() must not execute",
+    "reject_sanitization": "Stable reason strings only — forbid DSN/password/connection URL/raw driver dumps in ToolMessage content"
+  },
+  "explain_target": {
+    "locked": "pre-transform SQL in validate hook (after _validate_sql_query, before RLS transform)",
+    "defense_in_depth": "post-RLS _validate_sql_query in run unchanged",
+    "non_goal_c1": "post-RLS EXPLAIN"
+  },
+  "public_test_seams": [
+    "app/rag/chains/sql_dry_run.py (planned C1 — explain_validate or connector wrapper)",
+    "app/rag/chains/sql_graph.py::sql_db_query validate hook inside execute_tool",
+    "app/tools/execution.py::execute_tool (validate short-circuit before run)",
+    "tests/rag/chains/test_sql_dry_run.py (unit fixtures: pass static, fail EXPLAIN)",
+    "tests/tools/test_sql_dry_run_via_seam.py (spy run not called; EXPLAIN invoked when flag ON; zero EXPLAIN when OFF)"
+  ],
+  "acceptance_oracle": {
+    "C-net-new reject flag ON": {
+      "layer": "unit + seam",
+      "producer": "Fixture passes _validate_sql_query but dry_run rejects; spy asserts run() not called"
+    },
+    "C-explain invoked flag ON": {
+      "layer": "unit + seam",
+      "producer": "tests/tools/test_sql_dry_run_via_seam.py — spy EXPLAIN/connector validate called when sql_dry_run_explain=True"
+    },
+    "C-fail-closed flag OFF": {
+      "layer": "unit + seam",
+      "producer": "Same seam tests with flag False — spy proves zero EXPLAIN calls; successful query still reaches run()"
+    },
+    "C-no-allowlist-wrap": {
+      "layer": "unit",
+      "producer": "Red if implementation only re-invokes _validate_sql_query without net-new connector call"
+    },
+    "C-sanitized reject": {
+      "layer": "unit + seam",
+      "producer": "dry_run reject → Error: dry_run_failed: … stable prefix; assert no DSN/password/raw driver dump; shape node must skip Error: (no shape retry burn)"
+    }
+  },
+  "acceptance": {
+    "unit_seam": "IMPLEMENTED when C1+ green against this contract with flag ON/OFF spy AC",
+    "residual_canary": "INTEGRATED only if D10(b) unlocked",
+    "ACCEPTED": "NOT_ACCEPTED without live canary evidence when D10(a) locked"
+  }
+}

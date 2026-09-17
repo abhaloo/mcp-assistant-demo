@@ -1,0 +1,23 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": null,
+  "case_id": "orders-oldest-open",
+  "role": "sales",
+  "mode": "dev",
+  "run_id": "qwen-exp-baseline",
+  "question": "which open orders have been sitting the longest?",
+  "gold_sql": "SELECT co.order_number, c.name, co.created_at FROM customer_orders co JOIN customers c ON c.id=co.customer_id WHERE co.status='CREATED' ORDER BY co.created_at ASC LIMIT 10",
+  "agent_sql_scrubbed": null,
+  "error_category": "no_query",
+  "reason": "no_agent_query",
+  "valid_sql_rate": 0.0,
+  "pass_rate": 0.0,
+  "flaky": false,
+  "chat_deployment": "gpt-4o-mini",
+  "failure_kind": null,
+  "lever": null,
+  "root_cause": null,
+  "rule": null
+}

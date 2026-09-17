@@ -1,0 +1,87 @@
+{
+  "confirmed_at": "2026-08-03",
+  "confirmed_by": "Adeel",
+  "status": "CONFIRMED",
+  "observable_outcome": "Pairwise RAG and SQL campaigns accept --baseline-profile / --candidate-profile ids from evals/experiments/arm_profiles/, apply provider-fair reasoning knobs per profile, skip OpenRouter preflight when no arm uses openrouter, stamp profile ids on RAG freeze artifacts, and assemble a cross-lane dry-run summary keyed by profile id (or composite fallback). Offline TDD + dry-run only — no paid joint live matrix in this pass.",
+  "non_goals": [
+    "True three-arm matrix or automated three-way statistical gate",
+    "Phase 4 paid joint RAG+SQL live run",
+    "Full SQL dev/holdout --live matrix spend in orchestrator",
+    "Escalation-replay contest beyond existing SQL router replay",
+    "Production routing default flip",
+    "Judge same-vendor calibration study (Azure↔Azure RAG flagged advisory)"
+  ],
+  "locked_decisions": {
+    "sql_baseline_parity": "Phase 1 default pair prod-luna + deepseek-low matches today's SQL_ARMS; other pairs via CLI after parity goldens green",
+    "cross_lane_pair": "Chosen by profile ids (--baseline-profile / --candidate-profile), not hard-coded DeepSeek-only",
+    "routing": "Route conformance stays pre-flight wire check; no escalation-replay contest unless trivial",
+    "sql_live_before_orchestrator": "Orchestrator dry-run/assemble only; hard gate documented for --run-group SQL smoke before full matrix",
+    "cost_ratio": "Luna-named gate preserved for prod-luna baseline; non-Luna baselines fail closed on cost ratio (HOLD, not silent wrong ratio)",
+    "spend": "NO Phase 4 live dollars; tests + dry-run only",
+    "azure_azure_rag": "Phase 1a implemented now — all-Azure RAG freeze dry path without OpenRouter dependency"
+  },
+  "examples": [
+    "deepseek_rag_eval.py --baseline-profile prod-4o --candidate-profile prod-nano-high --dry-run prints two Azure arms, no OpenRouter key requirement",
+    "deepseek_rag_eval.py --baseline gpt-5-nano --candidate-effort high --dry-run still resolves legacy matrix (backward compatible)",
+    "deepseek_sql_eval.py --baseline-profile prod-luna --candidate-profile deepseek-low --dry-run prints forced-luna + forced-deepseek at reasoning_effort low, 440 cells, $3 cap",
+    "deepseek_cross_lane_eval.py --baseline-profile prod-nano --candidate-profile deepseek-high --lanes rag,sql --dry-run writes cross-lane-summary.json plan without spend"
+  ],
+  "edge_and_failure_cases": [
+    "Both RAG arms Azure: skip OPENROUTER_API_KEY and route_policy DeepInfra ceiling inference",
+    "OpenRouter candidate: capability probe HOLD on confirmed reasoning-effort mismatch",
+    "Nano effort siblings prod-nano-high vs prod-nano-low: distinct arm_name values required for pairwise freeze",
+    "SQL non-Luna baseline: cost ratio gate HOLD (uncalibrated economics)",
+    "Unknown profile id: ArmProfileError at CLI parse/apply time",
+    "Cross-lane join without profile stamp: composite key (lane, arm_name, deployment, reasoning_effort)"
+  ],
+  "independent_oracles": [
+    "Golden arm_profile fixtures @ tests/fixtures/arm_profiles/",
+    "SQL parity literals: forced-luna/gpt-5.6-luna, forced-deepseek/deepseek-low effort low, prod-router replay policy",
+    "Legacy LEGACY_CAMPAIGN_MATRIX scalar expectations in test_arm_profiles.py EXPECTED dict",
+    "freeze_rag_experiment requires exactly two unique arm names",
+    "Manifest sql_dev case_count and prices.yaml deployment rows"
+  ],
+  "acceptance_criteria": {
+    "rag_profile_cli": true,
+    "rag_legacy_cli_unchanged": true,
+    "rag_candidate_allowed_models_from_profile": true,
+    "rag_evidence_validator_by_provider": true,
+    "rag_azure_verify_both_arms": true,
+    "rag_profile_id_stamped_on_freeze": true,
+    "sql_prod_luna_yaml": true,
+    "sql_build_pairwise_campaign": true,
+    "sql_default_prod_luna_deepseek_low": true,
+    "sql_golden_parity_no_drift": true,
+    "cross_lane_dry_run_summary": true,
+    "pytest_focused_green": true,
+    "no_paid_live_spend_this_pass": true
+  },
+  "public_test_seams": [
+    "load_arm_profiles",
+    "lookup_campaign_cap_usd",
+    "lookup_sql_campaign_cap_usd",
+    "build_pairwise_campaign",
+    "build_sql_pairwise_campaign",
+    "campaign_config_to_globals",
+    "default_sql_campaign",
+    "build_cross_lane_plan",
+    "freeze_rag_experiment",
+    "answer_evidence_failures",
+    "freeze_sql_stage",
+    "assemble_cross_lane_summary"
+  ],
+  "implementation_status": "IMPLEMENTED",
+  "acceptance_status": "NOT_ACCEPTED",
+  "acceptance_blockers": [
+    "No paid joint RAG+SQL live matrix evidence",
+    "SQL cap fail-closed gate closed in this pass; remaining pairs need explicit sql_campaign_cap_usd before SQL spend"
+  ],
+  "approved_test_doubles": [
+    "Azure retrieval and answer adapter",
+    "OpenRouter answer adapter",
+    "Luna judge adapter",
+    "spend adapter",
+    "clock",
+    "filesystem"
+  ]
+}

@@ -1,0 +1,21 @@
+id: prod-luna-high
+extends: prod-luna
+arm_name: prod-luna-high
+reasoning_effort: high
+allowed_actual_models:
+  - gpt-5.6-luna
+  - gpt-5.6-luna-2026-07-09
+deployment_attestation:
+  source: azure_resource_manager
+  observed_at: "2026-08-03"
+  resource_group: mcp-rag-qa
+  account: mcp-rag-qa-openai-service
+  deployment: gpt-5.6-luna
+  model_name: gpt-5.6-luna
+  model_version: "2026-07-09"
+  deployment_state: Running
+  provisioning_state: Succeeded
+  sku: GlobalStandard
+  allowed_response_models:
+    - gpt-5.6-luna
+    - gpt-5.6-luna-2026-07-09

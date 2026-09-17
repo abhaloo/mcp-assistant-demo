@@ -1,0 +1,23 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": null,
+  "case_id": "cust-no-orders",
+  "role": "sales",
+  "mode": "all",
+  "run_id": "2026-07-07-sql-citations",
+  "question": "which customers have never placed an order?",
+  "gold_sql": "SELECT COUNT(*) FROM customers c WHERE NOT EXISTS (SELECT 1 FROM customer_orders co WHERE co.customer_id=c.id)",
+  "agent_sql_scrubbed": "SELECT c.id, c.name FROM customers c LEFT JOIN customer_orders co ON c.id = co.customer_id WHERE co.customer_id IS NULL;",
+  "error_category": null,
+  "reason": "row_count_mismatch",
+  "valid_sql_rate": 1.0,
+  "pass_rate": 0.0,
+  "flaky": false,
+  "chat_deployment": "gpt-4o-mini",
+  "failure_kind": null,
+  "lever": null,
+  "root_cause": null,
+  "rule": null
+}

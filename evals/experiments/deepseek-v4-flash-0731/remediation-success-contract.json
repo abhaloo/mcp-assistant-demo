@@ -1,0 +1,122 @@
+{
+  "confirmed_at": "2026-08-01",
+  "confirmed_by": "Adeel",
+  "status": "CONFIRMED",
+  "observable_outcome": "A fresh mini-versus-DeepSeek RAG attempt either emits an evidence-complete development verdict or stops at HOLD without making a model-quality claim, and writes per-case latency and answer-cost economics alongside quality movements.",
+  "non_goals": [
+    "Run SQL B2",
+    "Flip a production routing default",
+    "Use Luna as an answer arm",
+    "Let an autonomous agent own the verdict",
+    "Include judge spend in per-answer $/task",
+    "Make economics alone force HOLD in this slice"
+  ],
+  "examples": [
+    "Each of 62 cases is retrieved once, then answered by both arms for exactly three repeats using identical contexts.",
+    "An empty answer that hits the harness max_tokens cap (harness_output_cap) receives zero scores and counts as one operational answer failure under the 2% answer-opportunity budget (ops/answers, never diluted by score opportunities); missing scores are gated separately at the same 2% of score opportunities; neither hard-HOLDs by itself below threshold. The 32k candidate cap is a harness cost control, not the model's published max output.",
+    "OpenRouter candidate actual_model attestation accepts only the dated canonical slug deepseek/deepseek-v4-flash-20260731 (request may still use deepseek/deepseek-v4-flash-0731).",
+    "Eval OpenRouter route policy pins only DeepInfra with reasoning.effort=low and allow_fallbacks=false.",
+    "Acceptance ledger status REVIEWED or INTEGRATED requires review_kind=cold_independent with no waiver language; operator waivers cap status at IMPLEMENTED.",
+    "Manual audit finalization requires gates.adversarial_review.status=PASSED with review_kind=cold_independent; a bare status=REVIEWED ledger (including historical waiver-era files) is rejected. ACCEPTED requires manual_calibration_passed=true from the blinded Luna audit.",
+    "A rejudge creates a child attempt and does not modify its parent.",
+    "A bounded semantic and provider-provenance canary must pass before the full answer matrix can spend.",
+    "task-economics.json reports per-arm mean latency_ms and cost_usd, and per-case three-repeat means with candidate-minus-baseline deltas, from answers.jsonl only.",
+    "OpenRouter chat completions finish first; /generation metadata is enriched afterward so the metadata store has time to index each generation id.",
+    "Live harness parallelism defaults: answer workers 8, Luna judge workers 8, freeze retrieval workers 8."
+  ],
+  "edge_and_failure_cases": [
+    "zero rows or repeats other than three",
+    "duplicate or missing case-arm-repeat rows",
+    "context hash mismatch between arms",
+    "missing, NaN, timed-out, or disagreeing judge results",
+    "empty, errored, truncated, output-ceiling, or metadata-incomplete answers",
+    "dirty or uncommitted runtime code",
+    "campaign or global spend reservation failure",
+    "gold answers containing literals removed by retrieval redaction",
+    "a review artifact that is stale, non-APPROVE, or bound to another commit",
+    "missing latency_ms or cost_usd on an answer row blocks economics rollup"
+  ],
+  "independent_oracles": [
+    "the complete frozen semantic eval case literals",
+    "literal judge-canary score bands for exact, contradictory, complete, partial, redacted, and PII-hallucinated answers",
+    "git commit and dirty-state checks",
+    "artifact SHA-256 hashes",
+    "the existing paired non-inferiority specification",
+    "hand-computed three-repeat latency and cost means from frozen answer-row literals"
+  ],
+  "acceptance_criteria": {
+    "cases": 62,
+    "answer_arms": ["prod-mini", "forced-deepseek"],
+    "repeats": 3,
+    "retrievals_per_case": 1,
+    "harness_output_cap_tokens_by_arm": {
+      "prod-mini": 16384,
+      "forced-deepseek": 32768
+    },
+    "answer_output_ceiling_tokens_by_arm": {
+      "prod-mini": 16384,
+      "forced-deepseek": 32768
+    },
+    "output_ceiling_is_harness_cap": true,
+    "judge_deployment": "gpt-5.6-luna",
+    "judge_repeatability_subset_size": 15,
+    "judge_max_mean_absolute_delta": 0.1,
+    "judge_large_disagreement_delta": 0.2,
+    "judge_max_large_disagreement_rate": 0.1,
+    "judge_max_arm_delta_shift": 0.05,
+    "judge_call_evidence_required": true,
+    "judge_canary_count": 6,
+    "judge_canary_before_answer_matrix": true,
+    "score_range": [0.0, 1.0],
+    "candidate_route_policy": {
+      "providers": ["DeepInfra"],
+      "allow_fallbacks": false,
+      "data_collection": "deny",
+      "require_parameters": true,
+      "reasoning_effort": "low",
+      "post_call_generation_metadata_required": true
+    },
+    "allowed_actual_models": {
+      "prod-mini": ["gpt-4o-mini", "gpt-4o-mini-2024-07-18"],
+      "forced-deepseek": ["deepseek/deepseek-v4-flash-20260731"]
+    },
+    "max_operational_or_missing_rate": 0.02,
+    "output_ceiling_hard_hold": false,
+    "campaign_cap_usd": 8.0,
+    "global_spend_cap_usd": 25.0,
+    "spend_reconciliation": "canary, answer, and judge reservations are separate; overrun blocks later launch",
+    "manual_judge_calibration": {
+      "required_before_acceptance": true,
+      "blinded_case_count": 12,
+      "arms_per_case": 2,
+      "repeat": 0
+    },
+    "required_live_checks": ["B0 tool smoke", "small /api/ask authorization and rollback smoke", "B1 full RAG attempt"],
+    "required_evidence": [
+      "immutable attempt",
+      "provider response metadata",
+      "judge call metadata",
+      "failure files",
+      "acceptance ledger",
+      "case movement audit",
+      "task economics audit",
+      "blinded manual judge calibration"
+    ],
+    "comparison_goals": ["accuracy", "cost_per_task", "latency_per_task"]
+  },
+  "public_test_seams": [
+    "freeze_rag_experiment",
+    "RagExperiment.run",
+    "evaluate_rag_evidence",
+    "_capture_task_economics",
+    "enrich_openrouter_answer_rows"
+  ],
+  "approved_test_doubles": [
+    "Azure retrieval and answer adapter",
+    "OpenRouter answer adapter",
+    "Luna judge adapter",
+    "spend adapter",
+    "clock",
+    "filesystem"
+  ]
+}

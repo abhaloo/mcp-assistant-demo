@@ -1,0 +1,9 @@
+{
+  "run_id": "2026-07-07-e2-rerank",
+  "case_id": "messy-casual-01",
+  "mode": "semantic",
+  "question": "hey so im new here, when do i get my days off and how many leave days do i have",
+  "citation_parsed": 0,
+  "citation_precision": 0.0,
+  "source_file": "data/corpus/company/all/company-handbook.md"
+}

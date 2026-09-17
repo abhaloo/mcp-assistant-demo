@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "status": "CONFIRMED",
+  "confirmed_by": "Adeel",
+  "confirmed_at": "2026-08-06",
+  "note": "D10(b) unlocked by Adeel ('proceed with the canary'). Estimand = stacked post-canary tip residual (A+B+E unit on tip) vs P0 tip \u2014 NOT one-variable Slice A alone. june9 may move from E1 and/or A; report must not claim Slice A INTEGRATED from this spend.",
+  "contract_id": "sql-post-canary-residual-canary",
+  "plan_path": "docs/superpowers/plans/2026-08-06-sql-post-canary-tools-tdd.md",
+  "d10": "LOCKED (b) residual 3\u20135",
+  "estimand": {
+    "kind": "stacked_post_canary_tip_residual",
+    "forbidden_claims": [
+      "Slice A INTEGRATED from this matrix alone",
+      "Phase E E1 INTEGRATED from june9 alone",
+      "ACCEPTED"
+    ],
+    "allowed_claims": [
+      "matrix COMPLETE",
+      "gate PASS/FAIL per rules below",
+      "attribution vs P0 tip rates (report Luna+DS means + per-id delta)",
+      "INTEGRATED only as stacked-tip residual if gate PASS"
+    ]
+  },
+  "pair": {
+    "baseline_profile": "prod-luna-high",
+    "candidate_profile": "deepseek-direct-high"
+  },
+  "stage": "dev",
+  "repeats": 5,
+  "n_arms": 2,
+  "expected_cells": 30,
+  "max_campaign_usd": 1.0,
+  "canary_allowlist": [
+    "prod-revenue-june9",
+    "cust-no-orders",
+    "fin-ar-aging"
+  ],
+  "watch_rationale": {
+    "prod-revenue-june9": "stacked tip: named-day + shape (A+E1 confound \u2014 attribution only); residual-only clarify_answer overlay",
+    "cust-no-orders": "COUNT/existence grain vs multirow (Slice A primary signal); residual-only clarify_answer overlay",
+    "fin-ar-aging": "aging metric ambiguity (Slice B primary signal); residual-only clarify_answer overlay"
+  },
+  "clarify_answer_overrides": {
+    "prod-revenue-june9": "on June 9 only, not a from-date range through today",
+    "cust-no-orders": "count only",
+    "fin-ar-aging": "proceed with due_date 0-30/31-60/61-90/90+"
+  },
+  "estimand_note": "Oracle continuation is residual-only via clarify_answer_overrides \u2014 shared evals/sql/cases.jsonl is unchanged. Mid-run existence list streak CLARIFY is shape-style (not budget_clarify). Gate PASS under overlays is NOT Slice A INTEGRATED.",
+  "explicitly_out": [
+    "jobs-busiest-customer",
+    "fin-revenue-by-month",
+    "fin-revenue-month",
+    "7 P0 flip IDs",
+    "full 440"
+  ],
+  "cloud_abort_conditions": [
+    "git dirty / tip_sha mismatch vs frozen tip_sha field",
+    "cells completed != 30",
+    "allowlist expands beyond canary_allowlist (including --case-ids override)",
+    "escalate to full 440 or --flip-canary",
+    "sql_dry_run_explain=True (C out of scope for this matrix)",
+    "spend exceeds max_campaign_usd",
+    "EVAL_SNAPSHOT_DATABASE_URL still on /mcp_eval after remap",
+    "exact-wire canary FAIL after one secret-fix retry"
+  ],
+  "tip_sha": "05ebc1e823e7e5d122d8cdb1e10af57269ca3fcd",
+  "gate": {
+    "pass_rule": "candidate per-id mean match_rate >= 0.5 on >= 2 of 3 residual IDs; report MUST include Luna means and per-id DS-Luna delta (delta is reporting AC, not a second numeric bar)",
+    "integrated_scope": "stacked_post_canary_tip_residual only \u2014 never Slice A alone"
+  },
+  "acceptance": {
+    "ACCEPTED": "never from this canary alone",
+    "INTEGRATED": "gate PASS at frozen tip_sha under stacked estimand only",
+    "NOT_ACCEPTED": "default"
+  }
+}

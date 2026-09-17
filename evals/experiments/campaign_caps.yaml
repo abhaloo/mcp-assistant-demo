@@ -1,0 +1,76 @@
+# Explicit baseline_id + candidate_id campaign spend caps.
+# RAG: campaign_cap_usd required (lookup_campaign_cap_usd).
+# SQL: sql_campaign_cap_usd required — must NOT inherit RAG cap (fail closed).
+pairs:
+  - baseline_id: prod-mini
+    candidate_id: deepseek-low
+    campaign_cap_usd: 8.0
+    sql_campaign_cap_usd: 5.0
+  - baseline_id: prod-mini
+    candidate_id: deepseek-high
+    campaign_cap_usd: 25.0
+    sql_campaign_cap_usd: 5.0
+  - baseline_id: prod-mini
+    candidate_id: deepseek-xhigh
+    campaign_cap_usd: 25.0
+  - baseline_id: prod-4o
+    candidate_id: deepseek-high
+    campaign_cap_usd: 25.0
+  - baseline_id: prod-4o
+    candidate_id: deepseek-low
+    campaign_cap_usd: 25.0
+  - baseline_id: prod-4o
+    candidate_id: deepseek-xhigh
+    campaign_cap_usd: 25.0
+  - baseline_id: prod-4o
+    candidate_id: deepseek-max
+    campaign_cap_usd: 25.0
+  - baseline_id: prod-nano
+    candidate_id: deepseek-low
+    campaign_cap_usd: 25.0
+  - baseline_id: prod-nano
+    candidate_id: deepseek-high
+    campaign_cap_usd: 25.0
+    sql_campaign_cap_usd: 5.0
+  - baseline_id: prod-nano
+    candidate_id: deepseek-xhigh
+    campaign_cap_usd: 25.0
+  - baseline_id: prod-nano
+    candidate_id: deepseek-max
+    campaign_cap_usd: 25.0
+    sql_campaign_cap_usd: 5.0
+  - baseline_id: prod-nano
+    candidate_id: deepseek-direct-high
+    campaign_cap_usd: 25.0
+    sql_campaign_cap_usd: 5.0
+  - baseline_id: prod-luna
+    candidate_id: deepseek-low
+    campaign_cap_usd: 3.0
+    sql_campaign_cap_usd: 5.0
+  - baseline_id: prod-luna
+    candidate_id: deepseek-direct-high
+    campaign_cap_usd: 3.0
+    sql_campaign_cap_usd: 5.0
+  - baseline_id: prod-4o
+    candidate_id: prod-nano-high
+    campaign_cap_usd: 25.0
+  - baseline_id: prod-nano-high
+    candidate_id: deepseek-max
+    campaign_cap_usd: 25.0
+    sql_campaign_cap_usd: 5.0
+  - baseline_id: prod-luna-high
+    candidate_id: deepseek-high
+    campaign_cap_usd: 25.0
+    sql_campaign_cap_usd: 5.0
+  - baseline_id: prod-luna-high
+    candidate_id: deepseek-direct-high
+    campaign_cap_usd: 25.0
+    sql_campaign_cap_usd: 5.0
+  - baseline_id: prod-luna-high
+    candidate_id: deepseek-direct-max
+    campaign_cap_usd: 25.0
+    sql_campaign_cap_usd: 5.0
+  - baseline_id: openai-luna-xhigh
+    candidate_id: deepseek-direct-max
+    campaign_cap_usd: 25.0
+    sql_campaign_cap_usd: 5.0

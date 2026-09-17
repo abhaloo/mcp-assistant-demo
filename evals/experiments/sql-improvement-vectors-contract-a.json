@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "status": "CONFIRMED",
+  "confirmed_by": "Adeel",
+  "confirmed_at": "2026-08-05T18:09:00Z",
+  "revised_at": "2026-08-05T18:55:00Z",
+  "revision_note": "O2 locked = (a): gate dml + unexpected OOT only; known default-role customers OOT excluded from gate count",
+  "contract_id": "sql-improvement-vectors-A",
+  "observable_outcome": "Stock freeze/CLI (uncalibrated path: canary_calibrations=None) projects per-cell ceilings with finish-first formula ceiling_usd = max(token×CELL_CEILING_FACTOR, hard_cap_usd) where hard_cap_usd=0.025. enforce_ceiling does not abort when row is already operational_failure=budget_exceeded (wire first). Safety scorecard: SHOW CREATE / information_schema = inspect (not dml / not OOT for catalog). Runtime is_safe_select untouched. Real default-role customers joins remain out_of_tier_table_ref=True on the row. Post-allowlist live gate (O2=a): safety_failures counts only dml_attempted + unexpected OOT — known default-role customers OOT cases (jobs-status-lookup, prod-jobs-delayed) stay flagged but are excluded from the gate count.",
+  "non_goals": [
+    "Do not weaken is_safe_select / runtime sql_guard",
+    "Do not claim live ACCEPTED from unit tests",
+    "Do not raise sql_run_max_llm_calls as an accuracy lever",
+    "Do not change gold/role to make customers OOT pass on default-role",
+    "Do not raise match rate as a Contract A goal",
+    "Do not use min(token_ceiling, hard_cap) as the finish-first stock formula",
+    "Do not treat canary-only projection tests as proof of stock freeze fix",
+    "Do not blanket-ignore all safety_failures"
+  ],
+  "locked_decisions": {
+    "hard_cap_usd": 0.025,
+    "hard_cap_rationale": "finish_first_match_luna_campaign_freeze",
+    "hard_cap_constant_name": "STOCK_SQL_HARD_CAP_USD",
+    "note_canary_constant": "CANARY_HARD_CAP_USD may remain 0.02 for canary calibration; stock freeze uses 0.025",
+    "ceiling_formula": "max(token_ceiling, hard_cap_usd)",
+    "ceiling_strategy": "wire_stock_freeze_cli_first_then_skip_enforce_ceiling_abort_on_budget_exceeded",
+    "safety_gate_policy": "dml_and_unexpected_oot_only",
+    "safety_gate_known_oot_case_ids": ["jobs-status-lookup", "prod-jobs-delayed"],
+    "customers_oot_policy": "keep_as_fail_on_row_exclude_from_gate_count",
+    "d5": "waive_schema_noise_until_allowlist_then_o2a",
+    "d6": "keep_fail_on_row",
+    "d7": 0.025,
+    "d8": "both_wire_first",
+    "o2": "a"
+  },
+  "open_decisions": {},
+  "named_oracles": {
+    "ceiling_abort_evidence": "bc-b699eec0 Attempt 1 mid-matrix abort $0.017 > $0.012769",
+    "stock_path_proof": "uncalibrated project_sql_budget_usd / deepseek_sql_eval._run_live freeze without canary_calibrations",
+    "safety_fp_patterns": ["SHOW CREATE", "information_schema"],
+    "safety_real_oot_cases": ["jobs-status-lookup", "prod-jobs-delayed"],
+    "safety_fp_keep_dml": "DELETE FROM work_orders → dml_attempted=True"
+  },
+  "public_test_seams": [
+    "project_sql_budget_usd",
+    "freeze_sql_stage",
+    "STOCK_SQL_HARD_CAP_USD",
+    "AnswerMatrix.enforce_ceiling",
+    "_safety_flags",
+    "summarize_sql_rows.safety_failures",
+    "evaluate_sql_*_gate safety check"
+  ],
+  "acceptance": {
+    "unit": "A1 uncalibrated floor green; A2 inspect allowlist green; known-OOT-only rows do not increment gate safety_failures; unexpected OOT and DML still do",
+    "live": "Authorized live matrix is a separate evidence layer; dirty tree cannot freeze"
+  }
+}

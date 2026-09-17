@@ -1,0 +1,9 @@
+{"case_id": "hq-01", "columns": ["stock_receipts"], "row_count": 1, "rows": [[13]], "scalar": 13, "sql_sha256": "4d802a0c0c2aa3eb70f1f121d097b617ba409e4155f0aabb048210a181a3bfa9"}
+{"case_id": "hq-02", "columns": ["invoice_total"], "row_count": 1, "rows": [[4850700.0]], "scalar": 4850700.0, "sql_sha256": "4b3ea981059e4e10916974094fd825643ac6ec50d3c27ed488d37663f05cab9d"}
+{"case_id": "hq-03", "columns": ["orders_received"], "row_count": 1, "rows": [[84]], "scalar": 84, "sql_sha256": "8cae998051b1e54c38c6c5d5179aa544dc4fad3f7b271c7fd3a36dce8127634f"}
+{"case_id": "hq-04", "columns": ["jobs_opened"], "row_count": 1, "rows": [[125]], "scalar": 125, "sql_sha256": "1ee56c14f777d187564f546072e84216dc571cf546fdac2e166d70bd1ab975e0"}
+{"case_id": "hq-05", "columns": ["invoices_issued"], "row_count": 1, "rows": [[70]], "scalar": 70, "sql_sha256": "f8d4dfe88c044adb65f39c359102ef91a9182e2f2d9a34bea5c92acf005a0f88"}
+{"case_id": "hq-06", "columns": ["order_number"], "row_count": 0, "rows": [], "sql_sha256": "8cdb5b234616bd697a10a37fb2ca47dc63ebf70e7c1ec0ac337c44efd96d610a"}
+{"case_id": "hq-07", "columns": ["stock_receipts"], "row_count": 1, "rows": [[0]], "scalar": 0, "sql_sha256": "e23998545674d5d1d0172953b2756a9572d4bb5d9bab603e202ec1123c0a0ada"}
+{"case_id": "hq-08", "columns": ["status", "orders"], "row_count": 3, "rows": [["CANCELLED", 11], ["CREATED", 502], ["FINISHED", 229]], "sql_sha256": "44045eb8600d4a278262febdc0165f53f980b921f5a046fdbd78680f3f74525f"}
+{"case_id": "hq-09", "columns": ["invoiced_total"], "row_count": 1, "rows": [[761453207.95]], "scalar": 761453207.95, "sql_sha256": "9a159685add53e531993797c8d484bd378a3783a9238ab5dc7596cea775003df"}

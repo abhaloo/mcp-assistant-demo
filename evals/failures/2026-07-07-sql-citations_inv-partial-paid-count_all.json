@@ -1,0 +1,23 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": null,
+  "case_id": "inv-partial-paid-count",
+  "role": "finance",
+  "mode": "all",
+  "run_id": "2026-07-07-sql-citations",
+  "question": "how many invoices are partially paid?",
+  "gold_sql": "SELECT COUNT(*) FROM (SELECT b.id, b.due_date, b.customer_id, SUM((bi.price*bi.quantity-COALESCE(bi.discount,0))*(1+COALESCE(bi.tax,0)/100)) AS amt, COALESCE((SELECT SUM(j.debit) FROM journals j JOIN accounts a ON a.id=j.account_id WHERE j.bill_id=b.id AND a.account_type IN ('OPERATING_EXPENSE','PAYABLE','CASH','BANK') AND j.debit>0),0) AS paid FROM bills b JOIN bill_items bi ON bi.bill_id=b.id WHERE b.type='Invoice' GROUP BY b.id, b.due_date, b.customer_id) x WHERE x.paid > 0.01 AND x.amt-x.paid > 0.01",
+  "agent_sql_scrubbed": "SELECT COUNT(*) AS n\nFROM (\n  SELECT b.id,\n         SUM((bi.price*bi.quantity - COALESCE(bi.discount,0)) * (1 + COALESCE(bi.tax,0)/100)) AS amt,\n         COALESCE((SELECT SUM(j.debit) FROM journals j JOIN accounts a ON a.id = j.account_id\n                   WHERE j.bill_id = b.id AND j.debit > 0\n                   AND a.account_type IN (?,?,?,?)), 0) AS paid\n  FROM bills b\n  JOIN bill_items bi ON bi.bill_id = b.id\n  WHERE b.type = ?\n  GROUP BY b.id\n) x\nWHERE x.paid > 0.01 AND ABS(x.amt - x.paid) > 0.01;",
+  "error_category": null,
+  "reason": "value_mismatch",
+  "valid_sql_rate": 1.0,
+  "pass_rate": 0.8,
+  "flaky": true,
+  "chat_deployment": "gpt-4.1",
+  "failure_kind": null,
+  "lever": null,
+  "root_cause": null,
+  "rule": null
+}

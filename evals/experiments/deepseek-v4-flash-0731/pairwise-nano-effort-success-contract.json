@@ -1,0 +1,101 @@
+{
+  "confirmed_at": "2026-08-03",
+  "confirmed_by": "Adeel",
+  "status": "CONFIRMED",
+  "observable_outcome": "Pairwise RAG campaigns with Azure gpt-5-nano baseline vs DeepSeek candidate (high/xhigh effort) emit evidence-complete development verdicts or HOLD without live spend in offline TDD; freeze attestation binds prod-nano deployment from Bicep.",
+  "non_goals": [
+    "True 3-arm matrix or joint multi-arm statistical gate",
+    "Run SQL B2",
+    "Flip a production routing default",
+    "Use Luna as an answer arm",
+    "384k DeepSeek output unless a later budget decision",
+    "Live paid campaign or judge calibration in Phase 3",
+    "Azure↔Azure path matrix"
+  ],
+  "examples": [
+    "Each campaign retrieves 62 cases once, answers both arms for three repeats on identical contexts.",
+    "Baseline arm prod-nano uses Azure gpt-5-nano with harness_output_cap 16384; DeepSeek arm uses request slug deepseek/deepseek-v4-flash-0731 with attested DeepInfra effective harness_output_cap 65536 for high and xhigh.",
+    "OpenRouter route policy pins only DeepInfra; reasoning.effort is frozen and applied on every candidate answer call.",
+    "actual_model attestation accepts only deepseek/deepseek-v4-flash-20260731.",
+    "Low candidate_effort uses deepseek-high profile with route low (same cap rules as gpt-4o baseline, not deepseek-low collapse).",
+    "Per-attempt campaign_cap_usd is 25; phase rag_repair 55; global TOTAL_CAP_USD 60."
+  ],
+  "edge_and_failure_cases": [
+    "missing Azure gpt-5-nano ARM attestation",
+    "reasoning.effort not present on OpenRouter extra_body",
+    "request slug accepted as actual_model",
+    "Fireworks or multi-provider mix",
+    "32k DeepSeek cap reused for high/xhigh",
+    "prices.yaml missing gpt-5-nano row blocks spend reservation"
+  ],
+  "independent_oracles": [
+    "frozen semantic eval case literals",
+    "literal judge-canary score bands",
+    "git commit and dirty-state checks",
+    "artifact SHA-256 hashes",
+    "paired non-inferiority specification",
+    "OpenRouter /generation provider and model metadata",
+    "infra/main.bicep gpt-5-nano deployment name and model version"
+  ],
+  "acceptance_criteria": {
+    "cases": 62,
+    "answer_arms": ["prod-nano", "forced-deepseek"],
+    "repeats": 3,
+    "retrievals_per_case": 1,
+    "harness_output_cap_tokens_by_arm": {
+      "prod-nano": 16384,
+      "forced-deepseek": 65536
+    },
+    "output_ceiling_is_harness_cap": false,
+    "deepseek_effective_output_cap_attestation": "DeepInfra live stop 65536 on deepseek-v4-flash-0731",
+    "judge_deployment": "gpt-5.6-luna",
+    "candidate_route_policy": {
+      "providers": ["DeepInfra"],
+      "allow_fallbacks": false,
+      "data_collection": "deny",
+      "require_parameters": true,
+      "reasoning_effort_values": ["high", "xhigh"],
+      "post_call_generation_metadata_required": true
+    },
+    "allowed_actual_models": {
+      "prod-nano": ["gpt-5-nano", "gpt-5-nano-2025-08-07"],
+      "forced-deepseek": ["deepseek/deepseek-v4-flash-20260731"]
+    },
+    "max_operational_or_missing_rate": 0.02,
+    "campaign_cap_usd": 25.0,
+    "global_spend_cap_usd": 60.0,
+    "launch_order": ["high", "xhigh"],
+    "required_live_checks": [
+      "B0 tool smoke",
+      "small /api/ask authorization and rollback smoke",
+      "B1 full RAG attempt with live gpt-5-nano ARM attestation"
+    ],
+    "required_evidence": [
+      "immutable attempt",
+      "provider response metadata",
+      "frozen reasoning.effort on candidate route_policy",
+      "judge call metadata",
+      "failure files",
+      "acceptance ledger",
+      "case movement audit",
+      "task economics audit"
+    ],
+    "comparison_goals": ["accuracy", "cost_per_task", "latency_per_task"]
+  },
+  "public_test_seams": [
+    "apply_campaign_profile",
+    "build_campaign_from_legacy",
+    "freeze_rag_experiment",
+    "answer_frozen_case",
+    "invoke_rag_generation_with_usage",
+    "evaluate_rag_evidence"
+  ],
+  "approved_test_doubles": [
+    "Azure retrieval and answer adapter",
+    "OpenRouter answer adapter",
+    "Luna judge adapter",
+    "spend adapter",
+    "clock",
+    "filesystem"
+  ]
+}

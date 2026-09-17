@@ -1,0 +1,46 @@
+{
+  "case_id": "bq-04",
+  "family": "jobs_for_order",
+  "phrasing": "clear_english",
+  "expected": "answered",
+  "actual": "incomplete",
+  "passed": false,
+  "detail": "expected answered, got incomplete",
+  "reason_code": "adapter_invalid",
+  "failure_layer": "execute",
+  "failure_detail": "OperationalError: (1054, \"Unknown column 'ai_v1_bq_job_fact.customer_order_number' in 'WHERE'\")",
+  "planner_repair_count": 0,
+  "tokens_prompt": 6042,
+  "tokens_completion": 357,
+  "tokens_reasoning": 268,
+  "missing_members": [],
+  "plan": {
+    "measures": [],
+    "dimensions": [
+      "job.id"
+    ],
+    "bucket_set": null,
+    "filters": {
+      "all": [
+        {
+          "member": "job.customer_order_number",
+          "operator": "eq",
+          "values": [
+            "?"
+          ]
+        }
+      ]
+    },
+    "having": null,
+    "period": null,
+    "grain": "entity_rows",
+    "order": [],
+    "limit": 20
+  },
+  "message": "",
+  "outcome_match": false,
+  "literal_match": false,
+  "repeat_index": 12,
+  "arm": "openai-luna-plan",
+  "reasoning_redacted": true
+}

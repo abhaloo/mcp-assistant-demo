@@ -1,0 +1,23 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": null,
+  "case_id": "prod-revenue-june9",
+  "role": "finance",
+  "mode": "dev",
+  "run_id": "qwen-exp-baseline",
+  "question": "break down the revenue from june 9",
+  "gold_sql": "SELECT a.name AS account, SUM(j.credit - j.debit) AS revenue FROM journals j JOIN accounts a ON a.id = j.account_id WHERE a.account_type IN ('OPERATING_REVENUE', 'NON_OPERATING_REVENUE') AND j.post_date = '2026-06-09' GROUP BY a.name",
+  "agent_sql_scrubbed": "SELECT DATE(j.post_date) AS revenue_date, SUM(j.credit - j.debit) AS total_revenue\nFROM journals j\nWHERE j.post_date = ?\nGROUP BY revenue_date;",
+  "error_category": null,
+  "reason": "value_mismatch",
+  "valid_sql_rate": 1.0,
+  "pass_rate": 0.0,
+  "flaky": false,
+  "chat_deployment": "gpt-4o-mini",
+  "failure_kind": null,
+  "lever": null,
+  "root_cause": null,
+  "rule": null
+}

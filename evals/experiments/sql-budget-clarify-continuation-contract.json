@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "status": "CONFIRMED",
+  "confirmed_by": "Adeel",
+  "confirmed_at": "2026-08-07T05:33:00Z",
+  "contract_id": "sql-budget-clarify-continuation",
+  "plan_path": "docs/superpowers/plans/2026-08-07-sql-budget-clarify-continuation-tdd.md",
+  "workspace_tip": "feat/sql-shape-validator @ 9320698 (plan against tip + known seams; dirty CoT WIP may exist)",
+  "depends_on": {
+    "shared_clarify": "evals/experiments/sql-shared-clarify-seam-contract.json",
+    "context_budget": "evals/experiments/sql-context-budget-success-contract.json",
+    "adr_0037": "docs/adr/0037-sql-context-budget.md",
+    "incomplete_ux": "docs/superpowers/contracts/2026-08-05-prod-sql-cost-ceiling-incomplete-ux-success-contract.md"
+  },
+  "observable_outcome": "When the SQL agent hits sql_run_max_llm_calls without a final answer, the turn ends with a real-user CLARIFY: <useful question> (shared marker). Wire: completion_status=incomplete + CLARIFY body (not INCOMPLETE_ANSWER_MESSAGE) + sql_stop_reason=budget_clarify. The cap is NOT reset mid-run. On user/oracle reply, run_with_clarifications starts a new turn with a fresh SqlRunBudget. Eval: oracle cases score post-reply SQL exec-match; no-oracle budget CLARIFY is ops-style (budget_clarify) excluded from accuracy denominator — never folded into exec-match pass_rate as a win.",
+  "non_goals": [
+    "Do not auto-reset max_llm_calls mid-run without a human/oracle reply",
+    "Do not emit an internal model-only nudge without CLARIFY: to the user",
+    "Do not fold budget-driven CLARIFY into exec-match pass_rate / OutcomeCell.correct",
+    "Do not raise sql_run_max_llm_calls further as an accuracy lever in this slice (tip already 28)",
+    "Do not implement Ask UI multi-turn (NullClarificationReplySource stays in prod until UI — same as shared-clarify)",
+    "Do not claim ACCEPTED from unit tests alone",
+    "Do not run Slice C dry-run or Phase E residual canary as part of this slice (optional follow-up only)",
+    "Do not convert next_prompt_tokens / cumulative_cost_usd stops into CLARIFY (those stay incomplete UX with INCOMPLETE_ANSWER_MESSAGE)",
+    "Do not raise max_clarifications above default 1"
+  ],
+  "locked_decisions": {
+    "D_reply": "LOCKED — real user in prod (NullClarificationReplySource until Ask UI); OracleClarificationReplySource from case.clarify_answer in eval",
+    "D_reset": "LOCKED — fresh SqlRunBudget on continuation turn only (reset/recreate at invoke start; never mid-run)",
+    "D_eval_no_oracle": "LOCKED — ops-style exclusion via operational_failure=budget_clarify (or budget_exceeded family)",
+    "D_wire": "LOCKED (a) incomplete_plus_clarify_body — completion_status=incomplete + CLARIFY body + sql_stop_reason=budget_clarify; body MUST NOT be INCOMPLETE_ANSWER_MESSAGE",
+    "marker": "CLARIFY: (app.rag.chains.sql_clarify.CLARIFY_PREFIX)",
+    "max_clarifications_default": 1,
+    "cap_reason_in_scope": "max_llm_calls only"
+  },
+  "open_decisions": {},
+  "eval_scoring_table": [
+    {
+      "situation": "Cap → CLARIFY, case has clarify_answer",
+      "score": "Oracle reply → fresh budget turn → score post-reply SQL exec-match (existing shared clarify seam)"
+    },
+    {
+      "situation": "Cap → CLARIFY, case no clarify_answer",
+      "score": "NOT an exec-match miss. Tag operational_failure=budget_clarify (ops-style); excluded from accuracy denominator like today's budget_exceeded"
+    },
+    {
+      "situation": "Cap → CLARIFY + tagged clarify-ok only (no oracle)",
+      "score": "Diagnostic clarify_ok / out of pass_rate — do not invent gold SQL credit; clarify-ok tag takes precedence over bare budget_clarify when both apply"
+    },
+    {
+      "situation": "After reply still fails",
+      "score": "Normal miss or second ops stop (budget again / incomplete)"
+    },
+    {
+      "situation": "Cost",
+      "score": "Both turns count toward cell ceiling; fresh budget ≠ free"
+    }
+  ],
+  "acceptance_criteria": [
+    {
+      "id": "AC1",
+      "criterion": "max_llm_calls stop emits CLARIFY: <useful question> with completion_status=incomplete and sql_stop_reason=budget_clarify; body is NOT INCOMPLETE_ANSWER_MESSAGE — on JSON (_invoke_sql BranchResult → _handle_structured) AND SSE (astream_status success path with done.completion_status=incomplete + sql_stop_reason=budget_clarify)",
+      "evidence": "unit fake graph (Task 3) + ask_service BranchResult producer test (Task 6) + ask_stream SSE producer test (Task 6) — each fails if producer wiring skipped while mocks/stubs alone would pass"
+    },
+    {
+      "id": "AC2",
+      "criterion": "Cap is not reset mid-run; continuation turn after reply gets a fresh SqlRunBudget allowing further paid invokes",
+      "evidence": "agent-level AnonymizingSqlAgent + fake graph (Task 4): turn 1 exhausts budget via real invoke reset-at-start; turn 2 succeeds only because invoke resets — fake graph counter raises max_llm_calls when already at cap without calling reset itself"
+    },
+    {
+      "id": "AC3",
+      "criterion": "Oracle clarify_answer cases score post-reply exec-match via existing invoke_with_clarifications seam (CLARIFY detected from body text regardless of completion_status)",
+      "evidence": "unit fake agent + diagnostics"
+    },
+    {
+      "id": "AC4",
+      "criterion": "No-oracle budget CLARIFY is ops-excluded (budget_clarify); never folded into pass_rate as clarify_ok success inflation unless case is tagged clarify-ok — budget_clarify is full sibling of budget_exceeded in sql_task.classify_failure, enforce_operational_budget, and answer_matrix.enforce_ceiling",
+      "evidence": "unit sql_diagnostics + sql_summary + experiment matrix producer tests (Task 5b) — fails if diagnostics alone tags budget_clarify but matrix still treats only budget_exceeded as ops sibling"
+    },
+    {
+      "id": "AC4b",
+      "criterion": "sql_stop_reason=budget_clarify threads through ClarifyRunResult, run_with_clarifications (last turn), and invoke_with_clarifications return dict",
+      "evidence": "unit ClarifyRunResult/run_with_clarifications forwarding test + AnonymizingSqlAgent invoke_with_clarifications integration (Task 4) — no whole-agent stub for threading assertion"
+    },
+    {
+      "id": "AC5",
+      "criterion": "next_prompt_tokens / other non-max_llm_calls budget reasons remain incomplete UX with INCOMPLETE_ANSWER_MESSAGE",
+      "evidence": "unit regression"
+    },
+    {
+      "id": "AC6",
+      "criterion": "ADR 0030 consumer enumeration pasted before Answer / sql_stop_reason / clarify wire change — must include BranchResult, _invoke_sql.call, _handle_structured, hybrid_ask.resolve_hybrid_buffer, ask_stream done payload, sql_task, answer_matrix",
+      "evidence": "docs/adr/0046-sql-budget-clarify-consumers.md grep paste (Task 6 Step 0)"
+    },
+    {
+      "id": "AC7",
+      "criterion": "No ACCEPTED / RELEASABLE from unit alone; live residual optional follow-up",
+      "evidence": "Implementation Report status language"
+    }
+  ],
+  "independent_oracles": [
+    "CLARIFY_PREFIX literal from sql_clarify.py",
+    "SqlContextBudgetExceeded.reason == 'max_llm_calls'",
+    "case.clarify_answer presence (eval fixture field — never gold SQL)",
+    "row_counts_toward_exec_match excludes clarify_ok; operational_failure rows skipped in outcome cells",
+    "INCOMPLETE_ANSWER_MESSAGE only for non-max_llm_calls incomplete stops (budget-clarify body is CLARIFY:…)",
+    "settings.sql_run_max_llm_calls tip value is evidence of cap, not a lever to raise in this slice"
+  ],
+  "public_test_seams": [
+    "SqlRunBudget.reset (or equivalent per-invoke fresh budget)",
+    "build_budget_clarify_message / build_budget_clarify_question",
+    "build_sql_graph max_llm_calls → CLARIFY AIMessage (no raise); route_after_schema_llm must not enter get_schema ToolNode after budget CLARIFY",
+    "AnonymizingSqlAgent.invoke / invoke_with_clarifications / astream_status",
+    "run_with_clarifications / ClarifyRunResult.sql_stop_reason",
+    "result sql_stop_reason / raw budget_clarify marker",
+    "sql_diagnostics.run_case operational_failure=budget_clarify",
+    "sql_task.classify_failure / enforce_operational_budget + answer_matrix.enforce_ceiling budget_clarify sibling",
+    "score_case clarify_ok precedence",
+    "row_counts_toward_exec_match / outcome_cells_from_rows",
+    "ask_service BranchResult.sql_stop on success path (_invoke_sql.call → _handle_structured)",
+    "ask_stream done payload: completion_status=incomplete + CLARIFY body + sql_stop_reason=budget_clarify (SSE parity required this slice)"
+  ]
+}

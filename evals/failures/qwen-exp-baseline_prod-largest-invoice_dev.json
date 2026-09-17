@@ -1,0 +1,23 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": null,
+  "case_id": "prod-largest-invoice",
+  "role": "finance",
+  "mode": "dev",
+  "run_id": "qwen-exp-baseline",
+  "question": "what was the largest invoice this month and from who",
+  "gold_sql": "SELECT c.name, b.invoice_number, SUM((bi.price * bi.quantity - COALESCE(bi.discount, 0)) * (1 + COALESCE(bi.tax, 0) / 100)) AS total FROM bills b JOIN bill_items bi ON bi.bill_id = b.id JOIN customers c ON c.id = b.customer_id WHERE b.type = 'Invoice' AND b.created_at >= '2026-06-01' AND b.created_at < '2026-07-01' GROUP BY c.name, b.invoice_number ORDER BY total DESC LIMIT 1",
+  "agent_sql_scrubbed": "SELECT name FROM customers WHERE id = 80;",
+  "error_category": null,
+  "reason": "value_mismatch",
+  "valid_sql_rate": 1.0,
+  "pass_rate": 0.6,
+  "flaky": true,
+  "chat_deployment": "gpt-4.1",
+  "failure_kind": null,
+  "lever": null,
+  "root_cause": null,
+  "rule": null
+}
