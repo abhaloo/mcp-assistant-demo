@@ -11,8 +11,10 @@ from typing import Any
 
 from app.auth import Principal
 from app.business_query.authorize.capability import allowed_filter_values_valid
+from app.business_query.authorize.forced_predicate import ForcedPredicate
 from app.business_query.authorize.scoping import ScopedPlan
 from app.business_query.compile.business_time import period_bounds
+from app.business_query.cube.model import CubeMemberMap, CubeModel
 from app.business_query.definitions import (
     DefinitionBundle,
     measure_for_member,
@@ -64,6 +66,12 @@ _FALLTHROUGH_LOGS: dict[str, str] = {
     "compare_to_unsupported": "cube adapter falling through: compare_to unsupported",
     "derived_measure_unsupported": "cube adapter falling through: derived measure unsupported",
     "segment_unsupported": "cube adapter falling through: segment unsupported",
+    "attribute_predicate_unsupported": (
+        "cube adapter falling through: attribute predicate unsupported"
+    ),
+    "detail_selection_unsupported": "cube adapter falling through: detail selection unsupported",
+    "granularity_unsupported": "cube adapter falling through: granularity unsupported",
+    "member_unsupported": "cube adapter falling through: member unsupported",
 }
 
 
@@ -76,6 +84,7 @@ class CubeAdapter:
         transport: CubeTransport,
         principal: Principal,
         bundle: DefinitionBundle,
+        model: CubeModel,
         model_revision: str,
         expected_bundle_hash: str | None = None,
         database_identity: str | None = None,
@@ -83,6 +92,8 @@ class CubeAdapter:
         self._transport = transport
         self._principal = principal
         self._bundle = bundle
+        self._model = model
+        self._members = model.member_map()
         self._model_revision = model_revision
         self._expected_bundle_hash = (
             expected_bundle_hash if expected_bundle_hash is not None else bundle.content_hash
@@ -123,14 +134,10 @@ class CubeAdapter:
         ):
             logger.warning("cube adapter incomplete: relative period without business_date")
             return Incomplete(reason_code="adapter_invalid")
-        if scoped.forced:
-            # Forced predicates (the server-imposed scope channel) are not
-            # translated into Cube filters in release 1 — a genuine capability
-            # gap, not a terminal failure. Silently dropping the scope boundary
-            # would be worse, so this still refuses; AdapterUnsupported instead
-            # of Incomplete lets the chain fall through.
-            logger.warning("cube adapter falling through: forced scope predicates unsupported")
-            raise AdapterUnsupported("forced_scope_unsupported")
+        outside = _forced_predicates_outside_the_model(scoped.forced, self._model)
+        if outside:
+            logger.warning("cube adapter incomplete: forced predicate outside the model scope")
+            return Incomplete(reason_code="adapter_invalid")
         identity = self._database_identity
         if not identity:
             return Incomplete(reason_code="adapter_invalid")
@@ -140,6 +147,7 @@ class CubeAdapter:
             payload = {
                 "query": plan_to_cube_query(
                     scoped.plan,
+                    members=self._members,
                     business_date=scoped.business_date,
                     business_timezone=self._bundle.business_timezone,
                 ),
@@ -147,6 +155,9 @@ class CubeAdapter:
                 "bundleHash": self._bundle.content_hash,
                 "modelRevision": self._model_revision,
             }
+            department = _department_filters(scoped.forced, self._model, self._members)
+            if department:
+                payload["query"]["filters"] = [*payload["query"].get("filters", []), *department]
             response = self._transport(payload)
             finished_at = datetime.now(tz=UTC)
         except (PlanRefused, AdapterUnsupported):
@@ -193,6 +204,14 @@ class CubeAdapter:
         rows = [row for row in data if isinstance(row, dict)]
         if len(rows) != len(data):
             logger.warning("cube adapter incomplete: malformed response (row shape)")
+            return Incomplete(reason_code="adapter_invalid")
+
+        try:
+            rows = [
+                {self._members.to_plan(key): value for key, value in row.items()} for row in rows
+            ]
+        except KeyError:
+            logger.warning("cube adapter incomplete: cube answered an unmapped member")
             return Incomplete(reason_code="adapter_invalid")
 
         total_row_count = response.get("total", len(rows))
@@ -274,39 +293,52 @@ def principal_security_context(principal: Principal) -> dict[str, Any]:
 def plan_to_cube_query(
     plan: BusinessQueryPlan,
     *,
+    members: CubeMemberMap,
     business_date=None,
     business_timezone: str = "UTC",
 ) -> dict[str, Any]:
     """Typed plan → Cube ``Query`` field names (CUBE §5)."""
+
+    def _view(name: str) -> str:
+        if not members.knows(name):
+            raise AdapterUnsupported("member_unsupported")
+        return members.to_view(name)
+
     query: dict[str, Any] = {
-        "measures": list(plan.measures),
-        "dimensions": list(plan.dimensions),
+        "measures": [_view(name) for name in plan.measures],
+        "dimensions": [_view(name) for name in plan.dimensions],
         "limit": plan.limit,
+        "total": True,
+        "cache": "no-cache",
+        "timezone": business_timezone,
     }
-    filters = _filters_to_cube(plan.filters) + _filters_to_cube(plan.having)
+    filters = _filters_to_cube(plan.filters, members) + _filters_to_cube(plan.having, members)
     if filters:
         query["filters"] = filters
     if plan.period is not None:
         query["timeDimensions"] = [
             _period_to_time_dimension(
-                plan.period, business_date=business_date, business_timezone=business_timezone
+                plan.period,
+                members=members,
+                business_date=business_date,
+                business_timezone=business_timezone,
             )
         ]
     if plan.order:
-        query["order"] = {clause.member: clause.direction for clause in plan.order}
+        query["order"] = {_view(clause.member): clause.direction for clause in plan.order}
     return query
 
 
-def _filters_to_cube(group: FilterGroup | None) -> list[dict[str, Any]]:
+def _filters_to_cube(group: FilterGroup | None, members: CubeMemberMap) -> list[dict[str, Any]]:
     if group is None:
         return []
-    expression = _filter_group_to_cube(group)
+    expression = _filter_group_to_cube(group, members)
     return [expression] if expression is not None else []
 
 
-def _filter_group_to_cube(group: FilterGroup) -> dict[str, Any] | None:
-    all_parts = [_filter_node_to_cube(node) for node in group.all]
-    any_parts = [_filter_node_to_cube(node) for node in group.any]
+def _filter_group_to_cube(group: FilterGroup, members: CubeMemberMap) -> dict[str, Any] | None:
+    all_parts = [_filter_node_to_cube(node, members) for node in group.all]
+    any_parts = [_filter_node_to_cube(node, members) for node in group.any]
     parts = [part for part in all_parts if part is not None]
     if any_parts:
         parts.append({"or": [part for part in any_parts if part is not None]})
@@ -317,10 +349,14 @@ def _filter_group_to_cube(group: FilterGroup) -> dict[str, Any] | None:
 
 def _filter_node_to_cube(
     node: PlanFilter | AttributePredicate | FilterGroup,
+    members: CubeMemberMap,
 ) -> dict[str, Any] | None:
     if isinstance(node, FilterGroup):
-        return _filter_group_to_cube(node)
-    member = node.family_key if isinstance(node, AttributePredicate) else node.member
+        return _filter_group_to_cube(node, members)
+    raw = node.family_key if isinstance(node, AttributePredicate) else node.member
+    if not members.knows(raw):
+        raise AdapterUnsupported("member_unsupported")
+    member = members.to_view(raw)
     if node.operator in {"in_set", "not_in_set"}:
         # A derived-set membership filter IS expressible by
         # InternalCompilerAdapter -- this refusal must let module_scoping's
@@ -338,9 +374,15 @@ def _filter_node_to_cube(
 
 
 def _period_to_time_dimension(
-    period: BusinessPeriod, *, business_date=None, business_timezone: str = "UTC"
+    period: BusinessPeriod,
+    *,
+    members: CubeMemberMap,
+    business_date=None,
+    business_timezone: str = "UTC",
 ) -> dict[str, Any]:
-    td: dict[str, Any] = {"dimension": period.time_dimension}
+    if not members.knows(period.time_dimension):
+        raise AdapterUnsupported("member_unsupported")
+    td: dict[str, Any] = {"dimension": members.to_view(period.time_dimension)}
     if period.granularity is not None:
         td["granularity"] = period.granularity
     start, end = period_bounds(period, business_timezone, business_date=business_date)
@@ -354,10 +396,9 @@ def _unsupported_plan_reason(plan: BusinessQueryPlan, bundle: DefinitionBundle) 
         # No bucket-case translation in release 1; fall through to an adapter that
         # can express it (ADR 0047 Inv.8).
         return "bucket_set_unsupported"
-    if plan.compare_to is not None:
-        # One Cube query answers one period. Answering the current period alone
-        # would read as a previous period with no data, so refuse and fall through.
-        return "compare_to_unsupported"
+    shape = _shape_gap(plan)
+    if shape is not None:
+        return shape
     for member in plan.measures:
         measure = measure_for_member(bundle, member)
         if measure is not None and measure.expression_kind is not None:
@@ -373,3 +414,59 @@ def _unsupported_plan_reason(plan: BusinessQueryPlan, bundle: DefinitionBundle) 
                     # A segment is a compiler predicate over row columns, not a Cube member.
                     return "segment_unsupported"
     return None
+
+
+def _shape_gap(plan: BusinessQueryPlan) -> str | None:
+    if plan.compare_to is not None:
+        # One Cube query answers one period. Answering the current period alone
+        # would read as a previous period with no data, so refuse and fall through.
+        return "compare_to_unsupported"
+    if plan.attribute_predicates:
+        return "attribute_predicate_unsupported"
+    if plan.detail_selections:
+        return "detail_selection_unsupported"
+    if plan.period is not None and plan.period.granularity is not None:
+        # The seal layer declares no time-bucket member; Cube's
+        # `<dimension>.<granularity>` result key would be rejected as undeclared.
+        return "granularity_unsupported"
+    return None
+
+
+def _forced_predicates_outside_the_model(
+    forced: tuple[ForcedPredicate, ...], model: CubeModel
+) -> list[ForcedPredicate]:
+    """Forced predicates neither the relation nor a translated filter enforces.
+
+    The relation carries the entity column and record predicates; the department
+    column becomes an explicit filter (_department_filters). Anything else would be
+    silently dropped, so it refuses."""
+    return [p for p in forced if p.column not in model.forced_columns(p.resource)]
+
+
+def _department_column_of(model: CubeModel, cube_name: str) -> str | None:
+    for cube in model.cubes:
+        if cube.name == cube_name:
+            return cube.department_column
+    return None
+
+
+def _department_filters(
+    forced: tuple[ForcedPredicate, ...], model: CubeModel, members: CubeMemberMap
+) -> list[dict[str, Any]]:
+    """One equals filter per forced department predicate.
+
+    Scoping forces the department column on every resource of the join cover, so a
+    cube the plan only joins through is filtered too; a rewrite keyed on the members
+    the query names could not see it."""
+    filters: list[dict[str, Any]] = []
+    for predicate in forced:
+        if predicate.column != _department_column_of(model, predicate.resource):
+            continue
+        filters.append(
+            {
+                "member": members.to_view(f"{predicate.resource}.{predicate.column}"),
+                "operator": _OPERATOR_MAP[predicate.operator],
+                "values": [str(value) for value in predicate.values],
+            }
+        )
+    return filters

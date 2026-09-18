@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import date
@@ -11,19 +12,26 @@ from sqlalchemy.engine import Engine
 
 from app.auth import Principal
 from app.business_query.budget import INTERACTIVE_BUDGET_POLICY
+from app.business_query.compile import CubeAdapter
 from app.business_query.compile.adapter import InternalCompilerAdapter
 from app.business_query.compile.business_time import business_today
+from app.business_query.cube import HttpCubeTransport, generate_cube_model, model_revision
 from app.business_query.definitions import DefinitionBundle
 from app.business_query.outcomes import PlanRefused
 from app.business_query.plan import LlmPlanner
 from app.business_query.plan.value_resolver import SqlValueResolver
-from app.business_query.ports import PlanStore, QueryRecordWritePort
+from app.business_query.ports import (
+    ExecutionAdapter,
+    PlannerAdapter,
+    PlanStore,
+    QueryRecordWritePort,
+)
 from app.business_query.wire.module import (
     BusinessQueryEvidencePorts,
     BusinessQueryModule,
 )
 from app.business_query.wire.trace import QueryTrace
-from app.config import settings
+from app.config import Settings, settings
 from app.core.ask_errors import resolve_production_route
 from app.providers.model_purpose import ModelPurpose
 from app.providers.route_policy import ResolvedModelRoute
@@ -106,14 +114,42 @@ class ModulePlugins:
     pagination_secret: str | None = None
     mint_page_cursor: bool = True
     query_record_writer: QueryRecordWritePort | None = None
+    planner: PlannerAdapter | None = None
+    adapters_override: Sequence[ExecutionAdapter] | None = None
 
 
-def _planner_from_plugins(plugins: ModulePlugins) -> LlmPlanner:
+def _planner_from_plugins(plugins: ModulePlugins) -> PlannerAdapter:
+    if plugins.planner is not None:
+        return plugins.planner
     return LlmPlanner(
         call_recorder=plugins.call_recorder,
         trace=plugins.trace,
         attempt_sink=plugins.attempt_sink,
         attempt_context=plugins.attempt_context,
+    )
+
+
+def build_cube_adapter(
+    *,
+    principal: Principal,
+    bundle: DefinitionBundle,
+    database_identity: str,
+    settings: Settings = settings,
+) -> CubeAdapter:
+    """The one place a Cube adapter is assembled: transport from settings, model from the bundle."""
+    if settings.business_query_cube_url is None or settings.business_query_cube_api_secret is None:
+        raise ValueError("cube adapter requested without a configured Cube service")
+    return CubeAdapter(
+        transport=HttpCubeTransport(
+            settings.business_query_cube_url,
+            settings.business_query_cube_api_secret,
+            timeout_seconds=settings.business_query_cube_timeout_seconds,
+        ),
+        principal=principal,
+        bundle=bundle,
+        model=generate_cube_model(bundle),
+        model_revision=model_revision(bundle),
+        database_identity=database_identity,
     )
 
 
@@ -139,9 +175,25 @@ def build_module(
         trace=plugins.trace,
         database_identity=database_identity,
     )
+    adapters: list[Any] = (
+        list(plugins.adapters_override)
+        if plugins.adapters_override is not None
+        else (
+            [
+                build_cube_adapter(
+                    principal=principal,
+                    bundle=bundle,
+                    database_identity=database_identity,
+                ),
+                adapter,
+            ]
+            if settings.business_query_cube_url is not None
+            else [adapter]
+        )
+    )
     return BusinessQueryModule(
         planner=_planner_from_plugins(plugins),
-        adapters=[adapter],
+        adapters=adapters,
         bundle_resolver=lambda _h: bundle,
         step_timeout_seconds=module_step_timeout,
         planner_step_ceiling_seconds=planner_step_ceiling_seconds,

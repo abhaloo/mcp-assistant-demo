@@ -274,6 +274,48 @@ class RecordProjectionConnectivityCheck:
         return await _bounded_probe(_ping)
 
 
+def _cube_meta_client() -> httpx.AsyncClient:
+    return httpx.AsyncClient(timeout=5.0)
+
+
+class CubeConnectivityCheck:
+    """Cube answers `/meta` and serves the model generated from this API's bundle.
+
+    Soft: an unreachable or stale Cube never de-registers the API. Cube-eligible
+    requests then end Incomplete until it recovers; the chain has no raw-SQL
+    fallback for a Cube outage."""
+
+    name = "cube"
+
+    async def run(self) -> bool:
+        import time
+
+        import jwt
+
+        from app.business_query.cube import VIEW_NAME, model_revision
+        from app.business_query.definitions import current_bundle
+
+        url = settings.business_query_cube_url
+        secret = settings.business_query_cube_api_secret
+        if not url or not secret:
+            return False
+        token = jwt.encode(
+            {"cross_entity": True, "exp": int(time.time()) + 60}, secret, algorithm="HS256"
+        )
+        async with _cube_meta_client() as client:
+            response = await client.get(
+                f"{url.rstrip('/')}/meta",
+                params={"onlyViews": "true"},
+                headers={"Authorization": token},
+            )
+        if response.status_code != httpx.codes.OK:
+            return False
+        body = response.json()
+        views = {cube.get("name"): cube for cube in body.get("cubes", [])}
+        served = (views.get(VIEW_NAME) or {}).get("meta", {}).get("model_revision")
+        return served == model_revision(current_bundle())
+
+
 class BusinessQueryResolverCoverageCheck:
     """Every resolvable capability member in each accepted manifest's
     bundle must carry complete lookup metadata (view, column, scope) before
@@ -392,8 +434,9 @@ class QueryRecordSchemaCheck:
 # registry entry defaults to a hard dep, and a shared downstream most replicas'
 # document/semantic path never touches must not de-register the whole fleet at once --
 # the SAME hazard app/health/router.py's own errors_500_window comment already
-# names for a different signal.
-SOFT_CHECK_NAMES = frozenset({"record_projection"})
+# names for a different signal. cube is soft because the API serves document and
+# internal-compiler answers without it.
+SOFT_CHECK_NAMES = frozenset({"record_projection", "cube"})
 
 
 def _probes_openai(s: Settings) -> bool:
@@ -440,6 +483,7 @@ _CHECK_REGISTRY: tuple[tuple[Callable[[Settings], bool], Callable[..., HealthChe
         lambda s: s.business_query_mode != "disabled" and s.mcp_record_database_url is not None,
         BusinessQueryResolverCoverageCheck,
     ),
+    (lambda s: s.business_query_cube_url is not None, CubeConnectivityCheck),
 )
 
 

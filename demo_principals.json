@@ -157,12 +157,12 @@
       "entity_id": 1,
       "cross_entity": false,
       "document_tiers": [
-        "warehouse",
-        "customers",
-        "printing",
-        "all",
         "sales",
-        "finance"
+        "warehouse",
+        "printing",
+        "customers",
+        "finance",
+        "all"
       ],
       "scope_values": {},
       "resources": {
@@ -309,12 +309,12 @@
       "entity_id": 1,
       "cross_entity": false,
       "document_tiers": [
-        "warehouse",
-        "customers",
         "sales",
+        "warehouse",
         "printing",
-        "all",
-        "graphic design"
+        "customers",
+        "graphic design",
+        "all"
       ],
       "scope_values": {},
       "resources": {

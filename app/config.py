@@ -14,7 +14,7 @@ from typing import ClassVar, Literal
 from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
 from app.crypto.event_keyring import EventEncryptionKeyring
@@ -362,6 +362,11 @@ class Settings(_RedactedRepr, BaseSettings):
     # wait ceiling; both read this one value, so a connection is never held open by a
     # server-side statement the adapter has already stopped waiting for.
     adapter_statement_timeout_seconds: float = Field(default=10.0, gt=0)
+    # Cube shadow compiler. Unset URL = the chain is the internal compiler alone. The
+    # timeout is the whole-call deadline including Cube's long-poll retries.
+    business_query_cube_url: str | None = None
+    business_query_cube_api_secret: str | None = None
+    business_query_cube_timeout_seconds: float = Field(default=10.0, gt=0)
     # Width of the adapter thread pool. Deliberately small and separate from asyncio's
     # shared default executor (min(32, cpu+4) workers, process-wide): a wait_for timeout
     # does not cancel the underlying thread, so repeated timeouts during a slow-database
@@ -458,6 +463,21 @@ class Settings(_RedactedRepr, BaseSettings):
         "env_file_encoding": "utf-8",
         "extra": "ignore",
     }
+
+    @field_validator("business_query_cube_url", "business_query_cube_api_secret", mode="before")
+    @classmethod
+    def _empty_environment_value_is_unset(cls, value: object) -> object:
+        """Compose renders an unset variable as an empty string; treat it as absent."""
+        return None if value == "" else value
+
+    @model_validator(mode="after")
+    def _validate_cube_pair(self) -> "Settings":
+        """A Cube URL without its API secret cannot sign a request: fail at startup."""
+        if self.business_query_cube_url is not None and self.business_query_cube_api_secret is None:
+            raise ValueError(
+                "business_query_cube_api_secret is required when business_query_cube_url is set"
+            )
+        return self
 
     @model_validator(mode="after")
     def _alias_deepseek_direct_api_key(self) -> "Settings":
@@ -566,6 +586,7 @@ class EffectiveRouteSettings(BaseModel):
     ask_max_deadline_ms: int = 25_000
     ask_planner_step_ceiling_seconds: float | None = 18.0
     ask_turn_unbounded: bool = False
+    cube_configured: bool = False
 
 
 def effective_route_settings() -> EffectiveRouteSettings:
@@ -584,4 +605,5 @@ def effective_route_settings() -> EffectiveRouteSettings:
         ask_max_deadline_ms=settings.ask_max_deadline_ms,
         ask_planner_step_ceiling_seconds=planner_ceiling,
         ask_turn_unbounded=settings.ask_turn_unbounded,
+        cube_configured=settings.business_query_cube_url is not None,
     )
