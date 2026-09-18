@@ -12,7 +12,7 @@ This is a demo distilled from the original app.
 ## Architecture
 
 A finance user asks who owes us, opens an invoice, then asks about that selected record.
-This repository is the Ask API. The [record-links replay](docs/replays/demo-s2-who-owes-us.html) is the billing panel that calls it.
+This repository is the Ask API. The [record-links replay](docs/replays/demo-s2-who-owes-us.mp4) is the billing panel that calls it.
 
 ```mermaid
 %%{init: {'theme': 'neutral', 'flowchart': {'nodeSpacing': 25, 'rankSpacing': 35, 'subGraphTitleMargin': {'top': 10, 'bottom': 20}}}}%%
@@ -146,7 +146,9 @@ The coordinator can ask a follow-up in the same thread.
 
 ## Demo video
 
-Open the [record-links replay](docs/replays/demo-s2-who-owes-us.html) in a browser.
+<video src="docs/replays/demo-s2-who-owes-us.mp4" controls width="100%"></video>
+
+[Download the MP4](docs/replays/demo-s2-who-owes-us.mp4) if the player does not load.
 
 It lists unpaid invoices as linked rows, opens invoice 3377, then answers on that selected record.
 The replay is the billing Ask panel. This repository is the API behind it.
