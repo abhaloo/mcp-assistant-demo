@@ -146,9 +146,7 @@ The coordinator can ask a follow-up in the same thread.
 
 ## Demo video
 
-[![Record-links demo](docs/replays/demo-s2-who-owes-us.jpg)](docs/replays/demo-s2-who-owes-us.mp4)
-
-GitHub strips `<video>` tags that point at files in the repo. Click the image to play the MP4.
+https://github.com/user-attachments/assets/64b0c936-878d-48c7-b7ca-e367fdfb15b4
 
 It lists unpaid invoices as linked rows, opens invoice 3377, then answers on that selected record.
 The replay is the billing Ask panel. This repository is the API behind it.
