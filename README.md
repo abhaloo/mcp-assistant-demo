@@ -1,10 +1,10 @@
 # MCP Assistant Demo
 
-Natural-language questions over a print-shop billing database, compiled through
-versioned business-definition bundles, plus grounded document Q&A with citations.
+This is a conversational LLM powered assistant that answers natural-language questions over a print-shop billing SQL database, compiled through
+a semantic layer, plus grounded document Q&A with citations.
 
-- **Structured SQL analytics** — JWT-gated queries against MariaDB views (`data/mcp_demo_v2.sql.gz`).
-- **Fail-closed access** — the same question can answer for `demo_finance` and refuse for `demo_production`.
+- **Structured SQL analytics** — Queries against MariaDB (`data/mcp_demo_v2.sql.gz`).
+- **RBAC access** — the same question can answer for `demo_finance` and refuse for `demo_production`.
 - **Grounded document Q&A** — retrieve from the bundled handbook and cite sources.
 
 This is a demo distilled from the original app. Identifying information has been scrubbed, including company logos, and sql data has been generated synthetically. 
