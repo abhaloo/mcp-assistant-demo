@@ -17,6 +17,16 @@ from app.business_query.plan.value_resolver.contract import (
 )
 from app.business_query.plan.value_resolver.matching import normalize_lookup_value
 
+
+def clarification_choice_rewrite(question: str, raw_value: str, label: str) -> str:
+    """The next planner question for a named pick: original text, selected label."""
+    if raw_value and question and raw_value in question:
+        return question.replace(raw_value, label, 1)
+    if question.strip():
+        return f"{question} ({label})"
+    return label
+
+
 if TYPE_CHECKING:
     from app.business_query.definitions import DefinitionBundle
     from app.business_query.plan.plan_tree import PlanPath
@@ -88,15 +98,43 @@ def _member_has_resolver_metadata(
     return True
 
 
+def lookup_identity(lookup: ResolverLookup, bundle: DefinitionBundle) -> tuple[str, str | None]:
+    """Return (id sql_expression on the owning view, bind member or None)."""
+    dimension = next((d for d in bundle.dimensions if d.name == lookup.member), None)
+    if dimension is None:
+        raise ValueError("lookup member is not a resolvable dimension of this bundle")
+    binding = next((r for r in bundle.resources if r.name == dimension.owning_resource), None)
+    if binding is None:
+        raise ValueError("lookup member has no resource binding")
+    names = {d.name: d for d in bundle.dimensions}
+    if dimension.owning_resource == lookup.value_type:
+        pk_member = f"{binding.name}.{binding.primary_key}"
+        bind = pk_member if pk_member in names else None
+        return binding.primary_key, bind
+    typed_name = f"{dimension.owning_resource}.{lookup.value_type}_id"
+    typed = names.get(typed_name)
+    name_member = f"{dimension.owning_resource}.{lookup.value_type}_name"
+    name_sql = f"{lookup.value_type}_name"
+    if (
+        typed is not None
+        and typed.sql_expression.strip()
+        and (lookup.member == name_member or dimension.sql_expression.strip() == name_sql)
+    ):
+        return typed.sql_expression.strip(), typed.name
+    return dimension.sql_expression.strip(), None
+
+
 def bind_exact_filter(
     plan: BusinessQueryPlan,
     member: str,
-    canonical: str,
+    canonical: str | int,
     *,
     path: PlanPath = (),
+    bind_member: str | None = None,
 ) -> BusinessQueryPlan:
     from app.business_query.plan.plan_tree import iter_plan_nodes, replace_plan_at_path
 
+    target = bind_member or member
     if path == ():
         if plan.filters is None:
             return plan
@@ -107,7 +145,7 @@ def bind_exact_filter(
                 and node.member == member
                 and node.operator == "contains"
             ):
-                return PlanFilter(member=member, operator="eq", values=[canonical])
+                return PlanFilter(member=target, operator="eq", values=[canonical])
             return node
 
         bound = map_filter_tree(plan.filters, bind_leaf)
@@ -119,7 +157,9 @@ def bind_exact_filter(
     if path not in nodes:
         raise KeyError(f"Unknown plan path: {path}")
     target_subplan = nodes[path]
-    updated_subplan = bind_exact_filter(target_subplan, member, canonical, path=())
+    updated_subplan = bind_exact_filter(
+        target_subplan, member, canonical, path=(), bind_member=bind_member
+    )
     return replace_plan_at_path(plan, path, updated_subplan)
 
 

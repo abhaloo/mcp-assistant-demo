@@ -1,0 +1,17 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "journey",
+  "run_id": "2bfe1016b62d481a9310c83cec88793d",
+  "case_id": "E5",
+  "mode": "journey",
+  "role": "admin",
+  "question": "recover_wide.jsonl",
+  "outcome_type": "answered",
+  "mismatches": [
+    "job_detail_not_offered"
+  ],
+  "reason": "Invoice, customer and amount are right, but job 18602 (FINISHED) is neither shown nor offered: the answer ends 'it does not provide further job details' with no follow-up, a dead end.",
+  "evidence": "docs/superpowers/evidence/2026-09-25-failure-recovery/waveI/recover_wide-2.json; docs/superpowers/evidence/2026-09-25-failure-recovery/waveI/grades-waveI.json; docs/superpowers/evidence/2026-09-25-failure-recovery/waveI/grade-verification.md"
+}

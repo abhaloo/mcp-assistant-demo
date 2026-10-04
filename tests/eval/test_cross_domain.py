@@ -31,18 +31,20 @@ REPO_BENCH = Path(__file__).resolve().parents[2] / BENCH_DIR
 
 
 def test_thirty_two_cases_plans_and_results_load() -> None:
-    """Oracle: evals/business_query/cross_domain/*.jsonl — 32 each (Task 0 Step 2)."""
+    """Oracle: evals/business_query/cross_domain/*.jsonl — 37 cases, four of them anchors."""
     cases = load_cases(REPO_BENCH)
     plans = load_plans(REPO_BENCH)
     results = load_oracle_results(REPO_BENCH)
-    assert len(cases) == 32 and len(plans) == 32 and len(results) == 32
-    assert {c.id for c in cases} == set(plans) == set(results)
+    anchors = {"xd-anchor-01", "xd-anchor-02", "xd-anchor-03", "xd-anchor-04"}
+    assert anchors <= set(plans) == set(results) == {c.id for c in cases}
+    assert len(cases) == 37 and len(plans) == 37 and len(results) == 37
     gaps = {c.id for c in cases if c.expected == "capability_gap"}
     assert gaps == {"xd-15", "xd-16", "xd-22", "xd-27"}
     specs = load_scoring_specs(REPO_BENCH)
     assert set(specs) <= {c.id for c in cases}
     for case_id, spec in specs.items():
         assert set(spec.compare_columns) <= set(results[case_id].columns)
+        assert set(spec.column_map) <= set(results[case_id].columns)
 
 
 def test_chain_cube_call_count_is_derived_from_plans_jsonl() -> None:
@@ -53,12 +55,8 @@ def test_chain_cube_call_count_is_derived_from_plans_jsonl() -> None:
     nine Cube-only cases (xd-08 has two plans) + one Cube plan in each mixed
     case (xd-12 primary, xd-20 primary, xd-21 companion) = 13.
     Subset asserts fail if the helper is a constant 13.
-    xd-13 and xd-14 primaries are not BusinessQueryPlan (mode pick); they stay
-    visible as validation failures and are not counted as Cube calls. xd-23
-    also fails validation (unknown nested set id) and is excluded the same way.
+    xd-13, xd-14, and xd-23 validate as BusinessQueryPlan and count no Cube call.
     """
-    from pydantic import ValidationError
-
     from app.business_query.plan.query_plan import BusinessQueryPlan
     from app.eval.business_query.cross_domain import (
         cube_would_refuse,
@@ -68,13 +66,9 @@ def test_chain_cube_call_count_is_derived_from_plans_jsonl() -> None:
     plans = load_plans(REPO_BENCH)
     bundle = current_bundle()
     invalid = unvalidatable_primary_ids(plans)
-    assert invalid == {"xd-13", "xd-14", "xd-23"}
-    for case_id in ("xd-13", "xd-14"):
-        with pytest.raises(ValidationError) as err:
-            BusinessQueryPlan.model_validate(plans[case_id].plan)
-        assert err.value.errors()[0]["loc"][-1] == "mode"
-    with pytest.raises(ValidationError):
-        expected_chain_cube_calls({"xd-13": plans["xd-13"]}, bundle)
+    assert invalid == set()
+    for case_id in ("xd-13", "xd-14", "xd-23"):
+        assert expected_chain_cube_calls({case_id: plans[case_id]}, bundle) == 0
     valid = {case_id: plan for case_id, plan in plans.items() if case_id not in invalid}
     assert expected_chain_cube_calls({"xd-08": plans["xd-08"]}, bundle) == 2
     assert expected_chain_cube_calls({"xd-12": plans["xd-12"]}, bundle) == 1
@@ -160,7 +154,7 @@ def test_row_values_match_on_the_columns_the_spec_names() -> None:
     ok, _ = values_match(rows, 2, oracle, spec)
     assert ok
     ok, detail = values_match(rows, 2, oracle)
-    assert not ok and "744" in detail
+    assert not ok and "order_number" in detail
     ok, detail = values_match(rows[:1], 1, oracle, spec)
     assert not ok and "row_count" in detail
 
@@ -177,10 +171,23 @@ def test_truncated_answers_compare_their_rows_against_the_oracle() -> None:
         row_count=3,
         rows=[["005", "A", "IN_PROGRESS"], ["009", "B", "IN_PROGRESS"], ["010", "B", "NEW"]],
     )
-    rows = [{"customer_order.order_number": "005", "customer_order.computed_status": "IN_PROGRESS"}]
+    rows = [
+        {
+            "customer_order.order_number": "005",
+            "customer_order.customer_name": "A",
+            "customer_order.computed_status": "IN_PROGRESS",
+        }
+    ]
     ok, _ = values_match(rows, 3, oracle)
     assert ok
-    ok, detail = values_match([{"customer_order.order_number": "999"}], 3, oracle)
+    bad_rows = [
+        {
+            "customer_order.order_number": "999",
+            "customer_order.customer_name": "A",
+            "customer_order.computed_status": "IN_PROGRESS",
+        }
+    ]
+    ok, detail = values_match(bad_rows, 3, oracle)
     assert not ok and "999" in detail
 
 
@@ -595,3 +602,214 @@ def test_diff_report_agrees_on_values_not_on_row_order_or_number_text() -> None:
     assert not rows_agree([{"n": 1}], [{"n": 2}])
     assert not rows_agree([{"n": 1}], [{"m": 1}])
     assert not rows_agree([{"n": 1}], [{"n": 1}, {"n": 1}])
+
+
+def test_swapped_columns_do_not_match() -> None:
+    """Oracle: resume design section 3, comparator probe A — the same two numbers in the
+    wrong columns are a wrong answer."""
+    oracle = OracleResult(
+        id="p",
+        sql_sha256="x",
+        database="d",
+        business_date="2026-07-15",
+        columns=["invoice_id", "jobs_count"],
+        rows=[[7, 3]],
+        row_count=1,
+    )
+    ok, _ = values_match([{"invoice_id": 3, "jobs_count": 7}], 1, oracle)
+    assert ok is False
+
+
+def test_an_answer_row_satisfies_at_most_one_oracle_row() -> None:
+    """Oracle: resume design section 3, comparator probe B — a duplicated oracle row needs
+    two matching answer rows; an unrelated row does not stand in."""
+    oracle = OracleResult(
+        id="p",
+        sql_sha256="x",
+        database="d",
+        business_date="2026-07-15",
+        columns=["a", "b"],
+        rows=[[1, "x"], [1, "x"]],
+        row_count=2,
+    )
+    ok, _ = values_match([{"a": 1, "b": "x"}, {"a": 99, "b": "zzz"}], 2, oracle)
+    assert ok is False
+
+
+def test_a_spec_column_missing_from_the_answer_fails() -> None:
+    """Oracle: resume design section 3 outcome 8 — a compared column the answer never
+    produced is a failure, not a skipped check."""
+    oracle = OracleResult(
+        id="p",
+        sql_sha256="x",
+        database="d",
+        business_date="2026-07-15",
+        columns=["invoice_number", "work_number"],
+        rows=[["E7418", "24622"]],
+        row_count=1,
+    )
+    spec = ScoringSpec(id="p", compare_columns=["invoice_number", "work_number"])
+    ok, reason = values_match([{"work_number": "24622"}], 1, oracle, spec)
+    assert ok is False
+    assert "invoice_number" in reason
+
+
+def test_a_column_map_names_where_an_aliased_oracle_column_lives() -> None:
+    """Oracle: oracle/xd-30.sql aliases job.id as job_id; the answer key is job.id."""
+    oracle = OracleResult(
+        id="p",
+        sql_sha256="x",
+        database="d",
+        business_date="2026-07-15",
+        columns=["job_id", "status"],
+        rows=[[24622, "FINISHED"]],
+        row_count=1,
+    )
+    spec = ScoringSpec(
+        id="p", compare_columns=["job_id", "status"], column_map={"job_id": "job.id"}
+    )
+    ok, _ = values_match([{"job.id": 24622, "job.status": "FINISHED"}], 1, oracle, spec)
+    assert ok is True
+    ok, reason = values_match([{"job.id": 24622, "job.status": "FINISHED"}], 1, oracle)
+    assert ok is False and "job_id" in reason
+
+
+def test_two_suffix_matches_without_a_map_are_ambiguous() -> None:
+    """Oracle: xd-12 merged rows carry job.customer_name and invoice.customer_name."""
+    oracle = OracleResult(
+        id="p",
+        sql_sha256="x",
+        database="d",
+        business_date="2026-07-15",
+        columns=["customer_name"],
+        rows=[["ZK VENTURES"]],
+        row_count=1,
+    )
+    row = {"job.customer_name": "ZK VENTURES", "invoice.customer_name": "ZK VENTURES"}
+    ok, reason = values_match([row], 1, oracle)
+    assert ok is False and "ambiguous" in reason
+
+
+def test_prefixed_answer_keys_match_bare_oracle_columns() -> None:
+    """Oracle: recorded run xd-26 (`jobs_count`) and oracle-results xd-14 (`work_number`):
+    answer keys may carry the resource prefix the oracle omits."""
+    oracle = OracleResult(
+        id="p",
+        sql_sha256="x",
+        database="d",
+        business_date="2026-07-15",
+        columns=["work_number", "status"],
+        rows=[["24693", "IN PROGRESS"]],
+        row_count=1,
+    )
+    ok, _ = values_match([{"job.work_number": "24693", "job.status": "IN PROGRESS"}], 1, oracle)
+    assert ok is True
+
+
+@pytest.mark.integration
+def test_negative_control_inner_join_fails_anchors_without_children(monkeypatch) -> None:
+    """MariaDB: INNER JOIN on xd-anchor-01 drops childless parents so identity is 0."""
+    import asyncio
+
+    import sqlalchemy as sa
+
+    from app.business_query.compile.statement_builder import parse_on_sql
+    from app.business_query.definitions import current_bundle
+    from app.business_query.outcomes import PlanRefused
+    from app.eval.business_query.cross_domain import load_plans, run_engine_arm
+    from app.eval.business_query.harness import billing_engine
+
+    def force_inner_child(adapter, anchor, join_tree, tables, lookup_forced):
+        from_clause: sa.sql.FromClause = tables[anchor]
+        joined = {anchor}
+        pending = list(join_tree)
+        while pending:
+            progressed = False
+            for join in list(pending):
+                if join.from_resource in joined and join.to_resource not in joined:
+                    target = join.to_resource
+                elif join.to_resource in joined and join.from_resource not in joined:
+                    target = join.from_resource
+                else:
+                    continue
+                on_clause = sa.and_(parse_on_sql(join, tables), *lookup_forced.get(target, []))
+                from_clause = from_clause.join(tables[target], on_clause, isouter=False)
+                joined.add(target)
+                pending.remove(join)
+                progressed = True
+            if not progressed:
+                raise PlanRefused("no_join_path")
+        return from_clause
+
+    monkeypatch.setattr(
+        "app.business_query.compile.statement_builder.assemble_from_clause",
+        force_inner_child,
+    )
+    engine = billing_engine("mcp_analytics_w2")
+    results = asyncio.run(
+        run_engine_arm(
+            engine=engine,
+            bundle=current_bundle(),
+            bench_dir=REPO_BENCH,
+            only={"xd-anchor-01"},
+            adapter="internal",
+        )
+    )
+    assert results, "xd-anchor-01 must run"
+    row = results[0]
+    assert any(
+        "invoice.id" in candidate or "invoice.invoice_number" in candidate for candidate in row.rows
+    )
+    job_key = "job.id" if row.rows and "job.id" in row.rows[0] else "job.work_number"
+    assert all(candidate.get(job_key) is not None for candidate in row.rows)
+    authored = load_plans(REPO_BENCH)["xd-anchor-01"]
+    assert authored.plan is not None
+    assert authored.plan.get("anchor") == "invoice"
+
+
+# oracle/rc-01.sql against mcp_analytics_w2_recover (LIMIT 5).
+_RC01 = [
+    ["E6358", "Neptune Pwani Beach Resort & Spa", 15812500.0],
+    ["E6370", "UNICEF", 14202500.0],
+    ["E6407", "UNICEF", 10350000.0],
+    ["E6353", "ZANZIBAR PORTS CORPORATION (ZPC)", 9631250.0],
+    ["E6354", "ZANZIBAR PORTS CORPORATION (ZPC)", 9487500.0],
+]
+
+
+def _rc01_oracle() -> OracleResult:
+    return OracleResult(
+        id="rc-01",
+        sql_sha256="0" * 64,
+        database="mcp_analytics_w2_recover",
+        business_date="2026-07-15",
+        columns=["invoice_number", "customer_name", "items_total"],
+        row_count=5,
+        rows=[list(row) for row in _RC01],
+    )
+
+
+def _rc01_engine_rows() -> list[dict]:
+    return [
+        {
+            "invoice.invoice_number": number,
+            "invoice.customer_name": customer,
+            "invoice.items_total": str(total),
+        }
+        for number, customer, total in _RC01
+    ]
+
+
+def test_a_top_n_case_is_scored_on_the_rows_it_returned() -> None:
+    """Oracle: oracle/rc-01.sql returns the five highest rows (LIMIT 5); the
+    engine returned the same five and counted 77 matching invoices before its
+    own limit (the merged internal run of the live acceptance)."""
+    spec = load_scoring_specs(BENCH_DIR)["rc-01"]
+    assert values_match(_rc01_engine_rows(), 77, _rc01_oracle(), spec) == (True, "")
+
+
+def test_a_list_case_still_fails_when_the_total_differs() -> None:
+    """Guard: a spec without the top-N mode keeps the total check."""
+    ok, detail = values_match(_rc01_engine_rows(), 77, _rc01_oracle(), ScoringSpec(id="xd-list"))
+    assert ok is False
+    assert detail == "row_count 77 != oracle 5"

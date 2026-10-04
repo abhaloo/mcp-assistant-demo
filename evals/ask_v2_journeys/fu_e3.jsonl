@@ -1,0 +1,2 @@
+{"journey": "fu_e3"}
+{"id": "fu-e3", "question": "what are our latest orders", "expected": {"terminal_in": ["unsupported", "capability_unavailable"]}}

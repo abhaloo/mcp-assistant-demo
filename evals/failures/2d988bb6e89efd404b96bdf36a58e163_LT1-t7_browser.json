@@ -1,0 +1,19 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "browser",
+  "run_id": "2d988bb6e89efd404b96bdf36a58e163",
+  "case_id": "LT1",
+  "turn": 7,
+  "mode": "browser",
+  "role": "admin",
+  "question": "Only invoices from July 2025.",
+  "outcome_type": "answered",
+  "mismatches": [
+    "message_lost_on_restore",
+    "no_evidence_snapshot"
+  ],
+  "reason": "After the LT1 reload 23 of 24 messages came back: turn 7's answer is missing (messages 12 and 13 are both user turns). Turn 7 answered with a free-text question (no business query, no citation_set, completeness null, trusted true) and got a restore_ref, but it is the only one of 65 saved Wave I browser runs with no row in ask_evidence_snapshots. The t6 clarification card did come back. Same loss as Wave H's LT1-t6 record, whose guess (t6, panel side) was wrong.",
+  "evidence": "docs/superpowers/evidence/2026-09-25-failure-recovery/waveI/browser/lt1-reload-dom.txt; docs/superpowers/evidence/2026-09-25-failure-recovery/waveI/browser/sse/LT1-t7.sse; docs/superpowers/evidence/2026-09-25-failure-recovery/waveI/grades-waveI.json; docs/superpowers/evidence/2026-09-25-failure-recovery/waveI/grade-verification.md"
+}

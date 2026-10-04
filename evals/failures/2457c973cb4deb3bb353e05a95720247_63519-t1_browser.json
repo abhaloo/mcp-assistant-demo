@@ -1,0 +1,18 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "browser",
+  "run_id": "2457c973cb4deb3bb353e05a95720247",
+  "case_id": "63519",
+  "turn": 1,
+  "mode": "browser",
+  "role": "admin",
+  "question": "who has the biggest job here by invoice value",
+  "outcome_type": "answered",
+  "mismatches": [
+    "internal_id_shown"
+  ],
+  "reason": "The oracle passes (its case has no internal-word clause), but the card shows 'Referenced records: Invoice #143' next to '18602'. Record 143 is the ZRA invoice of 201,250,000 TZS (E3914 in the E5 answers). The row carries invoice.items_total but no invoice.invoice_number, so the label fell back to the database id (record_links.py:191-194). Wave I's plan had no invoice columns and referenced only the job ('18602'). Second instance of the LT1-t4 defect.",
+  "evidence": "docs/superpowers/evidence/2026-10-01-luna6-e2e/browser/sse/63519-t1.sse; docs/superpowers/evidence/2026-10-01-luna6-e2e/browser/shots/63519-t1.png; docs/superpowers/evidence/2026-09-25-failure-recovery/waveI/browser/sse/63519-t1.sse; docs/superpowers/evidence/2026-10-01-luna6-e2e/grades-luna6.json"
+}

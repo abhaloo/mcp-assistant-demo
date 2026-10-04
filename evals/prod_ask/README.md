@@ -33,18 +33,18 @@ python scripts/prod_ask_eval_run.py --mode live --confirm-spend --record
 
 | id | question is about | principal | route | dimensions | pair |
 |---|---|---|---|---|---|
-| pa-01 | business card pricing | sales | semantic | accuracy, citations, rich_text, follow_ups, helpfulness | pa-02 |
-| pa-02 | business card pricing | store | semantic | accuracy, citations, follow_ups | pa-01 |
-| pa-03 | supplier balances | accountant | semantic | accuracy, citations, rich_text, follow_ups, helpfulness | pa-04 |
-| pa-04 | supplier balances | sales | semantic | accuracy, citations, follow_ups | pa-03 |
-| pa-05 | salary bands | press | semantic | accuracy, citations, follow_ups | — |
-| pa-06 | working hours | no permissions | semantic | accuracy, citations, rich_text, follow_ups, helpfulness | — |
-| pa-07 | leave allowances | no permissions | semantic | accuracy, citations, rich_text, helpfulness | — |
-| pa-08 | corporate discount | sales | semantic | accuracy, citations, follow_ups | — |
-| pa-09 | rush surcharges | sales | semantic | citations, rich_text | — |
-| pa-10 | damaged delivery | store | semantic | accuracy, citations, follow_ups, helpfulness | — |
-| pa-11 | fire exits | no permissions | semantic | citations, follow_ups | — |
-| pa-12 | services offered | no permissions | semantic | citations, rich_text | — |
+| pa-01 | cancel an order | sales | semantic | accuracy, citations, rich_text, follow_ups, helpfulness | pa-02 |
+| pa-02 | cancel an order | store | semantic | accuracy, follow_ups | pa-01 |
+| pa-03 | ledger transaction types | accountant | semantic | accuracy, citations, rich_text, follow_ups, helpfulness | pa-04 |
+| pa-04 | ledger transaction types | sales | semantic | accuracy, follow_ups | pa-03 |
+| pa-05 | Data Cleanup linking | press | semantic | accuracy, follow_ups | — |
+| pa-06 | change password | no permissions | semantic | accuracy, citations, rich_text, follow_ups, helpfulness | — |
+| pa-07 | invoice payment statuses | no permissions | semantic | accuracy, citations, rich_text, helpfulness | — |
+| pa-08 | print an invoice | sales | semantic | accuracy, citations, follow_ups | — |
+| pa-09 | the order page | sales | semantic | citations, rich_text | — |
+| pa-10 | missing supplier box | store | semantic | accuracy, citations, follow_ups, helpfulness | — |
+| pa-11 | notifications | no permissions | semantic | citations, follow_ups | — |
+| pa-12 | what the assistant answers | no permissions | semantic | citations, rich_text | — |
 | pa-13 | Q1 2026 job count | press | structured | accuracy, rich_text, helpfulness | — |
 | pa-14 | monthly invoicing H1 2026 | accountant | structured | accuracy, rich_text, helpfulness | — |
 | pa-15 | five busiest customers | sales | structured | accuracy, rich_text, follow_ups, helpfulness | — |
@@ -97,3 +97,4 @@ new `oracle-results.jsonl`, then re-run the integrity tests.
 | 2026-08-18 | pa-14 | money column switched from `bills.payable` to a `bill_items` expression | `payable` sums to zero across the whole snapshot |
 | 2026-08-18 | pa-05 | dropped the `AED 10,000` forbidden literal | the document writes the band as `AED 6,000 – 10,000`, so the literal never appears |
 | 2026-08-18 | pa-03 | fixture chunk extended to all five supplier lines | the two zero-balance suppliers must be present for the "no zero balance presented as owed" claim to be falsifiable |
+| 2026-09-26 | pa-01..pa-12 | oracles, fixtures and questions re-pointed to data/corpus/company/<tier>/manuals/ | the 13 legacy seed files were retired (owner decision 2026-09-26) |

@@ -9,7 +9,9 @@ nullability. Pydantic models in plan.py remain the validation truth; the
 parity tests keep names AND enum values in lockstep.
 """
 
-from app.business_query.plan.derived_sets import _SET_ID_PATTERN
+from typing import get_args
+
+from app.business_query.plan.derived_sets import _SET_ID_PATTERN, MAX_DERIVED_SETS, SetMode
 
 _FILTER = {
     "type": "object",
@@ -114,6 +116,7 @@ _RELATIVE = {
                 "last_quarter",
                 "this_year",
                 "last_year",
+                "all_time",
             ],
         },
         {"type": "null"},
@@ -204,6 +207,7 @@ _DETAIL_SELECTION = {
 _PLAN_BODY_PROPERTIES = {
     "measures": {"type": "array", "items": {"type": "string"}},
     "dimensions": {"type": "array", "items": {"type": "string"}},
+    "anchor": {"type": ["string", "null"]},
     "bucket_set": {"type": ["string", "null"]},
     "filters": _NULLABLE_GROUP,
     "having": _NULLABLE_GROUP,
@@ -228,7 +232,7 @@ _DERIVED_SET = {
     "type": "object",
     "properties": {
         "id": {"type": "string", "pattern": _SET_ID_PATTERN.pattern, "maxLength": 32},
-        "mode": {"type": "string", "enum": ["complete", "ranked"]},
+        "mode": {"type": "string", "enum": list(get_args(SetMode))},
         "key": {"type": "string"},
         "plan": {"$ref": "#/$defs/inner_plan"},
     },
@@ -243,7 +247,7 @@ _PLAN_DEFINITION = {
         "derived_sets": {
             "type": "array",
             "items": _DERIVED_SET,
-            "maxItems": 2,
+            "maxItems": MAX_DERIVED_SETS,
         },
     },
     "required": sorted([*_PLAN_BODY_PROPERTIES, "derived_sets"]),
@@ -293,7 +297,12 @@ PLANNER_WIRE_SCHEMA = {
             "anyOf": [
                 {
                     "type": "string",
-                    "enum": ["member_not_found", "grain_unexpressible", "period_dimension_missing"],
+                    "enum": [
+                        "member_not_found",
+                        "grain_unexpressible",
+                        "period_dimension_missing",
+                        "needs_prior_answer",
+                    ],
                 },
                 {"type": "null"},
             ]

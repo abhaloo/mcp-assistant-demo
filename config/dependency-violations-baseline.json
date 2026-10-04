@@ -78,8 +78,8 @@
     {
       "rule": "2-state",
       "importer": "app/rag/retrieval/retriever_factory.py",
-      "imported": "app.rag.retrieval.azure_search_retriever, app.rag.retrieval.chroma_retriever",
-      "lines": "27,31",
+      "imported": "app.rag.retrieval.azure_search_retriever, app.rag.retrieval.chroma_retriever, app.rag.retrieval.lancedb_retriever",
+      "lines": "32,40,48",
       "note": "Business module importing a State-assigned module directly instead of through a typed port. Not pre-seeded in module-map.json's violations array -- Task 1 explicitly deferred this clause ('State ports don't exist yet ... building them is Workstream 3's job'); this checker enforces the letter of plan \u00a75.5 rule 2's second clause and found the current, real instances. Fix: build the State ports (Workstream 3) and route through them.",
       "owner": "abhaloo",
       "expires": "2026-11-22"
@@ -123,16 +123,16 @@
   ],
   "counters": {
     "settings_reads_outside_composition_root": {
-      "count": 408,
+      "count": 426,
       "owner": "abhaloo",
       "expires": "2026-11-22",
       "description": "AST attribute-access reads on a name `settings` bound via any import statement, in any file NOT assigned composition_root. Derived via: python scripts/check_dependency_direction.py --show-counts"
     },
     "ingress_services_symbols": {
-      "count": 8,
+      "count": 7,
       "owner": "abhaloo",
       "expires": "2026-11-22",
-      "description": "Distinct (module, symbol) pairs imported from app.services* by ingress-assigned files. Count 8 is v1 clamp_turn_budget plus AskV2Service and new_expiry_event on POST /api/ask/v2, plus stream_ask_frames on the SSE facade. Derived via: python scripts/check_dependency_direction.py --show-counts"
+      "description": "Distinct (module, symbol) pairs imported from app.services* by ingress-assigned files. Derived via: python scripts/gates/check_dependency_direction.py --show-counts"
     }
   }
 }

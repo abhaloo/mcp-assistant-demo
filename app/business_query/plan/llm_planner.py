@@ -31,6 +31,7 @@ from app.business_query.plan.attempts import (
     PlannerTerminalCode,
     PlannerValidationResult,
 )
+from app.business_query.plan.dialogue import DialogueTurn, render_dialogue_turn
 from app.business_query.plan.planned_set import PlannedQuerySet
 from app.business_query.plan.planner_history_assembly import (
     ReasoningObserver as _ReasoningObserver,
@@ -46,6 +47,7 @@ from app.business_query.plan.planner_history_assembly import (
 )
 from app.business_query.plan.planner_prompt import (
     _REPAIR_TEMPLATE,
+    card_time_dimensions,
     json_object_protocol_hash,
     planner_schema_hash,
 )
@@ -66,11 +68,12 @@ from app.business_query.plan.planner_response import (
     validate_model_payload,
 )
 from app.business_query.plan.planner_wire_schema import PLANNER_WIRE_SCHEMA
+from app.business_query.plan.planner_wire_schema_deepseek import PROVIDER_WIRE_SCHEMAS
 from app.business_query.plan.query_plan import BusinessQueryPlan, plan_fingerprint
 from app.business_query.plan.shape_guard import plan_names_entity, wants_named_entity
-from app.business_query.plan.thought_stream import ThoughtStreamObserver
 from app.business_query.ports import BusinessProgressSink, PlannerAttemptSink
 from app.business_query.wire.trace import QueryTrace
+from app.config import settings
 from app.telemetry.spans import planner_stage_span
 
 logger = logging.getLogger(__name__)
@@ -112,6 +115,10 @@ class LlmPlanner(PlannerRepairMixin):
         self._consumed_attempt_id: str | None = None
         self._repair_hint_code: str | None = None
         self._plan_dialogue: Sequence[tuple[Literal["ai", "human"], str]] | None = None
+        # Time members named on the current turn's card; validation refuses a
+        # grouped plan that lists one of them without a granularity.
+        self._time_dimensions: frozenset[str] = frozenset()
+        self._card_in_system = settings.planner_card_in_system_message
 
     @property
     def consumed_attempt_id(self) -> str | None:
@@ -127,7 +134,7 @@ class LlmPlanner(PlannerRepairMixin):
         retry_hint: str | None = None,
         trace: QueryTrace | None = None,
         clarification_exchange: tuple[str, str] | None = None,
-        dialogue: Sequence[tuple[Literal["ai", "human"], str]] | None = None,
+        dialogue: Sequence[DialogueTurn] | None = None,
         progress: BusinessProgressSink | None = None,
     ) -> BusinessQueryPlan | ClarificationRequired | Unsupported | Incomplete | Denied:
         """Plan one turn.
@@ -170,7 +177,7 @@ class LlmPlanner(PlannerRepairMixin):
         retry_hint: str | None = None,
         trace: QueryTrace | None = None,
         clarification_exchange: tuple[str, str] | None = None,
-        dialogue: Sequence[tuple[Literal["ai", "human"], str]] | None = None,
+        dialogue: Sequence[DialogueTurn] | None = None,
         progress: BusinessProgressSink | None = None,
     ) -> BusinessQueryPlan | ClarificationRequired | Unsupported | Incomplete | Denied:
         from app.business_query.outcomes import (
@@ -180,7 +187,10 @@ class LlmPlanner(PlannerRepairMixin):
 
         started = time.perf_counter()
         writer = trace if trace is not None else self._trace
-        self._plan_dialogue = dialogue
+        rendered_dialogue = (
+            [render_dialogue_turn(t) for t in dialogue] if dialogue is not None else None
+        )
+        self._plan_dialogue = rendered_dialogue
         attempt_id = await self._start_attempt()
         correlation_digest = hashlib.sha256(question.encode()).hexdigest()[:16]
         try:
@@ -258,6 +268,7 @@ class LlmPlanner(PlannerRepairMixin):
                 writer=writer,
             )
 
+        self._time_dimensions = card_time_dimensions(card)
         raw: object = None
         repair_error: str | None = None
         repair_human: str | None = None
@@ -359,6 +370,8 @@ class LlmPlanner(PlannerRepairMixin):
             if protocol_exc is None:
                 continue
             round_raw = protocol_exc.raw if protocol_exc.raw is not None else raw
+            # The next round replays this round's failed reply, not an earlier one.
+            raw = protocol_exc.raw
             repaired = await self._apply_protocol_repair(
                 attempt_id,
                 protocol_exc,
@@ -430,7 +443,10 @@ class LlmPlanner(PlannerRepairMixin):
         self._attempt_consumed = True
         start = self._attempt_context.model_copy(
             update={
-                "schema_hash": planner_schema_hash(self._attempt_context.output_mode),
+                "schema_hash": planner_schema_hash(
+                    self._attempt_context.output_mode,
+                    self._attempt_context.provider,
+                ),
                 "prompt_adjunct_hash": (
                     json_object_protocol_hash()
                     if self._attempt_context.output_mode == "json_object"
@@ -522,7 +538,7 @@ class LlmPlanner(PlannerRepairMixin):
         card: str,
         *,
         business_date: date | None,
-        dialogue: Sequence[tuple[Literal["ai", "human"], str]] | None,
+        dialogue: Sequence[DialogueTurn] | None,
         clarification_exchange: tuple[str, str] | None,
         progress: BusinessProgressSink | None,
         writer: QueryTrace | None,
@@ -535,14 +551,13 @@ class LlmPlanner(PlannerRepairMixin):
             and actual_output_mode != self._attempt_context.output_mode
         ):
             raise _PlannerProtocolFailure("planner_capability_mismatch")
+        provider = getattr(getattr(model, "spec", None), "credential_source", None)
         structured_method, add_json_object_protocol = _structured_method(model)
         if structured_method == "json_schema":
-            wire_schema, structured_kwargs = PLANNER_WIRE_SCHEMA, {"strict": True}
+            wire_schema = PROVIDER_WIRE_SCHEMAS.get(provider, PLANNER_WIRE_SCHEMA)
+            structured_kwargs = {"strict": True}
         else:
-            wire_schema, structured_kwargs = (
-                PlannerModelResponse.model_json_schema(),
-                {},
-            )
+            wire_schema, structured_kwargs = PlannerModelResponse.model_json_schema(), {}
         try:
             bound = model.with_structured_output(
                 wire_schema, method=structured_method, **structured_kwargs
@@ -552,16 +567,18 @@ class LlmPlanner(PlannerRepairMixin):
         callbacks = list(getattr(model, "callbacks", None) or [])
         if writer:
             callbacks.append(_ReasoningObserver(writer))
-        if progress is not None:
-            callbacks.append(ThoughtStreamObserver(progress))
         config = {"callbacks": callbacks} if callbacks else None
+        rendered_dialogue = (
+            [render_dialogue_turn(t) for t in dialogue] if dialogue is not None else None
+        )
         prompt = assemble_planner_prompt(
             question,
             card,
             business_date=business_date,
             add_json_object_protocol=add_json_object_protocol,
-            dialogue=dialogue,
+            dialogue=rendered_dialogue,
             clarification_exchange=clarification_exchange,
+            card_in_system=self._card_in_system,
         )
         return bound, prompt, config
 
@@ -575,22 +592,15 @@ class LlmPlanner(PlannerRepairMixin):
     ) -> list[Any]:
         if repair_human is None and repair_error is None:
             return prompt
+        instruction = repair_human or _REPAIR_TEMPLATE.replace("{errors}", repair_error or "")
+        if raw is None:
+            # No reply text came back, so there is nothing to replay.
+            return [*prompt, HumanMessage(content=instruction)]
         try:
             prior = json.dumps(raw) if isinstance(raw, dict) else str(raw)
         except TypeError:
             prior = str(raw)
-        prior_content = prior[:8192]
-        if repair_human is not None:
-            return [
-                *prompt,
-                AIMessage(content=prior_content),
-                HumanMessage(content=repair_human),
-            ]
-        return [
-            *prompt,
-            AIMessage(content=prior_content),
-            HumanMessage(content=_REPAIR_TEMPLATE.replace("{errors}", repair_error or "")),
-        ]
+        return [*prompt, AIMessage(content=prior[:8192]), HumanMessage(content=instruction)]
 
     async def _invoke_and_parse(
         self,
@@ -629,7 +639,7 @@ class LlmPlanner(PlannerRepairMixin):
                 raw=raw,
             )
         try:
-            parsed = validate_model_payload(raw)
+            parsed = validate_model_payload(raw, time_dimensions=self._time_dimensions)
         except (PydanticValidationError, TypeError, ValueError) as exc:
             raise _PlannerProtocolFailure(
                 "planner_schema_invalid",

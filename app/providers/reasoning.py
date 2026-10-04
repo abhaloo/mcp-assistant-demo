@@ -20,6 +20,7 @@ _REASONING_KWARG_KEYS = REASONING_KWARG_KEYS
 # Campaign persistence provenance (non-body metadata — survives body-flag strip).
 REASONING_KIND_PROVIDER_COT = "provider_cot"
 REASONING_KIND_AZURE_SUMMARY = "azure_summary"
+REASONING_KIND_RESPONSES_SUMMARY = "responses_summary"
 
 
 def normalize_answer_text(text: str) -> str:
@@ -62,13 +63,43 @@ def reasoning_text_from_evidence(evidence: Mapping[str, Any]) -> str | None:
     return None
 
 
+def reasoning_summary_text(message: Any, *, separator: str = "") -> str:
+    """Summary text carried by one Responses reply or streamed chunk.
+
+    langchain-openai delivers a Responses reasoning item either as a content
+    block of type ``reasoning`` or, in its v0 output shape, under
+    ``additional_kwargs["reasoning"]``. Answer text blocks are never summary.
+    A streamed delta is a piece of one summary part, so the default separator
+    is empty; pass a separator to keep the parts of a whole reply apart.
+    """
+    blocks: list[dict[str, Any]] = []
+    kwargs = getattr(message, "additional_kwargs", None) or {}
+    item = kwargs.get("reasoning")
+    if isinstance(item, dict):
+        blocks.append(item)
+    content = getattr(message, "content", None)
+    if isinstance(content, list):
+        blocks.extend(b for b in content if isinstance(b, dict) and b.get("type") == "reasoning")
+    parts: list[str] = []
+    for block in blocks:
+        for part in block.get("summary") or []:
+            if not isinstance(part, dict) or part.get("type") != "summary_text":
+                continue
+            text = part.get("text")
+            if isinstance(text, str) and text:
+                parts.append(text)
+    return separator.join(parts)
+
+
 def extract_reasoning_evidence(
     msg: BaseMessage, *, max_chars: int | None = 4000
 ) -> dict[str, object]:
-    """Pull provider reasoning fields for eval telemetry (before strip).
+    """Pull provider reasoning for eval telemetry and the invocation ledger (before strip).
 
-    ``max_chars`` truncates ``reasoning_text`` for legacy evidence blobs.
-    Pass ``max_chars=None`` for Campaign Reasoning Persistence (no truncate).
+    A provider's own reasoning field wins. A Responses reasoning summary is the
+    fallback, marked with ``reasoning_kind`` because a summary is not the
+    provider's chain of thought. ``max_chars`` truncates ``reasoning_text`` for
+    legacy evidence blobs. Pass ``max_chars=None`` to keep the whole text.
     """
     kwargs = dict(msg.additional_kwargs or {})
     evidence: dict[str, object] = {}
@@ -78,6 +109,10 @@ def extract_reasoning_evidence(
             continue
         evidence[key] = value
     text = reasoning_text_from_evidence(evidence)
+    if text is None:
+        text = reasoning_summary_text(msg, separator="\n\n") or None
+        if text is not None:
+            evidence["reasoning_kind"] = REASONING_KIND_RESPONSES_SUMMARY
     if text is not None:
         if max_chars is None or len(text) <= max_chars:
             evidence["reasoning_text"] = text
@@ -127,9 +162,9 @@ def build_reasoning_call_entry(msg: BaseMessage, *, index: int) -> dict[str, obj
     raw = evidence.get("reasoning_text")
     if not isinstance(raw, str) or not raw.strip():
         return None
-    kind = _reasoning_kind_from_message(msg)
-    if kind is None:
-        kind = REASONING_KIND_PROVIDER_COT
+    kind = evidence.get("reasoning_kind")
+    if not isinstance(kind, str):
+        kind = _reasoning_kind_from_message(msg) or REASONING_KIND_PROVIDER_COT
     return reasoning_call_entry_from_raw(raw, index=index, reasoning_kind=kind)
 
 

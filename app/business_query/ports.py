@@ -38,6 +38,7 @@ if TYPE_CHECKING:
         PlannerAttemptStart,
         PlannerAttemptTerminal,
     )
+    from app.business_query.plan.dialogue import DialogueTurn
     from app.business_query.plan.value_resolver import (
         ResolvedValue,
         ResolverLookup,
@@ -123,7 +124,7 @@ class PlannerAdapter(Protocol):
         retry_hint: str | None = None,
         trace: QueryTrace | None = None,
         clarification_exchange: tuple[str, str] | None = None,
-        dialogue: Sequence[tuple[Literal["ai", "human"], str]] | None = None,
+        dialogue: Sequence[DialogueTurn] | None = None,
         progress: BusinessProgressSink | None = None,
     ) -> (
         BusinessQueryPlan
@@ -133,6 +134,21 @@ class PlannerAdapter(Protocol):
         | Incomplete
         | Denied
     ): ...
+
+
+@runtime_checkable
+class ClarificationChoiceSuggester(Protocol):
+    """LLM options for a stall or an empty planner clarify. Empty means timeout."""
+
+    async def suggest(
+        self,
+        *,
+        question: str,
+        prompt: str,
+        dialogue: Sequence[tuple[Literal["ai", "human"], str]] | None,
+        timeout_seconds: float,
+        turn_budget: TurnBudget,
+    ) -> list[dict[str, Any]]: ...
 
 
 @runtime_checkable
@@ -259,6 +275,8 @@ class CompilerAdapter(Protocol):
     _dimensions: dict[str, DimensionDefinition]
     _metadata: sa.MetaData
 
+    @property
+    def dialect_name(self) -> str: ...
     def _assert_authorized(self, scoped: ScopedPlan) -> None: ...
     def _resolve_capability(self, name: str) -> tuple[str, Any]: ...
     def _resolve_join_tree(self, resources: tuple[str, ...]) -> list[ResolvedJoin]: ...

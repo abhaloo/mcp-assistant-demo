@@ -1,0 +1,2 @@
+{"journey": "recover_wide"}
+{"id": "recover-wide", "question": "who has the biggest order by invoice and what are their job details", "expected": {"outcome_type": "answered", "tables_min": 1, "row_key_prefix_or_notice": "job.", "row_value_contains_any": ["201250000", "201,250,000"]}}

@@ -148,6 +148,9 @@ async def ask(
                 continuation_token=fixed.continuation_token,
                 omitted_capabilities=fixed.omitted_capabilities,
                 banner=fixed.banner,
+                turn_result=fixed.turn_result,
+                reason_code=fixed.reason_code,
+                budget=fixed.budget,
             )
         case RecordsOnly(turn=turn):
             ctx = turn.ctx

@@ -1,0 +1,18 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "browser",
+  "run_id": "09997013a267d6846ed1ad27b547633c",
+  "case_id": "L4",
+  "turn": 1,
+  "mode": "browser",
+  "role": "admin",
+  "question": "Which month of 2025 had our highest invoiced revenue in TZS? (reload mid-stream)",
+  "outcome_type": "answered",
+  "mismatches": [
+    "mid_stream_reload_not_stopped"
+  ],
+  "reason": "A reload 4 s into a 7.8 s turn did not stop it: the server finished (terminal_outcome success) and the panel restored the full answer. The Task 9 oracle expected 'stopped' or the notice. The disconnect likely does not pass through the Billing proxy. Owner to decide: widen the oracle or treat as a defect.",
+  "evidence": "docs/superpowers/evidence/2026-09-29-durable-store/browser/dom/L4-reload-dom.json; docs/superpowers/evidence/2026-09-29-durable-store/acceptance-durable-store.json"
+}

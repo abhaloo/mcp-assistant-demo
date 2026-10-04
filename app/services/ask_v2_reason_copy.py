@@ -29,22 +29,28 @@ REASON_FAMILY: dict[str, str] = {
     # Not permitted for this account.
     "policy_denied": _PERMISSION,
     "cursor_scope_mismatch": _PERMISSION,
+    "budget_exhausted": _PERMISSION,
     # The deployment cannot express the question at all.
     "capability_disabled": _CAPABILITY,
+    "budget_unconfigured": _CAPABILITY,
     "unsupported_operator": _CAPABILITY,
     "measure_filter_unsupported": _CAPABILITY,
     "optional_join_unsupported": _CAPABILITY,
     "fanout_unsafe": _CAPABILITY,
+    "anchor_not_root": _CAPABILITY,
     "no_join_path": _CAPABILITY,
     "unsupported_relative_period": _CAPABILITY,
     "invalid_business_timezone": _CAPABILITY,
     "capability_unavailable": _CAPABILITY,
     "document_unavailable": _CAPABILITY,
     "result_page_disabled": _CAPABILITY,
+    "data_contract_mismatch": _CAPABILITY,
     # The question names a field or grouping this system has no member for.
     # A vocabulary gap, not a missing record — the person should rephrase,
     # not re-check a spelling.
     "member_not_found": _CAPABILITY,
+    # One part of the question needs another part's answer; each part alone can be asked.
+    "needs_prior_answer": _CAPABILITY,
     # The data or definition needed is not recorded here.
     "value_not_found": _COVERAGE,
     "grain_unexpressible": _COVERAGE,
@@ -53,6 +59,7 @@ REASON_FAMILY: dict[str, str] = {
     # The turn stopped part-way and may succeed on a retry.
     "budget": _TRANSIENT,
     "timeout": _TRANSIENT,
+    "unavailable": _TRANSIENT,
     "no_progress": _TRANSIENT,
     "adapter_invalid": _TRANSIENT,
     "request_conflict": _TRANSIENT,
@@ -65,6 +72,8 @@ REASON_FAMILY: dict[str, str] = {
     "upstream_circuit_open": _TRANSIENT,
     "conversation_store_unavailable": _TRANSIENT,
     "transcript_store_busy": _TRANSIENT,
+    "budget_unverifiable": _TRANSIENT,
+    "cancelled": _TRANSIENT,
 }
 
 _REASON_COPY: dict[str, str] = {
@@ -73,6 +82,13 @@ _REASON_COPY: dict[str, str] = {
     ),
     "cursor_scope_mismatch": (
         "Those results belong to a different question. Ask again to get a fresh set."
+    ),
+    "budget_exhausted": "This account has used its Ask AI budget for this month.",
+    "budget_unconfigured": (
+        "Ask AI has no budget set for this account. Ask an administrator to set one."
+    ),
+    "budget_unverifiable": (
+        "I could not check this account's Ask AI budget right now. Try again in a moment."
     ),
     "capability_disabled": (
         "That kind of question is switched off in this system. It is not a permission problem."
@@ -85,6 +101,9 @@ _REASON_COPY: dict[str, str] = {
     "optional_join_unsupported": "I cannot combine those two record types in this system yet.",
     "fanout_unsafe": (
         "That question would join records in a way that double-counts, so I did not run it."
+    ),
+    "anchor_not_root": (
+        "That subject cannot lead this list. Ask for the list the other way round."
     ),
     "no_join_path": "Those two record types are not connected in a way I can query.",
     "unsupported_relative_period": "I cannot work out that date range. Give exact dates instead.",
@@ -114,12 +133,17 @@ _REASON_COPY: dict[str, str] = {
         "Check the spelling, or it may not be recorded here."
     ),
     "grain_unexpressible": ("I cannot report that at the level of detail the question asks for."),
+    "needs_prior_answer": (
+        "One part of that question needs the answer to another part first, so I cannot "
+        "answer both at once. Ask the first part on its own, then ask the next part."
+    ),
     "period_dimension_missing": "Those records carry no date I can group or filter by.",
     "detail_unavailable": (
         "That detail is not recorded in this system, so I have nothing to report for it."
     ),
     "budget": "That question needed more work than one turn allows. Try narrowing it.",
     "timeout": "That took too long to finish. Try again in a moment, or narrow the question.",
+    "unavailable": "The data service is not reachable right now. Try again in a moment.",
     "no_progress": "I could not make progress on that question.",
     "adapter_invalid": "I could not build a safe query for that question.",
     "request_conflict": (
@@ -128,6 +152,10 @@ _REASON_COPY: dict[str, str] = {
     ),
     "cursor_expired": "Those results have expired. Ask the question again.",
     "cursor_invalid": "I cannot continue from that page of results. Ask the question again.",
+    "cancelled": "Stopped.",
+    "data_contract_mismatch": (
+        "One of the fields in that answer holds data of a different type than the catalog declares."
+    ),
 }
 
 # Says only what is known: the turn did not finish and no answer is claimed.

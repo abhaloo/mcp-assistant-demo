@@ -1,0 +1,2 @@
+{"journey": "clarify_basis"}
+{"id": "clarify-debtor", "question": "Who is our largest outstanding debtor?", "expected": {"outcome_type": "clarification_required"}}

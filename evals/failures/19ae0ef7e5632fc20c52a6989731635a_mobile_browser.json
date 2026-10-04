@@ -1,0 +1,18 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "browser",
+  "run_id": "19ae0ef7e5632fc20c52a6989731635a",
+  "case_id": "mobile",
+  "turn": 1,
+  "mode": "browser",
+  "role": "admin",
+  "question": "How do I record one payment for several invoices, and how do I send a customer their statement?",
+  "outcome_type": "answered",
+  "mismatches": [
+    "source_card_partly_hidden_on_mobile"
+  ],
+  "reason": "At 390 x 844 a tap on the first source title opens the card below the title (rect 14,437 to 366,716), because the room above the row in the thread (row top 373, thread top 114) is less than the card height. The thread's visible area ends at y 578, where the composer starts, so the lower part of the card (about 138 px of the passage) is hidden behind the composer until the person scrolls the thread. The card stays inside the screen horizontally and tap, second tap and Escape behave as designed. Cause: source_card.js place() checks only the room above, not the room below the row inside the scroll area. Follow-up: pick the side with more room and cap the card height to it.",
+  "evidence": "docs/superpowers/evidence/2026-10-02-luna6-docs/shots/orch-mobile-touch-open.png; docs/superpowers/evidence/2026-10-02-luna6-docs/sse/two-search-b-t1.sse; docs/superpowers/evidence/2026-10-02-luna6-docs/ORCHESTRATOR-CHECK.md"
+}

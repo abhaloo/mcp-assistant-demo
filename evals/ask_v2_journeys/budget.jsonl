@@ -1,0 +1,2 @@
+{"journey": "budget", "ask_budget": {"limit_usd": "0.01", "period": "month"}}
+{"id": "budget-exhausted", "question": "what are our latest invoices", "expected": {"outcome_type": "denied", "reason_code": "budget_exhausted", "trusted": false, "budget.limit_usd": "0.01", "budget.reset_at_present": true}}

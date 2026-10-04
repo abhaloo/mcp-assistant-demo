@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
+from app.business_query.definitions.schema import UiDestination
 from app.rag.retrieval.passages import RetrievedSource
 
 
@@ -24,6 +25,7 @@ class DocumentSearchResult:
     passages: tuple[RetrievedSource, ...]
     provenance: tuple[DocumentProvenance, ...]
     truncated: bool
+    page_offers: tuple[UiDestination, ...] = ()
 
 
 @dataclass(frozen=True)

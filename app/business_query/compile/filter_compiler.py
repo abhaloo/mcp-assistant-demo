@@ -12,7 +12,7 @@ from sqlalchemy.sql import ColumnElement, Select
 from app.auth import Principal
 from app.business_query.authorize.scoping import ForcedPredicate, ScopedDerivedSet
 from app.business_query.compile.bundle_expression import qualify_bundle_expression
-from app.business_query.compile.derived_sets import membership_clause
+from app.business_query.compile.derived_sets import membership_clause, time_group_clause
 from app.business_query.compile.detail_predicates import lower_attribute_predicate, operator_clause
 from app.business_query.compile.statement_builder import parse_on_sql
 from app.business_query.definitions import (
@@ -29,6 +29,7 @@ from app.business_query.definitions.allowed_values import canonical_allowed_valu
 from app.business_query.outcomes import PlanRefused
 from app.business_query.plan import AttributePredicate, FilterGroup, PlanFilter
 from app.business_query.plan.detail_family import resolve_detail_definition
+from app.business_query.plan.query_plan import time_group_for
 from app.business_query.ports import DimensionExprFn
 
 _DENY_MESSAGE = "business query tools are currently unavailable"
@@ -139,6 +140,10 @@ def compile_filter_group(
                     if derived_sets is None or set_id not in derived_sets or compile_set is None:
                         raise PlanRefused("member_not_found")
                     derived = derived_sets[set_id]
+                    if time_group_for(derived.key, derived.scoped.plan) is not None:
+                        time_table = tables[definition.owning_resource]
+                        raw_column = time_table.c[definition.sql_expression.strip()]
+                        return time_group_clause(raw_column, derived)
                     relation = compile_set(derived)
                     if derived.key not in relation.selected_columns.keys():
                         raise AssertionError(

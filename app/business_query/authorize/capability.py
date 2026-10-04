@@ -18,6 +18,7 @@ from app.business_query.plan import (
     PlanFilter,
     iter_filter_leaves,
 )
+from app.business_query.plan.row_value_order import row_value_member
 
 
 def _permissions_satisfied(entry: CapabilityEntry, principal: Principal) -> bool:
@@ -36,6 +37,27 @@ def _visible_entries(principal: Principal, bundle: DefinitionBundle) -> list[Cap
         for entry in bundle.capabilities
         if entry.capability_state == "enabled" and _permissions_satisfied(entry, principal)
     ]
+
+
+visible_entries = _visible_entries
+
+
+def outside_access_labels(principal: Principal, bundle: DefinitionBundle) -> list[str]:
+    """Labels of record types this principal has no card member for."""
+    visible = {entry.name for entry in _visible_entries(principal, bundle)}
+    resolved = {entry.resolves_to for entry in bundle.capabilities if entry.name in visible}
+    owners = {
+        definition.owning_resource
+        for definition in (*bundle.measures, *bundle.dimensions)
+        if definition.name in resolved
+    }
+    return sorted(r.label for r in bundle.resources if r.label and r.name not in owners)
+
+
+def available_access_labels(principal: Principal, bundle: DefinitionBundle) -> list[str]:
+    """Labels of record types this principal has at least one card member for."""
+    outside = set(outside_access_labels(principal, bundle))
+    return sorted(r.label for r in bundle.resources if r.label and r.label not in outside)
 
 
 def detail_permissions_satisfied(detail: DetailDefinition, principal: Principal) -> bool:
@@ -90,6 +112,16 @@ def allowed_filter_values_valid(plan: BusinessQueryPlan, bundle: DefinitionBundl
             if dimension is not None and canonical_allowed_values(dimension, node.values) is None:
                 return False
     return True
+
+
+def time_dimension_members(bundle: DefinitionBundle) -> frozenset[str]:
+    """Capability names of every dimension the bundle declares as type time."""
+    time_dimensions = {d.name for d in bundle.dimensions if d.type == "time"}
+    return frozenset(
+        entry.name
+        for entry in bundle.capabilities
+        if entry.kind == "dimension" and entry.resolves_to in time_dimensions
+    )
 
 
 def owning_resource(bundle: DefinitionBundle, entry: CapabilityEntry) -> str | None:
@@ -157,20 +189,23 @@ def capability_card(principal: Principal, bundle: DefinitionBundle) -> str:
             if measure is not None and measure.snapshot:
                 semantic_facts += "\n  time_axis: snapshot"
             if measure is not None and measure.time_dimension is not None:
-                time_members = _visible_dimension_names(
+                time_members = visible_dimension_names(
                     bundle, visible, resolves_to=measure.time_dimension
                 )
                 if time_members:
                     semantic_facts += f"\n  default_time_dimension: {time_members[0]}"
             if measure is not None and measure.allowed_time_axes:
-                axis_members = _visible_dimension_names(
+                axis_members = visible_dimension_names(
                     bundle, visible, resolves_to=measure.allowed_time_axes
                 )
                 if axis_members:
                     semantic_facts += f"\n  allowed_time_axes: {', '.join(axis_members)}"
+            row_value = row_value_member(bundle, entry.name, frozenset(visible))
+            if row_value is not None:
+                semantic_facts += f"\n  per_row_value: {row_value}"
             currency = measure.currency_dimension if measure is not None else None
             if currency is not None:
-                currency_members = _visible_dimension_names(bundle, visible, resolves_to=currency)
+                currency_members = visible_dimension_names(bundle, visible, resolves_to=currency)
                 if currency_members:
                     currency_rule = f"\n  currency_rule: filter or group by {currency_members[0]}"
                 else:
@@ -186,6 +221,8 @@ def capability_card(principal: Principal, bundle: DefinitionBundle) -> str:
                 semantic_facts += f"\n  direct_relationships: {', '.join(related)}"
             if dimension is not None and dimension.allowed_values:
                 semantic_facts += f"\n  allowed_values: {', '.join(dimension.allowed_values)}"
+            if dimension is not None and dimension.type == "time":
+                semantic_facts += "\n  type: time"
         elif entry.kind == "segment":
             semantic_facts += "\n  usage: filter with operator eq and value true"
         lines.append(
@@ -257,9 +294,9 @@ def capability_card(principal: Principal, bundle: DefinitionBundle) -> str:
     return card
 
 
-def _visible_dimension_names(
+def visible_dimension_names(
     bundle: DefinitionBundle,
-    visible: set[str],
+    visible: set[str] | frozenset[str],
     *,
     resolves_to: str | list[str],
 ) -> list[str]:

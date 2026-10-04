@@ -31,11 +31,20 @@ class AuthorizedSetExecution:
 
 
 def compose_answers(answers: Sequence[Answered]) -> Answered:
-    """The primary carries its companions in call order."""
+    """The primary carries its companions in call order, each followed by its own
+    selection tables, all at one level."""
     primary = answers[0]
     if len(answers) == 1:
         return primary
-    return primary.model_copy(update={"companion_answered": tuple(answers[1:])})
+    later = tuple(
+        member
+        for answer in answers[1:]
+        for member in (
+            answer.model_copy(update={"companion_answered": ()}),
+            *answer.companion_answered,
+        )
+    )
+    return primary.model_copy(update={"companion_answered": (*primary.companion_answered, *later)})
 
 
 async def execute_authorized_set(

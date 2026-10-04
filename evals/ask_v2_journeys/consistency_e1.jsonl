@@ -1,0 +1,2 @@
+{"journey": "consistency_e1"}
+{"id": "e1", "question": "Top 5 unpaid invoices from July 2025 by invoiced revenue: show invoice number and customer.", "expected": {"outcome_type": "answered", "tables_min": 1}}

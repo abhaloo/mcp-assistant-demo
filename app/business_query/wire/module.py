@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from datetime import date
 from functools import partial
-from typing import Any
+from typing import Any, Literal
 
 from app.auth import Principal
 from app.business_query.authorize.capability import (
@@ -39,9 +39,6 @@ from app.business_query.plan.value_resolver import (
 )
 from app.business_query.ports import (
     BusinessProgressSink as BusinessProgressSink,
-)
-from app.business_query.ports import (
-    EvidenceExecutionAdapter as EvidenceExecutionAdapter,
 )
 from app.business_query.ports import (
     ExecutionAdapter as ExecutionAdapter,
@@ -113,9 +110,17 @@ from app.business_query.wire.request import (
 )
 from app.business_query.wire.request_lifecycle import BqRequestScope
 from app.business_query.wire.result_presentation import step_subject
+from app.business_query.wire.round_resolution import (
+    PlanContinuation,
+    Resolution,
+    RoundResolution,
+    continuation_stages,
+    resolve_round,
+)
 from app.business_query.wire.tool_descriptor import BUSINESS_QUERY_PLAN_TOOL
 from app.business_query.wire.trace import QueryTrace
 from app.business_query.wire.trace_cache import TraceSnapshotCache
+from app.config import settings
 from app.core.errors import DeadlineExpiredError
 from app.core.turn_budget import (
     UNBOUNDED_BUDGET,
@@ -151,16 +156,14 @@ class BusinessQueryModule:
         pagination_secret: str | None = None,
         mint_page_cursor: bool = True,
         query_record_writer: QueryRecordWritePort | None = None,
+        choice_suggester: Any | None = None,
     ) -> None:
-        # Per-step ceiling: applied independently at each budgeted wait site
-        # (planner round, presenter, _resolve_values, _run_adapters,
-        # _commit_resolver_started, _seal_answer). A 10s value bounds each
-        # step, not the whole operation.
         self._planner = planner
         self._adapters = list(adapters)
         self._bundle_resolver = bundle_resolver or bundle_for_manifest
         self._scope_fn = scope_fn or apply_role_scope
         self._presenter = presenter or present_for_plan
+        # Per-step ceiling for each budgeted wait site; bounds each step, not the whole operation.
         self._step_timeout_seconds = step_timeout_seconds
         # Interactive transports inject a tighter planner ceiling so a model
         # stall refuses cleanly inside their turn deadline; eval and canary
@@ -180,6 +183,7 @@ class BusinessQueryModule:
         self._trace_cache = TraceSnapshotCache(limit=_TRACE_SNAPSHOT_LIMIT)
         self._evidence_ports = evidence_ports
         self._value_resolver = value_resolver
+        self._choice_suggester = choice_suggester
         self._active_scope: BqRequestScope | None = None
 
     @property
@@ -236,7 +240,7 @@ class BusinessQueryModule:
     ) -> Any:
         """Run a blocking job against a worker-local trace copy.
 
-        Cancelling the await does not stop the worker thread. Copy the
+        Cancelling the await sets turn_budget.cancel_token. Copy the
         worker trace into the request trace only after an in-budget result.
         """
         worker_trace = QueryTrace()
@@ -300,6 +304,8 @@ class BusinessQueryModule:
         evidence: BusinessQueryEvidenceContext | None = None,
         trace: QueryTrace,
         turn_budget: TurnBudget,
+        continuation: PlanContinuation | None = None,
+        display_members_added: frozenset[str] = frozenset(),
     ) -> BusinessQueryOutcome:
         """Authorize and execute a prepared plan set without replanning."""
         bundle_outcome = self.load_bundle(request.principal, request.correlation_id)
@@ -322,6 +328,22 @@ class BusinessQueryModule:
         )
         if not isinstance(scoped_plans, list):
             return scoped_plans
+        resolve_values = self.resolve_values
+        execute_and_present = self.execute_and_present
+        if continuation is not None:
+            staged = continuation_stages(
+                self, request, scoped_plans, continuation, bundle, evidence
+            )
+            if isinstance(staged, Denied):
+                return staged
+            resolve_values, execute_and_present = staged
+        # The declared-look members added during resolution bind to the primary
+        # scoped plan so the seal can mark those columns as display.
+        if display_members_added:
+            scoped_plans[0] = scoped_plans[0].model_copy(
+                update={"display_members_added": display_members_added}
+            )
+
         return await execute_authorized_set(
             AuthorizedSetExecution(
                 request=request,
@@ -332,8 +354,27 @@ class BusinessQueryModule:
                 trace=trace,
                 turn_budget=turn_budget,
             ),
-            resolve_values=self.resolve_values,
-            execute_and_present=self.execute_and_present,
+            resolve_values=resolve_values,
+            execute_and_present=execute_and_present,
+        )
+
+    async def resolve_round(
+        self,
+        request: BusinessQueryRequest,
+        *,
+        progress: BusinessProgressSink | None = None,
+        evidence: BusinessQueryEvidenceContext | None = None,
+        trace: QueryTrace,
+        turn_budget: TurnBudget = UNBOUNDED_BUDGET,
+    ) -> Resolution:
+        """Resolve a round via continuation or fresh planning."""
+        return await resolve_round(
+            self,
+            request,
+            progress=progress,
+            evidence=evidence,
+            trace=trace,
+            turn_budget=turn_budget,
         )
 
     async def _query(
@@ -350,21 +391,26 @@ class BusinessQueryModule:
         if request.page_cursor is not None:
             turn_budget.check_not_expired()
             return await self._execute_page_cursor(request, evidence, turn_budget)
-        plan_res = await self.plan_round(
-            request, progress=progress, trace=trace, turn_budget=turn_budget
-        )
-        if not isinstance(plan_res, tuple):
-            return plan_res
-        request, planned_set, bundle = plan_res
-        if self._active_scope is not None:
-            self._active_scope.bind_plan_bundle(bundle)
-        return await self.execute_planned_set(
+        resolved = await self.resolve_round(
             request,
-            planned_set,
             progress=progress,
             evidence=evidence,
             trace=trace,
             turn_budget=turn_budget,
+        )
+        if not isinstance(resolved, RoundResolution):
+            return resolved
+        if self._active_scope is not None:
+            self._active_scope.bind_plan_bundle(resolved.bundle)
+        return await self.execute_planned_set(
+            resolved.request,
+            resolved.planned_set,
+            progress=progress,
+            evidence=evidence,
+            trace=trace,
+            turn_budget=turn_budget,
+            continuation=resolved.continuation,
+            display_members_added=resolved.display_members_added,
         )
 
     compose_answers = staticmethod(compose_answers)
@@ -443,6 +489,8 @@ class BusinessQueryModule:
             turn_budget=turn_budget,
             reserve_seconds=self._budget_policy.planning_reserve_seconds,
             progress=progress,
+            choice_suggester=self._choice_suggester,
+            terminal_reserve_seconds=self._budget_policy.terminal_reserve_seconds,
         )
         if isinstance(planned, ClarificationRequired):
             return planned
@@ -499,6 +547,9 @@ class BusinessQueryModule:
         ordinal: int = 0,
         of: int = 1,
         turn_budget: TurnBudget,
+        root_answer_query_id: str | None = None,
+        changes: tuple[str, ...] = (),
+        continuation_tier: Literal["patch", "planned", "fresh"] | None = None,
     ) -> BusinessQueryOutcome:
         tick_ordinal = ordinal if of > 1 else None
         tick_of = of if of > 1 else None
@@ -533,6 +584,12 @@ class BusinessQueryModule:
                     plan_store=self._plan_store,
                     pagination_secret=self._pagination_secret,
                     mint_page_cursor=self._mint_page_cursor,
+                    stored_plan_ttl_seconds=settings.business_query_stored_plan_ttl_seconds,
+                    original_question=request.question,
+                    root_answer_query_id=root_answer_query_id,
+                    changes=changes,
+                    continuation_tier=continuation_tier or "fresh",
+                    owner_hint=request.owner_hint,
                 ),
                 turn_budget,
                 ceiling_seconds=self._step_timeout_seconds,

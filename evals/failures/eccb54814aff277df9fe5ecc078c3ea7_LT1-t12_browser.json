@@ -1,0 +1,18 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "latency",
+  "run_id": "eccb54814aff277df9fe5ecc078c3ea7",
+  "case_id": "LT1",
+  "turn": 12,
+  "mode": "browser",
+  "role": "admin",
+  "question": "Summarise what we found in this conversation.",
+  "outcome_type": "answered",
+  "mismatches": [
+    "slow_turn"
+  ],
+  "reason": "Correct summary (every figure appears in an earlier turn) but completion_latency_ms 73,537 with one conversation call and five coordinator calls (openai-luna-coordinator-high); the slow line is 25 s and the browser median is 14.0 s. Why the coordinator needed five rounds for a summary is not yet known.",
+  "evidence": "docs/superpowers/evidence/2026-10-01-luna6-e2e/telemetry/turns.tsv; docs/superpowers/evidence/2026-10-01-luna6-e2e/telemetry/calls.tsv; docs/superpowers/evidence/2026-10-01-luna6-e2e/browser/sse/LT1-t12.sse; docs/superpowers/evidence/2026-10-01-luna6-e2e/grades-luna6.json"
+}

@@ -33,6 +33,18 @@ def measure_for_member(bundle: DefinitionBundle, member: str) -> MeasureDefiniti
     return next((measure for measure in bundle.measures if measure.name == target), None)
 
 
+def primary_key_dimension(bundle: DefinitionBundle, resource: str) -> DimensionDefinition | None:
+    """The dimension that is the primary key of a resource, or None."""
+    return next(
+        (
+            dimension
+            for dimension in bundle.dimensions
+            if dimension.owning_resource == resource and dimension.is_primary_key
+        ),
+        None,
+    )
+
+
 def definition_for(bundle: DefinitionBundle, kind: str, name: str) -> MemberDefinition | None:
     """Resolve a capability entry's target to its declared definition."""
     if kind == "measure":

@@ -1,6 +1,7 @@
-"""Unit tests for the conversational coordinator evaluation scorer and models."""
-
 from __future__ import annotations
+
+import re
+from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
@@ -11,6 +12,11 @@ from app.conversation.coordinator.contracts import (
     FinishAnswer,
 )
 from app.conversation.coordinator.runtime import FinishedDraft
+from app.eval.ask_route.text import normalize_text
+from app.eval.conversation_coordinator import load_coordinator_cases
+from app.paths import REPO_ROOT
+from app.rag.access_tiers import get_access_tiers
+from scripts.eval.eval_tokens import PROFILES
 
 
 def test_models_importable():
@@ -630,3 +636,203 @@ def test_score_reports_no_violation_on_a_clean_run():
     run = CoordinatorRunOutput(actions=("query_business", "finish_answer"), answer_text="x")
 
     assert score(case, run).invariant_violations == ()
+
+
+def test_history_line_accepts_optional_plan_digest() -> None:
+    """Oracle: spec §4.2 typed dialogue — HistoryLine carries a PlanDigest for follow-up cases."""
+    from app.business_query.plan.plan_diff import PlanDigest
+    from app.conversation.coordinator.contracts import HistoryLine
+
+    digest = PlanDigest(
+        grain="entity_rows",
+        anchor="receipt",
+        dimensions=("receipt.id",),
+        measures=(),
+        limit=10,
+        period=None,
+        set_ids=("latest_receipts",),
+        plan_fingerprint="0" * 64,
+    )
+    line = HistoryLine(exchange_id="ex-0", user_text="list receipts", digest=digest)
+    assert line.digest is not None
+    assert line.digest.anchor == "receipt"
+    assert HistoryLine(exchange_id="ex-1", user_text="hello").digest is None
+
+
+def test_score_requires_patch_tier_when_origin_is_model() -> None:
+    """Oracle: PREFLIGHT 28 — expected origin model requires continuation_tier patch."""
+    from app.conversation.coordinator.contracts import CoordinatorContext
+    from app.eval.conversation_coordinator import (
+        CoordinatorCase,
+        CoordinatorRunOutput,
+        score,
+    )
+
+    case = CoordinatorCase(
+        case_id="fu-tier",
+        stratum="follow_up",
+        context=CoordinatorContext(turn_id="t-fu", question="add the warehouse"),
+        required_actions=("query_business", "finish_answer"),
+        expected_question_origin="model",
+        provenance="spec 2026-09-18 §4.1",
+    )
+    run = CoordinatorRunOutput(
+        actions=("query_business", "finish_answer"),
+        question_origin="model",
+        continuation_tier="planned",
+        answer_text="ok",
+    )
+    result = score(case, run)
+    assert result.trajectory == "fail"
+    assert "continuation_tier_not_patch" in result.invariant_violations
+
+
+def test_score_requires_continues_subject_match_last_business_candidate() -> None:
+    """Oracle: continues.subject must equal the last business candidate restore_ref."""
+    from app.conversation.coordinator.contracts import CoordinatorContext
+    from app.conversation.followup_contracts import FollowupFocus, SourceCandidate
+    from app.eval.conversation_coordinator import (
+        CoordinatorCase,
+        CoordinatorRunOutput,
+        score,
+    )
+
+    candidate = SourceCandidate(
+        position=1,
+        exchange_id="ex-1",
+        restore_ref="aq-" + "a" * 30,
+        grain="entity_rows",
+        user_question="list the latest 10 receipts",
+    )
+    case = CoordinatorCase(
+        case_id="fu-subject",
+        stratum="follow_up",
+        context=CoordinatorContext(
+            turn_id="t-fu",
+            question="add the warehouse",
+            candidates=(candidate,),
+            focus=FollowupFocus(status="resolved", source_positions=(1,)),
+        ),
+        required_actions=("query_business", "finish_answer"),
+        expected_question_origin="model",
+        provenance="spec 2026-09-18 §4.2",
+    )
+    mismatch = CoordinatorRunOutput(
+        actions=("query_business", "finish_answer"),
+        question_origin="model",
+        continuation_tier="patch",
+        continues_subject="aq-" + "b" * 30,
+        answer_text="ok",
+    )
+    failed = score(case, mismatch)
+    assert failed.trajectory == "fail"
+    assert "continues_subject_mismatch" in failed.invariant_violations
+
+    matched = CoordinatorRunOutput(
+        actions=("query_business", "finish_answer"),
+        question_origin="model",
+        continuation_tier="patch",
+        continues_subject=candidate.restore_ref,
+        answer_text="ok",
+    )
+    passed = score(case, matched)
+    assert passed.trajectory == "pass"
+    assert passed.invariant_violations == ()
+
+
+def test_follow_up_cases_load_from_jsonl() -> None:
+    """Oracle: evals/conversation_coordinator/cases.jsonl follow-up matrix."""
+    from pathlib import Path
+
+    from app.eval.conversation_coordinator import load_coordinator_cases
+
+    root = Path(__file__).resolve().parents[2]
+    path = root / "evals" / "conversation_coordinator" / "cases.jsonl"
+    cases = load_coordinator_cases(path)
+    ids = {c.case_id for c in cases}
+    expected = {
+        "fu-add-col-receipts",
+        "fu-more-rows-receipts",
+        "fu-change-sort-receipts",
+        "fu-change-entity-receipts",
+        "fu-explain-after-receipts",
+        "fu-add-col-invoices",
+        "fu-more-rows-invoices",
+        "fu-change-sort-invoices",
+        "fu-change-entity-invoices",
+        "fu-explain-after-invoices",
+        "fu-add-col-orders",
+        "fu-more-rows-orders",
+        "fu-change-sort-orders",
+        "fu-change-entity-orders",
+        "fu-explain-after-orders",
+    }
+    assert expected <= ids
+    patches = [c for c in cases if c.case_id in expected and "change-entity" not in c.case_id]
+    edits = [c for c in patches if "explain-after" not in c.case_id]
+    assert all(c.expected_question_origin == "model" for c in edits)
+    assert all(c.stratum == "follow_up" for c in cases if c.case_id in expected)
+
+
+_COORDINATOR_FOLDER_TO_TIER = {
+    "all": "all",
+    "sales": "sales",
+    "finance": "finance",
+    "admin": "admin",
+    "printing": "printing",
+    "graphic-design": "graphic design",
+    "warehouse": "warehouse",
+}
+
+
+def test_document_cases_cite_a_manual_their_principal_can_read() -> None:
+    path = REPO_ROOT / "evals" / "conversation_coordinator" / "cases.jsonl"
+    cases = load_coordinator_cases(path)
+    doc_cases = [c for c in cases if any(s.endswith(".md") for s in c.expected_sources)]
+    assert doc_cases, "Expected coordinator document cases"
+
+    source_re = re.compile(
+        r"^(all|sales|finance|admin|printing|graphic-design|warehouse)/manuals/[a-z0-9-]+\.md$"
+    )
+    corpus_root = REPO_ROOT / "data" / "corpus" / "company"
+
+    for case in doc_cases:
+        assert case.principal is not None, f"{case.case_id}: principal is None"
+        assert case.principal in PROFILES, (
+            f"{case.case_id}: principal '{case.principal}' not in PROFILES"
+        )
+        profile = PROFILES[case.principal]
+        granted_tiers = set(get_access_tiers(profile.role, list(profile.permissions)))
+
+        readable_paths: list[Path] = []
+        for p in corpus_root.glob("*/manuals/*.md"):
+            folder = p.parent.parent.name
+            if _COORDINATOR_FOLDER_TO_TIER.get(folder) in granted_tiers:
+                readable_paths.append(p)
+
+        assert case.expected_sources, f"{case.case_id}: expected_sources is empty"
+        for src in case.expected_sources:
+            assert source_re.match(src), f"{case.case_id}: source '{src}' does not match pattern"
+            source_file = corpus_root / src
+            assert source_file.is_file(), f"{case.case_id}: source file '{src}' not found on disk"
+            tier_folder = src.split("/")[0]
+            assert _COORDINATOR_FOLDER_TO_TIER.get(tier_folder) in granted_tiers, (
+                f"{case.case_id}: source tier '{tier_folder}' not in granted {granted_tiers}"
+            )
+
+        assert case.answer_oracle is not None, f"{case.case_id}: answer_oracle is None"
+        oracle_norm = normalize_text(case.answer_oracle)
+
+        for src in case.expected_sources:
+            cited_text = normalize_text((corpus_root / src).read_text(encoding="utf-8"))
+            assert oracle_norm in cited_text, (
+                f"{case.case_id}: oracle '{case.answer_oracle}' not in cited manual {src}"
+            )
+
+        allowed_files = {corpus_root / src for src in case.expected_sources}
+        for m_path in readable_paths:
+            if m_path not in allowed_files:
+                m_norm = normalize_text(m_path.read_text(encoding="utf-8"))
+                assert oracle_norm not in m_norm, (
+                    f"{case.case_id}: oracle '{case.answer_oracle}' leaked to {m_path.name}"
+                )

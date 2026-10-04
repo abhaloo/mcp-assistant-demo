@@ -1,0 +1,16 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "journey",
+  "case_id": "recover-basis",
+  "role": "finance",
+  "mode": "journey",
+  "run_id": "55566d785a25449a8f9f1710fad98420",
+  "question": "How much revenue is from unpaid invoices in July 2025 in TZS?",
+  "reason": "outcome_type mismatch: expected clarification_required, got answered",
+  "mismatches": [
+    "outcome_type"
+  ],
+  "outcome_type": "answered"
+}

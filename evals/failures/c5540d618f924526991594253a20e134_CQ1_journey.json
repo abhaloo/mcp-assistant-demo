@@ -1,0 +1,18 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "journey",
+  "run_id": "c5540d618f924526991594253a20e134",
+  "case_id": "CQ1",
+  "mode": "journey",
+  "role": "admin",
+  "question": "cq_month.jsonl",
+  "outcome_type": "unsupported",
+  "mismatches": [
+    "dependency_not_explained",
+    "unanswered_part_missing"
+  ],
+  "reason": "Refused with two good chips, but the reason given is 'two separate lookups', not that one part needs the other's answer. unanswered_part is null.",
+  "evidence": "docs/superpowers/evidence/2026-09-25-failure-recovery/waveI/cq-3.json; docs/superpowers/evidence/2026-09-25-failure-recovery/waveI/grades-waveI.json; docs/superpowers/evidence/2026-09-25-failure-recovery/waveI/grade-verification.md"
+}

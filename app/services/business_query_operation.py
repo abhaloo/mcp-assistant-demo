@@ -40,6 +40,7 @@ from app.business_query.wire.ask_result import AskBusinessQueryResult, Committed
 from app.business_query.wire.module import BusinessQueryModule
 from app.business_query.wire.request import BusinessQueryRequest
 from app.business_query.wire.request_lifecycle import BqRequestScope
+from app.business_query.wire.round_resolution import PlanContinuation, RoundResolution
 from app.config import settings
 from app.core.ask_errors import (
     CAPABILITY_UNAVAILABLE_MESSAGE,
@@ -204,6 +205,8 @@ class PreparedBqOperation:
         self._prepared_set: PlannedQuerySet | None = None
         self._normalized_request: BusinessQueryRequest | None = None
         self._bundle: DefinitionBundle | None = None
+        self._continuation: PlanContinuation | None = None
+        self._display_members_added: frozenset[str] = frozenset()
         self._committed: bool = False
         self._closed: bool = False
         self._shadow: bool = settings.business_query_mode == "shadow"
@@ -294,15 +297,16 @@ class PreparedBqOperation:
                 self._module.request_scope(self._request, turn_budget=self._turn_budget)
             )
 
-            planned_or_outcome = await self._module.plan_round(
+            resolution = await self._module.resolve_round(
                 self._scope.request,
                 progress=self._progress,
+                evidence=self._evidence,
                 trace=self._scope.trace,
                 turn_budget=self._turn_budget,
             )
 
-            if not isinstance(planned_or_outcome, tuple):
-                finished = self._scope.finish(planned_or_outcome)
+            if not isinstance(resolution, RoundResolution):
+                finished = self._scope.finish(resolution)
                 mapped = await map_and_require_query_record(
                     finished,
                     shadow=self._shadow,
@@ -320,14 +324,15 @@ class PreparedBqOperation:
                 self._closed = True
                 return mapped
 
-            self._normalized_request, self._prepared_set, self._bundle = planned_or_outcome
+            self._normalized_request = resolution.request
+            self._prepared_set = resolution.planned_set
+            self._bundle = resolution.bundle
+            self._continuation = resolution.continuation
+            self._display_members_added = resolution.display_members_added
             return self._prepared_set
-        except CapabilityUnavailableError:
+        except (CapabilityUnavailableError, BundleSelectionError) as exc:
             await self.aclose()
-            return denied_capability_result()
-        except BundleSelectionError:
-            await self.aclose()
-            return denied_capability_result()
+            return denied_capability_result(exc, correlation_id=self._request.correlation_id)
         except AttemptConflictError:
             await self.aclose()
             raise
@@ -398,6 +403,8 @@ class PreparedBqOperation:
                 evidence=self._evidence,
                 trace=self._scope.trace,
                 turn_budget=self._turn_budget,
+                continuation=self._continuation,
+                display_members_added=self._display_members_added,
             )
 
             outcome = self._scope.finish(outcome)

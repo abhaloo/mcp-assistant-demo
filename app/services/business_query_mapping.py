@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Literal, cast
 
 from app.business_query.definitions import BundleValidationError, InvalidBundleIndexError
 from app.business_query.outcomes import (
@@ -11,17 +12,20 @@ from app.business_query.outcomes import (
     ClarificationRequired,
     Denied,
     Incomplete,
+    RefusalDetail,
     Unsupported,
     serialize_business_query_outcome,
 )
 from app.business_query.wire.ask_result import AskBusinessQueryResult
+from app.business_query.wire.failure_note import FailureNote
 from app.business_query.wire.module import PLANNER_TIMEOUT_CONTINUATION
+from app.business_query.wire.refusal_advice import coordinator_advice_for
 from app.core.ask_errors import (
     EVIDENCE_UNAVAILABLE_MESSAGE,
     INCOMPLETE_ANSWER_MESSAGE,
 )
 from app.rag.provenance.record_links import extract_record_links_from_record_refs
-from app.services.ask_v2_reason_copy import copy_for_reason
+from app.services.ask_v2_reason_copy import copy_for_reason, family_for_reason
 from app.services.retained_evidence import RetentionMismatchError, retained_members
 
 logger = logging.getLogger(__name__)
@@ -42,7 +46,14 @@ UNSUPPORTED_MESSAGE = "that isn't available to ask here"
 _RECORD_DATABASE_IDENTITY = "mcp_record"
 
 
-def denied_capability_result() -> AskBusinessQueryResult:
+def denied_capability_result(exc: Exception, *, correlation_id: str) -> AskBusinessQueryResult:
+    """The principal or deployment cannot run Business Query. Only the exception
+    TYPE NAME reaches the log; the message may name a user or a bundle."""
+    logger.warning(
+        "business query capability denied correlation_id=%s error=%s",
+        correlation_id,
+        type(exc).__name__,
+    )
     return AskBusinessQueryResult(
         disposition="denied",
         answer_text="",
@@ -151,8 +162,8 @@ def map_outcome(
             plan=outcome.plan,
             scope_fingerprint=outcome.scope_fingerprint,
             business_query=wire_bq,
+            retained_members=retained,
         )
-        object.__setattr__(result, "retained_members", retained)
     elif isinstance(outcome, ClarificationRequired):
         result = AskBusinessQueryResult(
             disposition="clarification_required",
@@ -168,8 +179,15 @@ def map_outcome(
             raise_capability_unavailable=False,
             disambiguation=outcome.disambiguation,
             business_query=serialize_business_query_outcome(outcome),
+            failure_note=FailureNote(
+                reason_code="clarification_required",
+                family="coverage",
+                coordinator_advice=outcome.question,
+            ),
         )
     elif isinstance(outcome, Unsupported):
+        d = outcome.detail or RefusalDetail()
+        code = outcome.reason_code
         result = AskBusinessQueryResult(
             disposition="unsupported",
             answer_text=(
@@ -185,11 +203,22 @@ def map_outcome(
             output_tokens=None,
             raise_capability_unavailable=False,
             business_query=serialize_business_query_outcome(outcome),
+            failure_note=FailureNote(
+                reason_code=code,
+                family=cast(
+                    Literal["permission", "capability", "coverage", "transient"],
+                    family_for_reason(code),
+                ),
+                outside_access=tuple(d.outside_access),
+                available=tuple(d.available),
+                coordinator_advice=coordinator_advice_for(code, d.rule),
+            ),
         )
     elif isinstance(outcome, Incomplete):
+        code = outcome.reason_code
         result = AskBusinessQueryResult(
             disposition="incomplete",
-            answer_text=INCOMPLETE_ANSWER_MESSAGE,
+            answer_text=copy_for_reason(outcome.reason_code, fallback=INCOMPLETE_ANSWER_MESSAGE),
             completion_status="incomplete",
             sql_stop_reason=outcome.reason_code,
             model=None,
@@ -197,6 +226,14 @@ def map_outcome(
             output_tokens=None,
             raise_capability_unavailable=False,
             business_query=serialize_business_query_outcome(outcome),
+            failure_note=FailureNote(
+                reason_code=code,
+                family=cast(
+                    Literal["permission", "capability", "coverage", "transient"],
+                    family_for_reason(code),
+                ),
+                coordinator_advice=copy_for_reason(code),
+            ),
         )
     elif isinstance(outcome, Denied):
         result = AskBusinessQueryResult(
@@ -232,8 +269,8 @@ def map_outcome(
             # normalized plan available for the existing PII audit without
             # invoking a second presentation model over result rows.
             plan=result.plan,
+            retained_members=(),
         )
-        object.__setattr__(shadow_result, "retained_members", ())
         return shadow_result
     return result
 

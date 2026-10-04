@@ -44,6 +44,7 @@ class QueryRecordData(BaseModel):
 
     subject_digest: str | None = None
     entity_digest: str | None = None
+    entity_id: str | None = None
     role_class: str | None = None
     context_mode: str | None = None
 
@@ -100,6 +101,11 @@ class QueryRecordData(BaseModel):
     # Plan persistence
     plan_payload: str | None = None
     plan_expires_at: datetime | None = None
+    # Turn content: what the turn showed the person, kept raw (ADR 0085).
+    exchange_id: str | None = None
+    operation: str | None = None
+    answer_text: str | None = None
+    turn_detail_json: str | None = None
 
     @property
     def planner_ms(self) -> float | None:

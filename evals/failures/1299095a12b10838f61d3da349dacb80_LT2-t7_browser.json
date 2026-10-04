@@ -1,0 +1,18 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "browser",
+  "run_id": "1299095a12b10838f61d3da349dacb80",
+  "case_id": "LT2",
+  "turn": 7,
+  "mode": "browser",
+  "role": "finance",
+  "question": "How do I create an invoice?",
+  "outcome_type": "answered",
+  "mismatches": [
+    "source_links_unavailable"
+  ],
+  "reason": "The citation_set carries 6 sources, but citations is {parsed: false, cited: []}, so the panel shows 'Source links unavailable' instead of links. The same question got parsed citations on 8 other turns. Graded pass on the letter of the LT2 oracle (a citation_set with a source); kept because a person sees no source link.",
+  "evidence": "docs/superpowers/evidence/2026-09-25-failure-recovery/waveI/browser/sse/LT2-t7.sse; docs/superpowers/evidence/2026-09-25-failure-recovery/waveI/grades-waveI.json; docs/superpowers/evidence/2026-09-25-failure-recovery/waveI/grade-verification.md"
+}

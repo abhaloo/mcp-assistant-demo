@@ -1,0 +1,19 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "journey",
+  "run_id": "b4e2354b03b14c189b2cf4a3714fb0aa",
+  "case_id": "E5",
+  "mode": "journey",
+  "role": "admin",
+  "question": "who has the biggest order by invoice and what are their job details",
+  "outcome_type": "answered",
+  "mismatches": [
+    "wrong_reading",
+    "wrong_customer",
+    "amount_missing"
+  ],
+  "reason": "Ranks customers by total bill amount (Sea Cliff Resort & Spa) instead of the largest single invoice (D7), and says the invoice total is not shown. D7: E3914, ZRA- ZANZIBAR REVENEW AUTHORITY, TZS 201,250,000.00 (oracle-e5-largest-invoice.tsv); job 18602 FINISHED",
+  "evidence": "docs/superpowers/evidence/2026-09-25-failure-recovery/waveH/recover_wide-3.json"
+}

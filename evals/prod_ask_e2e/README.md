@@ -27,9 +27,9 @@ Every authorization case is **paired**, and each pair must land opposite ways:
 | `rb-01` (7) / `rb-02` (6) / `rb-03` (6113) | one question, three callers, three different correct answers — the department predicate is derived from the caller, not hardcoded |
 | `rb-07` allow / `rb-08` deny | the printing document tier filters by caller |
 | `rb-09` allow / `rb-10` deny | the mirror — so no fixed allow-list explains both |
-| `rb-11` deny / `rb-12` allow | the confidential payroll document is gated, and the gate isn't just a broken retriever |
+| `rb-11` deny / `rb-12` allow | the admin-tier Data Cleanup guide is gated, and the gate isn't just a broken retriever |
 
-A single-sided check is close to worthless here. "Printing cannot read the payroll document"
+A single-sided check is close to worthless here. "Printing cannot read the admin guide"
 passes just as cleanly when the entire document route is down — which is not hypothetical:
 the first time this suite was prepared, the container had zero embeddings, and the three
 DENY halves would all have passed. The positive half is what gives the negative half meaning,

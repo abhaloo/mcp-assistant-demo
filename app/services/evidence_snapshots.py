@@ -4,11 +4,14 @@ The snapshot is written after the answer is committed and before the transcript
 row that carries its ``restore_ref``. Anything that cannot be bound to policy
 (a BQ answer without a plan, a multi-envelope answer, a source without a tier)
 is left out entirely: the live answer stays usable and ``restore_ref`` is null.
+A query that did not answer carries no plan, so its turn keeps a text-only snapshot.
 """
 
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
+from contextvars import ContextVar
 from datetime import UTC, datetime, timedelta
 
 from app.auth import Principal
@@ -16,7 +19,12 @@ from app.business_query.compile.pagination.plan_store import StoredPlan
 from app.business_query.outcomes import BusinessQueryWireOutcome
 from app.config import settings
 from app.conversation.evidence.composition import build_evidence_snapshot_store
-from app.conversation.evidence.contracts import NarrativeDependencies, SnapshotPayload
+from app.conversation.evidence.contracts import (
+    NO_TIMELINE,
+    NarrativeDependencies,
+    SnapshotPayload,
+    TurnTimeline,
+)
 from app.rag.retrieval.document_contracts import DocumentProvenance
 from app.rag.retrieval.passages import RetrievedSource, to_json_source
 from app.resources import current_process_resources
@@ -26,11 +34,29 @@ from app.services.ask_result_projection import (
     build_snapshot_payload,
     publish_evidence_snapshot,
 )
-from app.services.retained_evidence import RetentionMismatchError, to_stored_plan
+from app.services.retained_evidence import MAX_TURN_TABLES, RetentionMismatchError, to_stored_plan
+from app.telemetry.correlation import current_restore_ref
 
 logger = logging.getLogger(__name__)
 
 SNAPSHOT_TTL = timedelta(hours=24)
+
+# The stream binds its sink's reader; the snapshot written inside the answer path
+# reads the steps and thought rows the person saw. Context vars are task-local.
+_turn_timeline: ContextVar[Callable[[], TurnTimeline] | None] = ContextVar(
+    "turn_timeline", default=None
+)
+
+
+def bind_turn_timeline(reader: Callable[[], TurnTimeline] | None) -> None:
+    """Bind the reader of this turn's timeline for the task's context."""
+    _turn_timeline.set(reader)
+
+
+def current_turn_timeline() -> TurnTimeline:
+    """The bound turn's timeline, read now; empty when no stream bound one."""
+    reader = _turn_timeline.get()
+    return reader() if reader is not None else NO_TIMELINE
 
 
 def _not_retained(gate: str) -> None:
@@ -38,45 +64,6 @@ def _not_retained(gate: str) -> None:
     unaffected; a null restore_ref can now be traced to its cause. Logged at
     warning level because deployments run the app logger at warning."""
     logger.warning("evidence snapshot not retained: %s", gate)
-
-
-def _legacy_plan(
-    evidence: TurnEvidence,
-    outcome: BusinessQueryWireOutcome,
-    *,
-    principal: Principal,
-    now: datetime,
-) -> StoredPlan | None:
-    """The single stored plan of a pre-receipt answer: one envelope bound to
-    the plan and scope fingerprint the turn carried. Each gate is named."""
-    envelope = outcome.envelope
-    plan = evidence.plan
-    scope_fingerprint = evidence.scope_fingerprint
-    if envelope is None:
-        return _not_retained("no_envelope")
-    if plan is None:
-        return _not_retained("no_plan")
-    if plan.derived_sets:
-        return _not_retained("derived_sets")
-    if scope_fingerprint is None:
-        return _not_retained("no_scope_fingerprint")
-    if len(outcome.envelopes) != 1:
-        return _not_retained("legacy_envelope_count")
-    return StoredPlan(
-        answer_query_id=envelope.answer_query_id,
-        plan=plan,
-        plan_fingerprint=scope_fingerprint,
-        created_at=now,
-        expires_at=now + SNAPSHOT_TTL,
-        principal=str(principal.user_id),
-        project_id="default",
-        entity_id=principal.entity_id,
-        department_id=principal.department_id,
-        bundle_hash=envelope.bundle_hash,
-        policy_hash=principal.manifest_hash,
-        total_row_count=envelope.total_row_count,
-        response_policy=evidence.response_policy,
-    )
 
 
 def _stored_plans(
@@ -90,7 +77,10 @@ def _stored_plans(
         return ()
 
     envelopes = outcome.envelopes
-    if len(envelopes) == 0 or len(envelopes) > 2:
+    if outcome.outcome != "answered" and not envelopes and not evidence.retained_members:
+        # A refused or clarified query shows text only: there is no plan to re-scope.
+        return ()
+    if len(envelopes) == 0 or len(envelopes) > MAX_TURN_TABLES:
         return _not_retained("envelope_count")
 
     if evidence.retained_members:
@@ -120,8 +110,7 @@ def _stored_plans(
                 return _not_retained("retention_mismatch")
         return tuple(stored)
 
-    legacy = _legacy_plan(evidence, outcome, principal=principal, now=now)
-    return None if legacy is None else (legacy,)
+    return _not_retained("no_retained_members")
 
 
 def _provenance(sources: tuple[RetrievedSource, ...]) -> tuple[DocumentProvenance, ...]:
@@ -147,6 +136,7 @@ def snapshot_payload(
     run_id: str,
     exchange_id: str,
     now: datetime,
+    timeline: TurnTimeline = NO_TIMELINE,
 ) -> SnapshotPayload | None:
     """Everything a restore may release for this turn; None when it cannot be bound."""
     stored_plans = _stored_plans(evidence, principal=principal, now=now)
@@ -193,6 +183,11 @@ def snapshot_payload(
             record_context_digest=principal.record_context_digest,
             source_restore_refs=evidence.source_restore_refs,
         ),
+        duration_ms=timeline.duration_ms,
+        steps=timeline.steps,
+        thoughts=timeline.thoughts,
+        follow_ups=evidence.follow_ups,
+        unanswered_part=evidence.unanswered_part,
     )
 
 
@@ -221,6 +216,11 @@ async def publish_turn_evidence(
         return None
     now = datetime.now(tz=UTC)
     try:
+        timeline = current_turn_timeline()
+    except Exception as exc:  # noqa: BLE001 - the steps are optional; the text is the snapshot
+        logger.warning("turn timeline not read: %s", type(exc).__name__)
+        timeline = NO_TIMELINE
+    try:
         payload = snapshot_payload(
             evidence,
             principal=principal,
@@ -228,6 +228,7 @@ async def publish_turn_evidence(
             run_id=run_id,
             exchange_id=exchange_id,
             now=now,
+            timeline=timeline,
         )
         if payload is None:
             return None
@@ -242,4 +243,8 @@ async def publish_turn_evidence(
     except Exception as exc:  # noqa: BLE001 - a snapshot failure never fails the answer
         logger.warning("evidence snapshot not assembled: %s", type(exc).__name__)
         return None
-    return await publish_evidence_snapshot(store, bindings, payload)
+    # The answer path publishes under the attempt reference the stream minted;
+    # with no bound reference (legacy callers), the store mints one as before.
+    return await publish_evidence_snapshot(
+        store, bindings, payload, restore_ref=current_restore_ref()
+    )

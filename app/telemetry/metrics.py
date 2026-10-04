@@ -105,6 +105,15 @@ _render_guard_trips = _meter.create_counter(
     description="Rich-render value-preservation guard trips (fallback to present_answered).",
 )
 
+_durable_history_rebuilds = _meter.create_counter(
+    "conversation.durable_history.rebuilds",
+    unit="{rebuild}",
+    description="Thread memory rebuilds from the Query Records, by outcome.",
+)
+_DURABLE_HISTORY_OUTCOMES = frozenset(
+    {"rebuilt", "empty", "too_old", "read_failed", "write_back_failed"}
+)
+
 _business_query_failures = _meter.create_counter(
     "bq.failures",
     unit="{failure}",
@@ -142,6 +151,13 @@ def record_render_guard_trip() -> None:
     """Emit observable telemetry when the rich-render value guard trips."""
     _render_guard_trips.add(1)
     _logger.info("render_guard_trip")
+
+
+def record_durable_history_rebuild(*, outcome: str) -> None:
+    """Count one durable history rebuild by its bounded outcome (ADR 0085)."""
+    if outcome not in _DURABLE_HISTORY_OUTCOMES:
+        raise ValueError(f"unsupported durable history outcome: {outcome!r}")
+    _durable_history_rebuilds.add(1, {"outcome": outcome})
 
 
 def record_business_query_failure(*, kind: str) -> None:

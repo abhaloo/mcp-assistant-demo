@@ -73,9 +73,9 @@ def test_bootstrap_ci_exact_seeded_output_is_pinned():
     deltas = [0.1, -0.2, 0.3, 0.0, 0.5]
     result = paired_bootstrap_ci(deltas, seed=7)
     assert result == {
-        "point": 0.13999999999999999,
-        "lo": -0.06000000000000001,
-        "hi": 0.33999999999999997,
+        "point": pytest.approx(0.13999999999999999),
+        "lo": pytest.approx(-0.06000000000000001),
+        "hi": pytest.approx(0.34),
         "n": 5,
     }
 

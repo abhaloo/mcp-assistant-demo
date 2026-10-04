@@ -2,25 +2,42 @@
 
 Oracle for mp-01/mp-02: git HEAD (or parent product SHA) suite.json, not the
 working-tree file after this revision. Oracle for suite literals: ADR 0070
-and the timeout-remediation Success Contract (AC-T3 stall card, choices=[]).
+and the timeout-remediation Success Contract (AC-T3 stall card with LLM choices).
 """
 
 from __future__ import annotations
 
 import importlib.util
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
 from types import ModuleType
 from typing import Any
 
+from app.eval.ask_route.text import contains_phrase, normalize_text
+
 REPO = Path(__file__).resolve().parents[2]
 SUITE_PATH = REPO / "evals" / "prod_ask_e2e" / "suite.json"
 CANONICAL_STRIPPER = REPO / ".claude" / "skills" / "ai-e2e" / "assets" / "make_run_plan.py"
 CLI_LAUNCHER = REPO / "scripts" / "eval" / "make_prod_ask_e2e_run_plan.py"
 PARENT_PRODUCT_SHA = "c6c533cf742f877ee51cc045959f02c254bbd9ee"
-NEXT_SUITE_VERSION = "1.17.0"
+NEXT_SUITE_VERSION = "1.25.0"
+
+MANUAL_RE = re.compile(
+    r"^data/corpus/company/(all|sales|finance|admin|printing|graphic-design|warehouse)/manuals/[a-z0-9-]+\.md$"
+)
+
+FOLDER_TO_TIER = {
+    "all": "all",
+    "sales": "sales",
+    "finance": "finance",
+    "admin": "admin",
+    "printing": "printing",
+    "graphic-design": "graphic design",
+    "warehouse": "warehouse",
+}
 
 
 def _load_stripper() -> ModuleType:
@@ -85,18 +102,17 @@ def test_cl_04_remains_in_source_with_historical_body_and_is_superseded() -> Non
         assert current[key] == historical[key]
 
 
-def test_cl_05_is_conditional_stall_card_with_zero_chips() -> None:
+def test_cl_05_is_conditional_stall_card_with_llm_chips() -> None:
     cl_05 = _case(_load_suite(), "cl-05")
     assert "CONDITIONAL" in cl_05["procedure"]
     check_types = {c["type"]: c for c in cl_05["checks"]}
     assert check_types["text_includes"]["value"] == "taking longer than usual"
     assert check_types["card_rendered"]["selector"] == ".mcp-ask-v2__card--clarification"
     chip = check_types["chip_count"]
-    assert chip.get("max") == 0 or chip.get("count") == 0
-    assert chip.get("max", 0) == 0
+    assert chip.get("min") == 1
+    assert chip.get("max") == 3
     assert any("free text" in json.dumps(c).lower() for c in cl_05["checks"])
     assert any(c["type"] == "no_step_left_running" for c in cl_05["checks"])
-    assert "zero recovery" in json.dumps(cl_05).lower() or "0 recovery" in json.dumps(cl_05).lower()
 
 
 def test_mp_01_and_mp_02_oracles_match_parent_byte_for_byte() -> None:
@@ -135,10 +151,11 @@ def test_superseded_and_run_with_cases_stay_in_suite_and_leave_the_run_plan() ->
     assert built_ids == ["keep"]
 
 
-def test_planner_stall_ceiling_names_empty_choices_not_narrowing() -> None:
+def test_planner_stall_ceiling_names_llm_choices_not_empty_card() -> None:
     text = _load_suite()["coverage_gaps"]["planner_stall_ceiling"]
     assert "narrowing" not in text
-    assert "choices=[]" in text
+    assert "choices=[]" not in text
+    assert "LLM" in text or "1 to 3" in text
     assert "planner-timeout" in text
     assert "typed timeout" in text
     assert "not forceable from the browser" in text
@@ -309,3 +326,179 @@ def test_env_card_overrides_environment_endpoints_and_database() -> None:
     assert env["rag_api"] == "http://127.0.0.1:8432"
     assert env["database"] == "mcp_analytics_w2"
     assert env["entity_id"] == 1
+
+
+def test_st_stop_cases_are_in_the_suite() -> None:
+    """Oracle: spec §4.6 Stop control — st-01..st-05 stop / reopen / next question."""
+    suite = _load_suite()
+    ids = [_case(suite, cid)["id"] for cid in ("st-01", "st-02", "st-03", "st-04", "st-05")]
+    assert ids == ["st-01", "st-02", "st-03", "st-04", "st-05"]
+    st01 = _case(suite, "st-01")
+    assert st01["persona"] == "sales"
+    blob = json.dumps(st01["checks"])
+    assert "running" in blob
+    assert "250" in blob
+
+
+def _manuals_with_tiers() -> list[tuple[Path, str]]:
+    base = REPO / "data" / "corpus" / "company"
+    results: list[tuple[Path, str]] = []
+    for tier_dir in base.iterdir():
+        if not tier_dir.is_dir():
+            continue
+        manuals_dir = tier_dir / "manuals"
+        if not manuals_dir.is_dir():
+            continue
+        tier = FOLDER_TO_TIER.get(tier_dir.name, tier_dir.name)
+        results.extend((md, tier) for md in manuals_dir.glob("*.md"))
+    return results
+
+
+def test_document_oracles_cite_manuals_that_contain_their_facts() -> None:
+    suite = _load_suite()
+    doc_cases = [
+        c
+        for c in suite["cases"]
+        if isinstance(c.get("oracle"), dict) and c["oracle"].get("kind") == "document_facts"
+    ]
+    assert len(doc_cases) >= 4
+    for case in doc_cases:
+        source = case["oracle"]["source"]
+        assert MANUAL_RE.match(source), f"{case['id']}: {source} does not match MANUAL_RE"
+        source_path = REPO / source
+        assert source_path.is_file(), f"{case['id']}: {source} does not exist"
+        text = source_path.read_text(encoding="utf-8")
+        literals = list(case["oracle"].get("must_include", [])) + list(
+            case["oracle"].get("must_include_any", [])
+        )
+        for lit in literals:
+            assert contains_phrase(text, lit), (
+                f"{case['id']}: literal '{lit}' not found in {source}"
+            )
+
+
+def _assert_pair_literals(
+    allow: dict[str, Any],
+    deny: dict[str, Any],
+    allow_tiers: set[str],
+    deny_tiers: set[str],
+    manuals: list[tuple[Path, str]],
+) -> None:
+    allow_id, deny_id = allow["id"], deny["id"]
+    allow_source = REPO / allow["oracle"]["source"]
+    assert allow_source.is_file(), f"{allow_id}: source {allow['oracle']['source']} does not exist"
+    allow_text = allow_source.read_text(encoding="utf-8")
+
+    allow_literals = list(allow["oracle"].get("must_include", [])) + list(
+        allow["oracle"].get("must_include_any", [])
+    )
+    deny_literals: list[str] = []
+    for check in deny.get("checks", []):
+        if check.get("type") == "numbers_absent" and "values" in check:
+            deny_literals.extend(check["values"])
+
+    assert allow_literals, f"{allow_id} has no must_include/must_include_any literals"
+    assert deny_literals, f"{deny_id} has no numbers_absent values"
+
+    for lit in allow_literals + deny_literals:
+        assert contains_phrase(allow_text, lit), (
+            f"{allow_id}/{deny_id}: literal '{lit}' not in ALLOW source {allow_source.name}"
+        )
+        for manual_path, manual_tier in manuals:
+            if manual_tier in deny_tiers:
+                assert not contains_phrase(manual_path.read_text(encoding="utf-8"), lit), (
+                    f"{deny_id}: literal '{lit}' found in DENY manual {manual_path.name}"
+                )
+
+    for lit in allow_literals:
+        for manual_path, manual_tier in manuals:
+            if manual_path != allow_source and manual_tier in allow_tiers:
+                assert not contains_phrase(manual_path.read_text(encoding="utf-8"), lit), (
+                    f"{allow_id}: ALLOW literal '{lit}' also found in {manual_path.name}"
+                )
+
+    for lit in deny_literals:
+        assert normalize_text(lit) not in normalize_text(deny["question"]), (
+            f"{deny_id}: DENY literal '{lit}' is a substring of the question"
+        )
+
+
+def test_document_pairs_land_opposite_ways_by_construction() -> None:
+    suite = _load_suite()
+    manuals = _manuals_with_tiers()
+    pairs = [
+        ("rb-07", "rb-08"),
+        ("rb-09", "rb-10"),
+        ("rb-12", "rb-11"),
+    ]
+    for allow_id, deny_id in pairs:
+        allow = _case(suite, allow_id)
+        deny = _case(suite, deny_id)
+        deny_tiers = set(suite["personas"][deny["persona"]]["document_tiers"])
+        allow_tiers = set(suite["personas"][allow["persona"]]["document_tiers"])
+        _assert_pair_literals(allow, deny, allow_tiers, deny_tiers, manuals)
+
+
+def _check(case_id: str, check_type: str) -> dict[str, Any]:
+    case = _case(_load_suite(), case_id)
+    return next(c for c in case["checks"] if c["type"] == check_type)
+
+
+def test_v2_table_selector_on_ac03() -> None:
+    selector = _check("ac-03", "dom_present")["selector"]
+    assert "[data-slot='result'] table.mcp-ask-v2__table" in selector
+
+
+def test_v2_work_block_and_actions_on_ux02() -> None:
+    phases = _check("ux-02", "phases_visible")
+    assert phases["selector"] == "details.mcp-ask-v2__work[data-mcp-ask-v2-work]"
+    assert ".mcp-ask-v2__step-state" in phases["capture"] and "Running" in phases["capture"]
+    assert _check("ux-02", "actions_rendered")["selector"] == "[data-copy]"
+
+
+def test_repointed_personas_hold_view_job() -> None:
+    for case_id in ("iso-01", "mb-01", "rc-01", "rc-02", "fu-05", "cp-01"):
+        assert _case(_load_suite(), case_id)["persona"] == "admin"
+
+
+def test_mb01_option_height_applies_only_with_a_card() -> None:
+    assert "card" in _check("mb-01", "element_min_height")["conditional_on"]
+
+
+def test_fu01_is_superseded_by_fu04() -> None:
+    case = _case(_load_suite(), "fu-01")
+    assert case["status"] == "superseded"
+    assert case["superseded_by"] == "fu-04"
+
+
+def test_fu02_clicks_a_follow_up_option_after_hp01() -> None:
+    case = _case(_load_suite(), "fu-02")
+    assert case["conversation"] == "reuse:hp-01"
+    assert "ASK_AI_V2_MODULE_INTERACTION_CARD" not in case["procedure"]
+    assert "NOT RUN (precondition)" in case["procedure"]
+    types = [c["type"] for c in case["checks"]]
+    new = (
+        "follow_up_option_click_sends",
+        "reply_not_refused",
+        "follow_up_option_count",
+        "follow_up_options_reachable",
+    )
+    for name in new:
+        assert name in types and name in _load_suite()["check_definitions"]
+    assert next(c for c in case["checks"] if c["type"] == "follow_up_option_count")["max"] == 3
+
+
+def test_cl02_asks_lk09s_proven_question() -> None:
+    suite = _load_suite()
+    case = _case(suite, "cl-02")
+    lk09 = _case(suite, "lk-09")
+    assert case["question"] == lk09["question"]
+    assert case["persona"] == lk09["persona"] == "sales"
+    assert case["oracle"]["sql"] == "evals/business_query/cross_domain/oracle/lk-09.sql"
+    assert case["oracle"]["candidate_ids"] == [701, 704]
+
+
+def test_ef07_is_not_run_until_v2_has_its_controls() -> None:
+    case = _case(_load_suite(), "ef-07")
+    assert case["status"] == "not_run"
+    assert "Regenerate" in case["not_run_reason"]

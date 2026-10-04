@@ -49,6 +49,7 @@ __all__ = [
     "_latest_exchange_id",
     "_load_history",
     "_resolve_thread_id",
+    "condenses_follow_ups",
     "finalize_exchange",
     "get_conversation_store",
     "load_thread",
@@ -131,6 +132,19 @@ def _context_mode(page_context: TrustedPageContext | PageContextV2 | None) -> Co
     return "jobs" if page_context is not None else None
 
 
+def condenses_follow_ups(operation: str) -> bool:
+    """Whether a follow-up is rewritten as a standalone question before dispatch.
+
+    Only the classifier route reads the rewrite: it classifies the turn and searches
+    documents with it. The coordinator reads the person's own words and writes each
+    tool's query itself. The business-query planner re-plans a clarification reply as
+    dialogue (business_query/wire/planning_round.py): it reads the original question
+    and the shown-question/reply exchange, so a rewrite there is only latency and can
+    collapse the question to the reply.
+    """
+    return operation != "clarification_reply" and not settings.conversation_coordinator_enabled
+
+
 def _latest_aggregate_continuation(
     turns: list[TranscriptTurn],
 ) -> RecordAggregateContinuation | None:
@@ -206,13 +220,7 @@ async def resolve_turn(
         )
         record_context = record_context_from_rehydration(rehydration_outcome)
 
-    if operation == "clarification_reply":
-        # The business-query planner re-plans a clarification reply as
-        # dialogue: it reads the original question plus the shown-question/
-        # reply exchange as separate turns (business_query/wire/planning_round.py),
-        # never this condensed rewrite. Condensing here is pure latency on the
-        # tightest turn in the budget, and it can lose the original intent by
-        # collapsing the question down to just the reply.
+    if not condenses_follow_ups(operation):
         search_query = body.question or ""
     else:
         try:

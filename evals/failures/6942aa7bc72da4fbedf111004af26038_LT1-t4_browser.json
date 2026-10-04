@@ -1,0 +1,19 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "browser",
+  "run_id": "6942aa7bc72da4fbedf111004af26038",
+  "case_id": "LT1",
+  "turn": 4,
+  "mode": "browser",
+  "role": "admin",
+  "question": "Who is the customer on the first one?",
+  "outcome_type": "answered",
+  "mismatches": [
+    "needless_clarify",
+    "internal_id"
+  ],
+  "reason": "Asks 'Do you mean the first invoice in the top-five list—invoice 3033?' instead of naming the customer. 3033 is invoice.id (an internal id); the invoice number is E6071. Oracle: Blackstone Beach Resort (waveG/oracle-lt1-top5-march.tsv).",
+  "evidence": "docs/superpowers/evidence/2026-09-25-failure-recovery/waveG/browser/sse/LT1-t4.sse"
+}

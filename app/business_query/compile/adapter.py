@@ -47,6 +47,7 @@ from app.business_query.compile.join_paths import (
 from app.business_query.compile.period_comparison import select_for_plan
 from app.business_query.compile.schema_reflection import build_metadata, table_for
 from app.business_query.compile.statement_compiler import StatementCompiler
+from app.business_query.compile.time_group_selection import resolve_time_groups
 from app.business_query.definitions import (
     BucketSetDefinition,
     DefinitionBundle,
@@ -226,7 +227,7 @@ class InternalCompilerAdapter:
     def _resolve_capability(self, name: str) -> tuple[str, Any]:
         resolved = resolve_member(self._bundle, name)
         if resolved is None:
-            raise PlanRefused("member_not_found")
+            raise PlanRefused("member_not_found", "unknown_member", members=(name,))
         return resolved
 
     def _assert_authorized(self, scoped: ScopedPlan) -> None:
@@ -539,4 +540,6 @@ class InternalCompilerAdapter:
             record_sql_fn=self._record_sql,
             trace=trace,
             writer_fn=self._writer,
+            build_set_fn=self._statement_compiler.compile_set,
+            resolve_fn=lambda conn, plan: resolve_time_groups(conn, self, plan),
         )

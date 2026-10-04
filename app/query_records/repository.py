@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import dataclass
 from datetime import datetime
+from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import delete, func, select, text, update
+from sqlalchemy import case, delete, func, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,6 +20,14 @@ from app.query_records.types import (
     TimingUpdate,
     row_to_dict,
 )
+
+
+@dataclass(frozen=True)
+class PeriodSpend:
+    priced_usd: Decimal
+    unpriced_input_tokens: int
+    unpriced_output_tokens: int
+    rows: int
 
 
 class FeedbackTargetMissingError(LookupError):
@@ -38,7 +48,9 @@ _TERMINAL_RECONCILE_FIELDS = frozenset(
         "input_tokens",
         "output_tokens",
         "reasoning_tokens",
+        "estimated_usd",
         "cost_status",
+        "price_table_version",
         "resolver_query_id",
         "resolver_disposition",
         "row_count",
@@ -65,13 +77,22 @@ def _reconcilable_values(payload: Mapping[str, Any], existing: Mapping[str, Any]
     does not alter a recorded value, so one rule keeps both safe: reconcile the
     terminal field set, and complete anything still unset.
     """
-    return {
+    values = {
         key: value
         for key, value in payload.items()
         if value is not None
         and key not in _RECONCILE_NEVER_FIELDS
         and (key in _TERMINAL_RECONCILE_FIELDS or existing.get(key) is None)
     }
+    # A terminal that could not price the turn withdraws the price an earlier
+    # seal wrote for one call of it; the row never pairs a price with "unknown".
+    if payload.get("cost_status") == "unknown":
+        values["estimated_usd"] = None
+    # The provider belongs to the call that named the model, so it moves only
+    # with a model; a write that names no model leaves the recorded pair alone.
+    if payload.get("model") is not None:
+        values["provider"] = payload.get("provider")
+    return values
 
 
 class QueryRecordRepository:
@@ -121,7 +142,7 @@ class QueryRecordRepository:
             f"insert flushed but row not readable correlation_id={record.correlation_id}"
         )
 
-    async def reserve_execution(
+    async def reserve_execution(  # noqa: PLR0913 - the row's owner stamps ride with its reservation
         self,
         *,
         correlation_id: str,
@@ -129,20 +150,28 @@ class QueryRecordRepository:
         environment: str = "development",
         question: str | None = None,
         requested_route: str | None = None,
+        thread_id: str | None = None,
+        subject_digest: str | None = None,
+        entity_id: str | None = None,
     ) -> dict:
         """Reserve execution identity before claiming continuation.
 
         Writes pending row if none exists; if existing row exists, returns it.
         A reservation opens before routing is decided, so it leaves
         ``requested_route`` unset unless the caller already knows the route.
-        The terminal write is then the first writer for it.
+        The terminal write is then the first writer for it. The row names its
+        thread, person and entity from the start, so a turn that never reaches
+        its terminal write is still found in its thread.
         """
         stmt = pg_insert(QueryRecordRow).values(
             correlation_id=correlation_id,
             project_id=project_id,
             environment=environment,
-            raw_question=question,
+            raw_question=question or None,
             requested_route=requested_route,
+            thread_id=thread_id,
+            subject_digest=subject_digest,
+            entity_id=entity_id,
             terminal_outcome="pending",
         )
         stmt = stmt.on_conflict_do_nothing(index_elements=["correlation_id"])
@@ -317,3 +346,51 @@ class QueryRecordRepository:
         except Exception:
             await self._session.rollback()
             raise
+
+    async def spend_in_period(
+        self,
+        *,
+        entity_id: str,
+        period_start: datetime,
+        period_end: datetime,
+        project_id: str,
+    ) -> PeriodSpend:
+        """Sum period spend and count unpriced tokens for an entity within one
+        project; the caller names the project the writer stamps on every row."""
+        stmt = (
+            select(
+                func.coalesce(func.sum(QueryRecordRow.estimated_usd), Decimal("0")),
+                func.coalesce(
+                    func.sum(
+                        case(
+                            (QueryRecordRow.estimated_usd.is_(None), QueryRecordRow.input_tokens),
+                            else_=0,
+                        )
+                    ),
+                    0,
+                ),
+                func.coalesce(
+                    func.sum(
+                        case(
+                            (QueryRecordRow.estimated_usd.is_(None), QueryRecordRow.output_tokens),
+                            else_=0,
+                        )
+                    ),
+                    0,
+                ),
+                func.count(),
+            )
+            .where(QueryRecordRow.entity_id == entity_id)
+            .where(QueryRecordRow.created_at >= period_start)
+            .where(QueryRecordRow.created_at < period_end)
+            .where(QueryRecordRow.project_id == project_id)
+        )
+        result = await self._session.execute(stmt)
+        row = result.one()
+        priced_usd, unpriced_in, unpriced_out, count = row
+        return PeriodSpend(
+            priced_usd=Decimal(str(priced_usd)),
+            unpriced_input_tokens=int(unpriced_in or 0),
+            unpriced_output_tokens=int(unpriced_out or 0),
+            rows=int(count or 0),
+        )

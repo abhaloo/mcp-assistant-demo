@@ -1,0 +1,17 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "journey",
+  "run_id": "eea4198237714f549dd6266659c322f3",
+  "case_id": "CQ1",
+  "mode": "journey",
+  "role": "admin",
+  "question": "Which month of 2025 had our highest invoiced revenue in TZS, and list the invoices from that month.",
+  "outcome_type": "unsupported",
+  "mismatches": [
+    "refusal_missing_dependency"
+  ],
+  "reason": "Branch (a) refusal with the right chip (the month alone), but the text 'the business records lookup couldn't answer both parts together' does not say the list needs the month. Run 3 says it ('the invoice-list question depends on first identifying the month'). Same 1/3 as Wave I.",
+  "evidence": "docs/superpowers/evidence/2026-10-01-luna6-e2e/scripted/cq-1.json; docs/superpowers/evidence/2026-10-01-luna6-e2e/grades-luna6.json"
+}

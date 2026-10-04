@@ -1,0 +1,17 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "journey",
+  "run_id": "34783ed6a5914ec9aff46304757ca6d5",
+  "case_id": "fu-e3",
+  "mode": "journey",
+  "role": "finance",
+  "question": "what are our latest orders",
+  "outcome_type": "answered",
+  "mismatches": [
+    "terminal_in"
+  ],
+  "reason": "terminal_in mismatch: expected unsupported, got answered/trusted with a free-text clarify ('Do you mean the latest sales orders or the latest purchase orders?') before any query (pilot run 2)",
+  "evidence": "docs/superpowers/evidence/2026-09-25-failure-recovery/waveG/ac6/pilot-fu_e3-2.json"
+}

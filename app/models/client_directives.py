@@ -25,7 +25,7 @@ class DisambiguationPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     term: str = Field(min_length=1, max_length=64, description="The ambiguous input phrase")
-    candidates: list[DisambiguationCandidate] = Field(min_length=2, max_length=5)
+    candidates: list[DisambiguationCandidate] = Field(min_length=2, max_length=3)
 
 
 class ClientAction(BaseModel):

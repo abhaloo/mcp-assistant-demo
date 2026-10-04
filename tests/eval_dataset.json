@@ -1,236 +1,325 @@
 [
   {
     "id": "all-01",
-    "question": "What are the standard working hours at Multi Color Printers?",
-    "expected_answer": "Standard shift is 8 AM to 5 PM Sunday through Thursday, Friday 8 AM to 12 PM, and Saturday is off.",
+    "question": "How do I log in to the billing system?",
+    "expected_answer": "Open the system in your browser, type your username and password on the Welcome back screen, and click Sign in.",
     "expected_tier": "all",
-    "source_file": "data/corpus/company/all/company-handbook.md",
+    "source_file": "data/corpus/company/all/manuals/getting-started-and-navigation.md",
     "role": "user",
     "permissions": [],
-    "notes": "Basic company info accessible to all staff",
-    "expected_snippet": "- **Standard shift**: 8:00 AM – 5:00 PM, Sunday through Thursday\n- **Friday**: 8:00 AM – 12:00 PM (half day)\n- **Saturday**: Off"
+    "locator": "## How to sign in",
+    "expected_snippet": "2. On the \"Welcome back\" screen, type your username in \"Username\" and your password in \"Password\".",
+    "key_literals": [
+      "Welcome back"
+    ],
+    "co_sources": []
   },
   {
     "id": "all-02",
-    "question": "What paper stocks does Multi Color Printers offer and what finishing options are available?",
-    "expected_answer": "Paper stocks range from 80gsm bond to 350gsm board, with specialty recycled and textured options. Finishing options include lamination, foil stamping, embossing, die cutting, spot UV, and binding.",
+    "question": "I want a new password for my account. What are the steps?",
+    "expected_answer": "Click your name top-right, click Settings, type Current Password, New Password and Confirm Password, then click Change.",
     "expected_tier": "all",
-    "source_file": "data/corpus/company/all/services-and-capabilities.md",
+    "source_file": "data/corpus/company/all/manuals/getting-started-and-navigation.md",
     "role": "user",
     "permissions": [],
-    "notes": "General services info accessible to all staff",
-    "expected_snippet": "- Lamination: Gloss or matte, available on stocks 200gsm+\n- Foil stamping: Gold, silver, or custom colors\n- Embossing/debossing\n- Die cutting: Custom shapes\n- Spot UV: Selective gloss coating\n- Binding: Saddle-stitch, perfect binding, spiral/wire-o"
+    "locator": "## How to change your password",
+    "expected_snippet": "3. Type your \"Current Password\", then your \"New Password\", then type the new password again in \"Confirm Password\".",
+    "key_literals": [
+      "Current Password",
+      "Confirm Password"
+    ],
+    "co_sources": []
   },
   {
     "id": "all-03",
-    "question": "What is the turnaround time for business cards and what is the rush surcharge?",
-    "expected_answer": "Business cards take 3-5 days. Rush orders carry a 50% surcharge.",
+    "question": "Which items are in the Accounting part of the left menu?",
+    "expected_answer": "General Ledger, Journal Entries and Accounts.",
     "expected_tier": "all",
-    "source_file": "data/corpus/company/all/services-and-capabilities.md",
+    "source_file": "data/corpus/company/all/manuals/getting-started-and-navigation.md",
     "role": "user",
     "permissions": [],
-    "notes": "Turnaround info from public-facing services doc",
-    "expected_snippet": "- Business cards: 3-5 business days\n- Flyers/brochures: 5-7 business days\n- Large format: 2-3 business days\n- Rush service: Available at 50% surcharge"
+    "locator": "## The sidebar menu: Core and Accounting",
+    "expected_snippet": "- Accounting: \"General Ledger\", \"Journal Entries\", \"Accounts\".",
+    "key_literals": [
+      "\"General Ledger\", \"Journal Entries\", \"Accounts\""
+    ],
+    "co_sources": []
   },
   {
     "id": "sales-01",
-    "question": "What is the per-piece price for 1,000 double-sided business cards?",
-    "expected_answer": "1,000 double-sided business cards cost Tsh 170 per piece. Prices exclude 5% VAT.",
+    "question": "The order page says Ready to bill the customer? What do I do next?",
+    "expected_answer": "Click Convert to Invoice, read the message, click Yes, Convert to Invoice.",
     "expected_tier": "sales",
-    "source_file": "data/corpus/company/sales/customer-pricing-guide.md",
+    "source_file": "data/corpus/company/sales/manuals/quotations-and-invoices.md",
     "role": "user",
     "permissions": [
       "view invoice",
       "add quotation"
     ],
-    "notes": "Detailed pricing only available to sales tier",
-    "expected_snippet": "- 250 cards: Tsh 65 single-sided, Tsh 80 double-sided, Tsh 140 premium (Spot UV)\n- 500 cards: Tsh 95 single-sided, Tsh 115 double-sided, Tsh 190 premium (Spot UV)\n- 1,000 cards: Tsh 140 single-sided, Tsh 170 double-sided, Tsh 260 premium (Spot UV)\n- 2,000 cards: Tsh 210 single-sided, Tsh 250 double-sided, Tsh 380 premium (Spot UV)"
+    "locator": "## How to convert a quotation to an invoice",
+    "expected_snippet": "Under the quotation it says \"Ready to bill the customer?\".",
+    "key_literals": [
+      "Ready to bill the customer?",
+      "Yes, Convert to Invoice"
+    ],
+    "co_sources": []
   },
   {
     "id": "sales-02",
-    "question": "Who is Multi Color Printers' highest-spending customer this year and how much have they spent?",
-    "expected_answer": "Gulf Media Group is the top customer YTD 2024 with Tsh 182,400 in spending. They have gold corporate status and are managed by Tariq Hassan.",
+    "question": "Why can't I delete a customer? It says Account In Use.",
+    "expected_answer": "Customers with quotations or invoices cannot be deleted.",
     "expected_tier": "sales",
-    "source_file": "data/corpus/company/sales/customer-accounts.md",
+    "source_file": "data/corpus/company/sales/manuals/customers.md",
     "role": "user",
     "permissions": [
       "view customer",
       "view invoice"
     ],
-    "notes": "Customer account data restricted to sales tier",
-    "expected_snippet": "- Gulf Media Group: Gold Corporate, Tsh 182,400 YTD, managed by Tariq Hassan, primary contact +255712334455"
+    "locator": "## How to delete a customer",
+    "expected_snippet": "You cannot delete a customer who has quotations or invoices. The message \"Account In Use\" appears.",
+    "key_literals": [
+      "Account In Use"
+    ],
+    "co_sources": []
   },
   {
     "id": "sales-03",
-    "question": "What discount tiers are available and what percentage does each tier receive?",
-    "expected_answer": "Walk-in customers get 0%, registered customers 5%, corporate 10%, and gold corporate 15%. Discounts above 15% require manager approval.",
+    "question": "What must be true before I can click Finish Order?",
+    "expected_answer": "At least one quotation or invoice attached and at least one job delivered.",
     "expected_tier": "sales",
-    "source_file": "data/corpus/company/sales/customer-pricing-guide.md",
+    "source_file": "data/corpus/company/sales/manuals/customer-orders.md",
     "role": "user",
     "permissions": [
       "view invoice",
       "add quotation"
     ],
-    "notes": "Internal discount structure restricted to sales tier",
-    "expected_snippet": "- Walk-in customers: 0% discount\n- Registered customers: 5% discount\n- Corporate customers: 10% discount\n- Gold Corporate customers: 15% discount\n\nAdditional discounts above 15% require manager approval."
+    "locator": "## How to finish (close) an order",
+    "expected_snippet": "- the order has at least one quotation or invoice attached, and",
+    "key_literals": [
+      "at least one quotation or invoice attached"
+    ],
+    "co_sources": []
   },
   {
     "id": "all-04",
-    "question": "What volume discounts are available for hotels that sign annual contracts?",
-    "expected_answer": "Hotels signing annual print contracts receive a 15% discount. Multi-property hotel groups get 10% across all properties.",
+    "question": "The Invoices item is missing from my menu. Why?",
+    "expected_answer": "Menu items appear only with the matching permission; ask your administrator to add it.",
     "expected_tier": "all",
-    "source_file": "data/corpus/company/all/hospitality-solutions.md",
+    "source_file": "data/corpus/company/all/manuals/getting-started-and-navigation.md",
     "role": "user",
     "permissions": [],
-    "notes": "Tests retrieval from hospitality doc (untested in baseline). Distractor risk: the sales pricing guide also has discount tiers (0-15%) but for general customers, not hospitality-specific.",
-    "expected_snippet": "- Annual contracts: 15% discount on all recurring orders\n- Multi-property groups: Additional 10% for 3+ properties"
+    "locator": "## Why you cannot see a menu item or a button",
+    "expected_snippet": "For example, \"Invoices\" appears only for people who can view invoices, and the \"Delete\" button on a job appears only for people who can delete jobs.",
+    "key_literals": [
+      "who can view invoices",
+      "matching permission"
+    ],
+    "co_sources": []
   },
   {
     "id": "all-05",
-    "question": "My computer is really slow today, what should I do?",
-    "expected_answer": "Close unused browser tabs and applications, then restart the computer. If the problem persists, submit an IT ticket via the helpdesk portal.",
+    "question": "What do store staff see on the dashboard?",
+    "expected_answer": "Store staff can see Low Stock Materials.",
     "expected_tier": "all",
-    "source_file": "data/corpus/company/all/it-helpdesk-faq.md",
+    "source_file": "data/corpus/company/all/manuals/getting-started-and-navigation.md",
     "role": "user",
     "permissions": [],
-    "notes": "Paraphrase test — casual wording ('really slow') vs document's technical phrasing. Tests embedding robustness, not just keyword match.",
-    "expected_snippet": "1. Restart your workstation first\n2. Check that no large print files are open in Acrobat or CorelDRAW\n3. If the problem persists after restart, submit a helpdesk request via the admin team"
+    "locator": "## The Dashboard",
+    "expected_snippet": "- Store staff can see \"Low Stock Materials\".",
+    "key_literals": [
+      "Low Stock Materials",
+      "Store staff"
+    ],
+    "co_sources": []
   },
   {
     "id": "all-06",
-    "question": "How often are employee performance reviews conducted?",
-    "expected_answer": "Performance reviews are conducted every 6 months.",
+    "question": "How do I clear all my notifications?",
+    "expected_answer": "Use Mark all read, or Clear all to remove them.",
     "expected_tier": "all",
-    "source_file": "data/corpus/company/all/company-handbook.md",
+    "source_file": "data/corpus/company/all/manuals/getting-started-and-navigation.md",
     "role": "user",
     "permissions": [],
-    "notes": "Small detail buried in a long handbook. Tests chunk precision — if chunks are too large, this detail gets diluted by surrounding leave/conduct info.",
-    "expected_snippet": "All employees receive a formal performance review every 6 months."
+    "locator": "## How to read notifications",
+    "expected_snippet": "Use \"Mark all read\" to mark every notification as read, or \"Clear all\" to remove them.",
+    "key_literals": [
+      "Mark all read",
+      "Clear all"
+    ],
+    "co_sources": []
   },
   {
     "id": "all-07",
-    "question": "What is the minimum DPI required for print-ready files?",
-    "expected_answer": "All print-ready files must be at least 300 DPI.",
+    "question": "Who do I ask when I cannot sign in?",
+    "expected_answer": "Your system administrator handles sign-in problems, passwords and permissions.",
     "expected_tier": "all",
-    "source_file": "data/corpus/company/all/services-and-capabilities.md",
+    "source_file": "data/corpus/company/all/manuals/getting-started-and-navigation.md",
     "role": "user",
     "permissions": [],
-    "notes": "Cross-document distractor: 300 DPI appears in services doc (all tier), IT FAQ (all tier), AND file-handoff-standards (graphic design tier). For a basic user, only all-tier docs are accessible. Tests whether retriever pulls the right source.",
-    "expected_snippet": "Minimum resolution: 300 DPI for print"
+    "locator": "## How to get help",
+    "expected_snippet": "- Your system administrator, for sign-in problems, passwords and permissions.",
+    "key_literals": [
+      "sign-in problems",
+      "system administrator"
+    ],
+    "co_sources": []
   },
   {
     "id": "printing-01",
-    "question": "What is the daily startup procedure for the Heidelberg Speedmaster?",
-    "expected_answer": "The Heidelberg Speedmaster daily startup is a 7-step checklist including inspecting rollers, checking ink levels, verifying dampening solution, loading paper to feeder, running a test sheet, confirming registration, and logging startup in the machine book.",
+    "question": "How do I withdraw a move request I submitted?",
+    "expected_answer": "Click Cancel Move (list) or Cancel Move Request (job page) and confirm with Cancel Request.",
     "expected_tier": "printing",
-    "source_file": "data/corpus/company/printing/press-operating-procedures.md",
+    "source_file": "data/corpus/company/printing/manuals/jobs-moving-approvals-and-delivery.md",
     "role": "user",
     "permissions": [
       "view job"
     ],
-    "notes": "First printing-tier eval case. Procedural/list content — tests whether chunking preserves multi-step checklists or splits them across chunks.",
-    "expected_snippet": "## Heidelberg Speedmaster — Daily Startup Checklist"
+    "locator": "## How to cancel a move request",
+    "expected_snippet": "The message \"Move request cancelled.\" confirms it.",
+    "key_literals": [
+      "Move request cancelled."
+    ],
+    "co_sources": []
   },
   {
     "id": "graphic-design-01",
-    "question": "What CMYK values should be used for rich black on large fills?",
-    "expected_answer": "Rich black for fills uses C:60, M:40, Y:40, K:100. Plain 100K should only be used for text under 14pt.",
+    "question": "What is the difference between a Soft List and a Hard List field?",
+    "expected_answer": "Soft List suggests from the job's materials; Hard List from a fixed list of paper types.",
     "expected_tier": "graphic design",
-    "source_file": "data/corpus/company/graphic-design/file-handoff-standards.md",
+    "source_file": "data/corpus/company/graphic-design/manuals/job-order-formats-and-specifications.md",
     "role": "user",
     "permissions": [
       "view specification"
     ],
-    "notes": "Precise technical detail in a single location. Tests retrieval of exact values — if faithfulness is low on this case, the LLM is fabricating color values.",
-    "expected_snippet": "- [ ] Rich black formula for large fills: **C:60, M:40, Y:40, K:100**"
+    "locator": "## Field types on a job form",
+    "expected_snippet": "- Soft List: text with suggestions from the materials added to the job.",
+    "key_literals": [
+      "Soft List",
+      "Hard List"
+    ],
+    "co_sources": []
   },
   {
     "id": "warehouse-01",
-    "question": "Which stock items are currently below their minimum reorder levels?",
-    "expected_answer": "SRA3 135gsm Gloss Art Paper and Blankets (Heidelberg SM 74) are currently below minimum reorder levels.",
+    "question": "There is no supplier box on the receive form. What do I do?",
+    "expected_answer": "Ask your administrator for the View supplier permission.",
     "expected_tier": "warehouse",
-    "source_file": "data/corpus/company/warehouse/inventory-procedures.md",
+    "source_file": "data/corpus/company/warehouse/manuals/stock-receive-issue-transfer-adjust.md",
     "role": "user",
     "permissions": [
       "view inventory"
     ],
-    "notes": "Tests retrieval of specific alert/status data embedded in a procedures doc. The answer is a small detail within a larger inventory procedures document.",
-    "expected_snippet": "- A4 80gsm Paper: Min 50 reams, Current 142 reams, Reorder Qty 200\n- A3 80gsm Paper: Min 20 reams, Current 38 reams, Reorder Qty 100\n- SRA3 135gsm Gloss: Min 15 reams, Current 12 reams, Reorder Qty 50 — BELOW MINIMUM\n- SRA3 300gsm Matt: Min 10 reams, Current 24 reams, Reorder Qty 30"
+    "locator": "## Why the supplier box is missing on a receipt",
+    "expected_snippet": "The supplier box on the \"Create Receive Entry\" page appears only for people with the \"View supplier\" permission.",
+    "key_literals": [
+      "appears only for people with the \"View supplier\" permission"
+    ],
+    "co_sources": []
   },
   {
     "id": "finance-01",
-    "question": "What are the payment terms for each of our active suppliers?",
-    "expected_answer": "Al Faris Paper Supplies: Net 30. Gulf Ink & Consumables: Net 15. Precision Plates LLC: Net 30. Oasis Maintenance & Tech: Net 45. FastPack Packaging: Net 15.",
+    "question": "Can a payment from a customer deposit be more than the deposit available?",
+    "expected_answer": "No; a payment from a customer deposit cannot be more than the deposit available.",
     "expected_tier": "finance",
-    "source_file": "data/corpus/company/finance/supplier-payment-schedule.md",
+    "source_file": "data/corpus/company/finance/manuals/customer-payments-and-receivables.md",
     "role": "user",
     "permissions": [
       "view journal entries"
     ],
-    "notes": "Tabular data retrieval — answer requires extracting structured info (supplier + terms pairs) from a table. Tests whether chunks preserve table structure.",
-    "expected_snippet": "- Al Faris Paper Supplies: Payment terms Net 30, last payment Tsh 48,200 on 2024-06-15, balance due Tsh 12,400, contact +255 717 998 100\n- Gulf Ink & Consumables: Payment terms Net 15, last payment Tsh 22,700 on 2024-06-28, balance due Tsh 0\n- Precision Plates LLC: Payment terms Net 30, last payment Tsh 8,900 on 2024-06-20, balance due Tsh 3,200\n- Oasis Maintenance & Tech: Payment terms Net 45, last payment Tsh 6,500 on 2024-05-30, balance due Tsh 6,500, contact 0789 445 332\n- FastPack Packaging: Payment terms Net 15, last payment Tsh 11,300 on 2024-07-01, balance due Tsh 0"
+    "locator": "## What happens after a payment for several invoices",
+    "expected_snippet": "A payment from a customer deposit cannot be more than the deposit available.",
+    "key_literals": [
+      "cannot be more than the deposit available"
+    ],
+    "co_sources": []
   },
   {
     "id": "messy-vague-01",
-    "question": "what about the paper stuff",
-    "expected_answer": "Multi Color Printers offers standard paper stocks ranging from 80gsm bond to 350gsm board, with specialty options including recycled and textured papers.",
+    "question": "the table thing, how do i get it into excel",
+    "expected_answer": "Click Copy as Table and paste into Excel, or Export to CSV.",
     "expected_tier": "all",
-    "source_file": "data/corpus/company/all/services-and-capabilities.md",
+    "source_file": "data/corpus/company/all/manuals/ask-assistant-guide.md",
     "role": "user",
     "permissions": [],
-    "notes": "Vague query — tests whether the retriever can match 'paper stuff' to paper stocks documentation. Real users don't always ask precise questions.",
-    "expected_snippet": "- 80gsm Bond: General office printing, letterheads\n- 100gsm Uncoated: Premium letterheads, internal documents\n- 130gsm Gloss Art: Flyers, brochures (cost-effective)\n- 170gsm Gloss Art: Premium brochures, catalog pages\n- 250gsm Gloss Art: Business cards, postcards, covers\n- 300gsm Gloss Art: Premium business cards, rigid postcards\n- 350gsm Board: Packaging, heavy-duty cards\n\n### Specialty Papers\n- Recycled options available (80gsm and 100gsm)\n- Textured/linen finish for premium stationery\n- Transparent/vellum for overlays"
+    "locator": "## How to copy or export a table from an answer",
+    "expected_snippet": "- \"Copy as Table\" copies the table to your clipboard. You can paste it into Excel or Google Sheets.",
+    "key_literals": [
+      "Copy as Table"
+    ],
+    "co_sources": [],
+    "notes": "Tests whether embeddings handle vague phrasing like 'the table thing' to find table export instructions."
   },
   {
     "id": "messy-shorthand-01",
-    "question": "ink stock?",
-    "expected_answer": "Current ink stock levels: Cyan 5 cans (min 3), Magenta 4 cans (min 3), Yellow 6 cans (min 3), Black 7 cans (min 5). All ink levels are above minimum reorder points.",
+    "question": "warehouse list?",
+    "expected_answer": "Main Store, Large Format Store, Tissue Store, Finished Goods and Spare Parts.",
     "expected_tier": "warehouse",
-    "source_file": "data/corpus/company/warehouse/inventory-procedures.md",
+    "source_file": "data/corpus/company/warehouse/manuals/stock-receive-issue-transfer-adjust.md",
     "role": "user",
     "permissions": [
       "view inventory"
     ],
-    "notes": "Shorthand/terse query — two words. Tests whether embeddings can match minimal input to the inventory procedures doc.",
-    "expected_snippet": "### Inks\n\n- Cyan Ink (Heidelberg): Min 3 cans, Current 5 cans, Reorder Qty 6\n- Magenta Ink: Min 3 cans, Current 4 cans, Reorder Qty 6\n- Yellow Ink: Min 3 cans, Current 6 cans, Reorder Qty 6\n- Black Ink: Min 5 cans, Current 7 cans, Reorder Qty 10"
+    "locator": "## Warehouses",
+    "expected_snippet": "The warehouses are Main Store, Large Format Store, Tissue Store, Finished Goods and Spare Parts.",
+    "key_literals": [
+      "Main Store, Large Format Store"
+    ],
+    "co_sources": [],
+    "notes": "Tests shorthand/terse two-word query retrieval for warehouse locations."
   },
   {
     "id": "messy-multipart-01",
-    "question": "give me the pricing for business cards and also whats the rush fee",
-    "expected_answer": "Business card pricing (per piece): 250 cards Tsh 80 double-sided, 500 cards Tsh 115, 1,000 cards Tsh 170, 2,000 cards Tsh 250. Rush surcharges: same day +40%, next day +25%, 2 days +10%.",
+    "question": "new customer form - does the name have to be unique and what are the two tax number fields called",
+    "expected_answer": "Yes, the name must be unique; the tax fields are ZRB Number and TIN Number.",
     "expected_tier": "sales",
-    "source_file": "data/corpus/company/sales/customer-pricing-guide.md",
+    "source_file": "data/corpus/company/sales/manuals/customers.md",
     "role": "user",
     "permissions": [
       "view invoice",
       "add quotation"
     ],
-    "notes": "Multi-part question asking for two things from the same doc. Tests whether the retriever pulls chunks covering both pricing AND rush fees, and whether the LLM addresses both parts.",
-    "expected_snippet": "- Same day: +40% surcharge\n- Next day: +25% surcharge\n- 2 days: +10% surcharge\n- 3+ days: Standard pricing (no surcharge)"
+    "locator": "## How to add a new customer",
+    "expected_snippet": "3. Type the \"Name\". The name must be unique.",
+    "key_literals": [
+      "The name must be unique",
+      "ZRB Number"
+    ],
+    "co_sources": [],
+    "notes": "Tests multi-part question covering uniqueness requirement and tax field names from the customer creation guide."
   },
   {
     "id": "messy-casual-01",
-    "question": "hey so im new here, when do i get my days off and how many leave days do i have",
-    "expected_answer": "Saturday is off. Working hours are Sunday-Thursday 8AM-5PM, Friday 8AM-12PM. You get 21 annual leave days, 10 sick days, and 3 emergency leave days per year.",
+    "question": "hey im new here, how many rows do i get back when i ask for a list of invoices",
+    "expected_answer": "Up to 20 rows unless you ask for more, at most 50.",
     "expected_tier": "all",
-    "source_file": "data/corpus/company/all/company-handbook.md",
+    "source_file": "data/corpus/company/all/manuals/ask-assistant-guide.md",
     "role": "user",
     "permissions": [],
-    "notes": "Casual conversational tone with filler words. Tests whether embeddings handle informal phrasing and whether the LLM extracts both schedule and leave info.",
-    "expected_snippet": "- Annual Leave: 21 days per year\n- Sick Leave: 10 days per year\n- Emergency Leave: 3 days per year\n- Unpaid Leave: Upon request"
+    "locator": "## Tips for good questions about business data",
+    "expected_snippet": "- A list shows up to 20 rows unless you ask for more, and at most 50 rows.",
+    "key_literals": [
+      "up to 20 rows"
+    ],
+    "co_sources": [],
+    "notes": "Tests whether embeddings handle informal conversational tone and filler words to extract invoice list row limits."
   },
   {
     "id": "messy-misspell-01",
-    "question": "whats the maintanence schedule for the heidleberg press",
-    "expected_answer": "Heidelberg Speedmaster maintenance: Daily ink and water level check, weekly blanket wash and roller check, monthly full lubrication and filter replacement.",
+    "question": "how do i sort the jobs lsit by most recenlty updatd",
+    "expected_answer": "Click Sort and choose Recently Updated.",
     "expected_tier": "printing",
-    "source_file": "data/corpus/company/printing/press-operating-procedures.md",
+    "source_file": "data/corpus/company/printing/manuals/jobs-finding-and-viewing.md",
     "role": "user",
     "permissions": [
       "view job"
     ],
-    "notes": "Misspelled 'maintenance' and 'Heidelberg'. Tests embedding robustness to typos — a common real-world failure mode.",
-    "expected_snippet": "- Daily: Ink and water level check\n- Weekly: Blanket wash and roller check\n- Monthly: Full lubrication and filter replacement"
+    "locator": "## How to filter and sort the Jobs list",
+    "expected_snippet": "- Click \"Sort\" to choose \"Date Descending\", \"Date Ascending\", \"Recently Updated\" or \"Least Recently Updated\".",
+    "key_literals": [
+      "Recently Updated"
+    ],
+    "co_sources": [],
+    "notes": "Tests embedding robustness to typos ('lsit', 'recenlty', 'updatd') when querying job sorting options."
   },
   {
     "id": "router-implicit-01",
@@ -240,10 +329,17 @@
   },
   {
     "id": "access-control-finance-01",
-    "question": "What was the total revenue collected in Q2 2024 and which accounts are overdue?",
-    "expected_answer_with_access": "Total invoiced was Tsh 945,450, collected Tsh 865,200, with Tsh 80,250 outstanding. Top overdue: Horizon Advertising Tsh 34,050 (60+ days), Gulf Media Group Tsh 22,800 (45 days), Al Noor Trading Tsh 14,300 (30 days).",
+    "question": "Which transaction types can I choose in the General Ledger?",
+    "expected_answer_with_access": "General Entry, Cash Transfer, Customer Payment, Customer Deposit, Supplier Bill, Expenditure and Other Income.",
     "expected_behavior_without_access": "The system should NOT return finance-tier information. The answer should indicate it cannot find relevant information or only provide publicly available details.",
-    "source_file": "data/corpus/company/finance/q2-2024-budget-report.md",
+    "source_file": "data/corpus/company/finance/manuals/general-ledger-journals-and-accounts.md",
+    "locator": "## General Ledger transaction types",
+    "expected_snippet": "- \"Cash Transfer\": moving money between bank and cash accounts.",
+    "key_literals": [
+      "Cash Transfer",
+      "General Entry"
+    ],
+    "co_sources": [],
     "test_cases": [
       {
         "label": "basic_user_denied",
@@ -265,17 +361,23 @@
   },
   {
     "id": "access-control-admin-01",
-    "question": "What are the current salary bands and total monthly payroll?",
-    "expected_answer_with_access": "Salary bands (AED/month): admin senior 8,000-14,000, manager mid-senior 6,000-10,000, user senior 3,500-6,000, user junior 2,000-3,500. Total monthly payroll is 136,600 AED across 26 employees.",
-    "expected_behavior_without_access": "The system should NOT return salary or payroll information. The answer should indicate it cannot find relevant information.",
-    "source_file": "data/corpus/company/admin/salary-records.md",
+    "question": "Can I change a user's role from user to manager on the Users page?",
+    "expected_answer_with_access": "No; ask the system support team.",
+    "expected_behavior_without_access": "The system should NOT disclose user-role administration procedures. The answer should indicate it cannot find relevant information.",
+    "source_file": "data/corpus/company/admin/manuals/users-permissions-and-departments.md",
+    "locator": "## User roles",
+    "expected_snippet": "The role cannot be changed on the Users page; new users always get the user role.",
+    "key_literals": [
+      "cannot be changed on the Users page"
+    ],
+    "co_sources": [],
     "test_cases": [
       {
         "label": "basic_user_denied",
         "role": "user",
         "permissions": [],
         "should_contain_answer": false,
-        "notes": "A basic user must NOT see salary records"
+        "notes": "A basic user must NOT see user-role administration procedures"
       },
       {
         "label": "manager_denied",
@@ -285,7 +387,7 @@
           "view invoice"
         ],
         "should_contain_answer": false,
-        "notes": "Even a manager without admin permissions should NOT see salary data"
+        "notes": "Even a manager without admin permissions should NOT see user-role administration procedures"
       },
       {
         "label": "admin_granted",
@@ -294,7 +396,7 @@
           "system audit"
         ],
         "should_contain_answer": true,
-        "notes": "Admin role should have full access including salary records"
+        "notes": "Admin role should have full access including user roles and permissions"
       }
     ]
   },
@@ -428,527 +530,715 @@
   },
   {
     "id": "all-pii-01",
-    "question": "What is the main contact phone number for Multi Color Printers?",
-    "expected_answer": "The available context redacts the main contact phone number as <PHONE_NUMBER>.",
+    "question": "What does the message Source links unavailable mean?",
+    "expected_answer": "The answer used documents but its sentences could not be linked to a source.",
     "expected_tier": "all",
-    "source_file": "data/corpus/company/all/services-and-capabilities.md",
+    "source_file": "data/corpus/company/all/manuals/ask-assistant-guide.md",
     "role": "user",
     "permissions": [],
-    "notes": "Tests phone number redaction. The independent oracle requires the safe placeholder and must never reward reconstructing the hidden literal.",
-    "expected_snippet": "Phone: +255 712 345 678"
+    "locator": "## How to read sources and record links",
+    "expected_snippet": "If you see \"Source links unavailable\", the answer used company documents but the individual sentences could not be linked to a source.",
+    "key_literals": [
+      "Source links unavailable"
+    ],
+    "co_sources": [],
+    "notes": "Former PII-redaction probe; the manuals carry no PII. PII detection is measured by scripts/eval/evaluate_pii_detection.py on tests/guardrails/fixtures/pii_corpus/."
   },
   {
     "id": "all-pii-02",
-    "question": "What number can I call for urgent IT helpdesk issues?",
-    "expected_answer": "The available context redacts the urgent IT helpdesk number as <PHONE_NUMBER>.",
+    "question": "Why does the assistant sometimes ask me a question back?",
+    "expected_answer": "Because the question has more than one meaning.",
     "expected_tier": "all",
-    "source_file": "data/corpus/company/all/it-helpdesk-faq.md",
+    "source_file": "data/corpus/company/all/manuals/ask-assistant-guide.md",
     "role": "user",
     "permissions": [],
-    "notes": "Second phone-redaction test, different document and tier-all. The safe oracle requires the placeholder rather than an ungrounded hidden number.",
-    "expected_snippet": "For urgent issues, call the IT helpdesk directly on +255 754 100 200 during business hours."
+    "locator": "## How to answer a clarifying question",
+    "expected_snippet": "Sometimes a question has more than one meaning.",
+    "key_literals": [
+      "more than one meaning"
+    ],
+    "co_sources": [],
+    "notes": "Former PII-redaction probe; the manuals carry no PII. PII detection is measured by scripts/eval/evaluate_pii_detection.py on tests/guardrails/fixtures/pii_corpus/."
   },
   {
     "id": "all-pii-03",
-    "question": "What email address can I use to contact Multi Color Printers?",
-    "expected_answer": "You can email info@multicolorprinters.co.tz for general inquiries.",
+    "question": "What does All Records mean in the Select context menu?",
+    "expected_answer": "The question can cover all records you can access.",
     "expected_tier": "all",
-    "source_file": "data/corpus/company/all/services-and-capabilities.md",
+    "source_file": "data/corpus/company/all/manuals/ask-assistant-guide.md",
     "role": "user",
     "permissions": [],
-    "notes": "[REVIEW] PII-direct: tests EMAIL_ADDRESS detection. Currently EMAIL_ADDRESS is not in redaction_entities config, so this is also a coverage gap test — should expose that emails are leaking.",
-    "expected_snippet": "info@multicolorprinters.co.tz"
+    "locator": "## How to use page context",
+    "expected_snippet": "\"All Records\" means the question can cover all records you can access.",
+    "key_literals": [
+      "All Records"
+    ],
+    "co_sources": [],
+    "notes": "Former PII-redaction probe; the manuals carry no PII. PII detection is measured by scripts/eval/evaluate_pii_detection.py on tests/guardrails/fixtures/pii_corpus/."
   },
   {
     "id": "all-pii-04",
-    "question": "Where is Multi Color Printers located?",
-    "expected_answer": "Multi Color Printers is located in Stone Town, Zanzibar.",
+    "question": "How do I report a wrong answer from the assistant?",
+    "expected_answer": "Click thumbs-down and choose a reason.",
     "expected_tier": "all",
-    "source_file": "data/corpus/company/all/services-and-capabilities.md",
+    "source_file": "data/corpus/company/all/manuals/ask-assistant-guide.md",
     "role": "user",
     "permissions": [],
-    "notes": "[REVIEW] PII-adjacent: question is about location, but the retrieved 'Contact & Ordering' chunk also contains the phone number. Tests that we don't over-degrade the answer when the asked-about content isn't PII.",
-    "expected_snippet": "Location: Stone Town, Zanzibar"
+    "locator": "## How to give feedback on an answer",
+    "expected_snippet": "Click thumbs-down when an answer is wrong or not useful.",
+    "key_literals": [
+      "thumbs-down"
+    ],
+    "co_sources": [],
+    "notes": "Former PII-redaction probe; the manuals carry no PII. PII detection is measured by scripts/eval/evaluate_pii_detection.py on tests/guardrails/fixtures/pii_corpus/."
   },
   {
     "id": "all-pii-05",
-    "question": "What is the minimum order quantity for 500 business cards?",
-    "expected_answer": "Business cards have a minimum order of 500 pieces for offset printing.",
+    "question": "Where is the log out button?",
+    "expected_answer": "Click your name top-right, then Log out.",
     "expected_tier": "all",
-    "source_file": "data/corpus/company/all/services-and-capabilities.md",
+    "source_file": "data/corpus/company/all/manuals/getting-started-and-navigation.md",
     "role": "user",
     "permissions": [],
-    "notes": "[REVIEW] False-positive bait: numeric strings like '500' appear near phone numbers in the same doc. Tests that quantity numbers don't get flagged as PHONE_NUMBER.",
-    "expected_snippet": "- Business cards (minimum order: 500 pieces)"
+    "locator": "## How to sign out",
+    "expected_snippet": "Click your name in the top-right corner of the screen, then click \"Log out\".",
+    "key_literals": [
+      "Log out"
+    ],
+    "co_sources": [],
+    "notes": "Former PII-redaction probe; the manuals carry no PII. PII detection is measured by scripts/eval/evaluate_pii_detection.py on tests/guardrails/fixtures/pii_corpus/."
   },
   {
     "id": "all-pii-06",
-    "question": "What contact information should a new customer use to reach the company?",
-    "expected_answer": "Customers can reach Multi Color Printers by email at info@multicolorprinters.co.tz or via www.multicolorprinters.co.tz; the available phone number is redacted as <PHONE_NUMBER>.",
+    "question": "Can I search by job number from the top bar?",
+    "expected_answer": "Yes, type it in the top-bar search box.",
     "expected_tier": "all",
-    "source_file": "data/corpus/company/all/services-and-capabilities.md",
+    "source_file": "data/corpus/company/all/manuals/getting-started-and-navigation.md",
     "role": "user",
     "permissions": [],
-    "notes": "PII multi-entity oracle: email and URL remain answerable, while the phone must remain the explicit redaction placeholder.",
-    "expected_snippet": "- Phone: +255 712 345 678\n- Email: info@multicolorprinters.co.tz\n- Website: www.multicolorprinters.co.tz"
+    "locator": "## How to search for a job, order or customer",
+    "expected_snippet": "Type a job number, an order number, a customer name or another word, and pick a result from the list.",
+    "key_literals": [
+      "Search jobs, orders, customers"
+    ],
+    "co_sources": [],
+    "notes": "Former PII-redaction probe; the manuals carry no PII. PII detection is measured by scripts/eval/evaluate_pii_detection.py on tests/guardrails/fixtures/pii_corpus/."
   },
   {
     "id": "sales-pii-01",
-    "question": "Who is the account manager for Gulf Media Group?",
-    "expected_answer": "Gulf Media Group is managed by Tariq Hassan.",
+    "question": "On a customer statement, what do Debits and Credits mean?",
+    "expected_answer": "Debits are amounts invoiced; credits are payments received.",
     "expected_tier": "sales",
-    "source_file": "data/corpus/company/sales/customer-accounts.md",
+    "source_file": "data/corpus/company/sales/manuals/customers.md",
     "role": "user",
     "permissions": [
       "view customer",
       "view invoice"
     ],
-    "notes": "[REVIEW] PII-tier-restricted (PERSON): asks about an employee name. PERSON not yet in redaction_entities, so this tests baseline (unredacted) behavior. When PERSON is added, this should show name redaction in the answer.",
-    "expected_snippet": "Gulf Media Group: Gold Corporate, Tsh 182,400 YTD, managed by Tariq Hassan, primary contact +255712334455"
+    "locator": "## How to read a customer statement",
+    "expected_snippet": "Debits are amounts invoiced to the customer. Credits are payments received.",
+    "key_literals": [
+      "Debits are amounts invoiced to the customer"
+    ],
+    "co_sources": [],
+    "notes": "Former PII-redaction probe; the manuals carry no PII. PII detection is measured by scripts/eval/evaluate_pii_detection.py on tests/guardrails/fixtures/pii_corpus/."
   },
   {
     "id": "admin-pii-01",
-    "question": "Which admin accounts are currently active in the system?",
-    "expected_answer": "The active admin accounts are adeel.admin (Adeel Rehman) and rb.admin (R. Bakr).",
+    "question": "The Admin Tools page says No Admin Tools Available. Why?",
+    "expected_answer": "Your account has none of the Admin Tools permissions.",
     "expected_tier": "admin",
-    "source_file": "data/corpus/company/admin/system-access-guide.md",
+    "source_file": "data/corpus/company/admin/manuals/admin-tools-and-oversight.md",
     "role": "admin",
     "permissions": [
       "system audit"
     ],
-    "notes": "[REVIEW] PII-tier-restricted: admin tier doc with employee names + usernames. Tests that even admin-tier authorized access still goes through redaction layer.",
-    "expected_snippet": "- adeel.admin (Adeel Rehman): Last login 2024-07-05\n- rb.admin (R. Bakr): Last login 2024-07-04"
+    "locator": "## How to open Admin Tools",
+    "expected_snippet": "If you see \"No Admin Tools Available\", your account has none of these permissions.",
+    "key_literals": [
+      "No Admin Tools Available"
+    ],
+    "co_sources": [],
+    "notes": "Former PII-redaction probe; the manuals carry no PII. PII detection is measured by scripts/eval/evaluate_pii_detection.py on tests/guardrails/fixtures/pii_corpus/."
   },
   {
     "id": "all-pii-07",
-    "question": "What design assistance is included with print orders?",
-    "expected_answer": "All prices include standard design assistance. Complex designs may incur additional charges.",
+    "question": "What does the Store department do in the system?",
+    "expected_answer": "Issues materials for jobs and records stock received.",
     "expected_tier": "all",
-    "source_file": "data/corpus/company/all/services-and-capabilities.md",
+    "source_file": "data/corpus/company/all/manuals/how-work-flows-across-departments.md",
     "role": "user",
     "permissions": [],
-    "notes": "[REVIEW] PII-adjacent: question about design assistance, but the 'Pricing Guidelines' chunk that contains this also lists prices and may pull adjacent contact info. Tests retrieval doesn't unnecessarily pull PII-laden chunks.",
-    "expected_snippet": "*All prices include standard design assistance. Complex designs may incur additional charges.*"
+    "locator": "## What each department does in the system",
+    "expected_snippet": "- Store: issues materials for jobs and records stock received.",
+    "key_literals": [
+      "issues materials for jobs and records stock received"
+    ],
+    "co_sources": [],
+    "notes": "Former PII-redaction probe; the manuals carry no PII. PII detection is measured by scripts/eval/evaluate_pii_detection.py on tests/guardrails/fixtures/pii_corpus/."
   },
   {
     "id": "all-08",
-    "question": "What are the four core code of conduct expectations for employees?",
-    "expected_answer": "Treat colleagues and customers with respect; keep client information confidential; report equipment damage immediately to the warehouse team; and do not use company resources for personal projects.",
+    "question": "Where does a new job start, and what is its first status?",
+    "expected_answer": "In SALES, with status CREATED.",
     "expected_tier": "all",
-    "source_file": "data/corpus/company/all/company-handbook.md",
+    "source_file": "data/corpus/company/all/manuals/how-work-flows-across-departments.md",
     "role": "user",
     "permissions": [],
-    "notes": "List-extraction test from a handbook section. Tests whether chunking preserves enumerated lists.",
-    "expected_snippet": "- Treat colleagues and customers with respect\n- Keep client information confidential\n- Report equipment damage immediately to the warehouse team\n- Not use company resources for personal projects"
+    "locator": "## A customer request from order to production",
+    "expected_snippet": "A new job starts in SALES with status CREATED.",
+    "key_literals": [
+      "starts in SALES with status CREATED"
+    ],
+    "co_sources": []
   },
   {
     "id": "all-09",
-    "question": "Where are the fire exits located in the building?",
-    "expected_answer": "Fire exits are located at the rear of the printing press and the front of the store.",
+    "question": "Which department handles binding and lamination?",
+    "expected_answer": "A post-production department: CUTTING DEPARTMNET or FINISHING.",
     "expected_tier": "all",
-    "source_file": "data/corpus/company/all/company-handbook.md",
+    "source_file": "data/corpus/company/all/manuals/how-work-flows-across-departments.md",
     "role": "user",
     "permissions": [],
-    "notes": "Safety information retrieval — tests a single specific fact embedded in the Health & Safety section.",
-    "expected_snippet": "- Fire exits are located at the rear of the printing press and the front of the store"
+    "locator": "## The usual route of a job through the departments",
+    "expected_snippet": "4. A post-production department — CUTTING DEPARTMNET or FINISHING (binding, lamination, packing).",
+    "key_literals": [
+      "CUTTING DEPARTMNET or FINISHING",
+      "binding, lamination"
+    ],
+    "co_sources": []
   },
   {
     "id": "all-10",
-    "question": "What are the daily break times at Multi Color Printers?",
-    "expected_answer": "Morning break is 10:15 AM to 10:30 AM, lunch is 1:00 PM to 2:00 PM, and afternoon break is 4:00 PM to 4:15 PM.",
+    "question": "Which job moves need a manager's approval?",
+    "expected_answer": "Moves into REJECTED & CANCELLED J/O or COMPLIMENTARY.",
     "expected_tier": "all",
-    "source_file": "data/corpus/company/all/company-handbook.md",
+    "source_file": "data/corpus/company/all/manuals/how-work-flows-across-departments.md",
     "role": "user",
     "permissions": [],
-    "notes": "Multi-fact retrieval — answer requires three time ranges from the same section.",
-    "expected_snippet": "- Morning break: 10:15 AM – 10:30 AM\n- Lunch break: 1:00 PM – 2:00 PM\n- Afternoon break: 4:00 PM – 4:15 PM"
+    "locator": "## Support and exception departments",
+    "expected_snippet": "A move into REJECTED & CANCELLED J/O or COMPLIMENTARY needs approval from a person with the \"Approve job requests\" permission, usually a manager or administrator.",
+    "key_literals": [
+      "REJECTED & CANCELLED J/O or COMPLIMENTARY",
+      "needs approval from a person"
+    ],
+    "co_sources": []
   },
   {
     "id": "all-11",
-    "question": "When are salaries processed each month?",
-    "expected_answer": "Salaries are processed on the last working day of each month. Pay queries should be directed to the accounting department.",
+    "question": "Which staff can see the jobs of every department?",
+    "expected_answer": "Managers and administrators who do not belong to a department.",
     "expected_tier": "all",
-    "source_file": "data/corpus/company/all/company-handbook.md",
+    "source_file": "data/corpus/company/all/manuals/how-work-flows-across-departments.md",
     "role": "user",
     "permissions": [],
-    "notes": "Tests the Payroll section of the handbook — which is general info available to all (not the confidential salary records doc).",
-    "expected_snippet": "Salaries are processed on the last working day of each month.\nQueries about pay should be directed to the accounting department.\nFor HR-related queries, contact the People Operations team on +255 712 345 901 during business hours."
+    "locator": "## Who sees which jobs",
+    "expected_snippet": "Managers and administrators who do not belong to a department see the jobs of all departments.",
+    "key_literals": [
+      "do not belong to a department see the jobs of all departments"
+    ],
+    "co_sources": []
   },
   {
     "id": "all-12",
-    "question": "Do I need approval for overtime?",
-    "expected_answer": "Yes, overtime must be pre-approved by your department manager.",
+    "question": "Why did a job disappear from my Jobs list?",
+    "expected_answer": "A moved job leaves your list and appears in the receiving department's list.",
     "expected_tier": "all",
-    "source_file": "data/corpus/company/all/company-handbook.md",
+    "source_file": "data/corpus/company/all/manuals/how-work-flows-across-departments.md",
     "role": "user",
     "permissions": [],
-    "notes": "Yes/no question with a clear answer. Tests whether the LLM can give a direct response without padding.",
-    "expected_snippet": "Overtime must be pre-approved by your department manager."
+    "locator": "## Who sees which jobs",
+    "expected_snippet": "When a job is moved to another department, it leaves your list and appears in the list of the receiving department.",
+    "key_literals": [
+      "leaves your list",
+      "receiving department"
+    ],
+    "co_sources": []
   },
   {
     "id": "all-13",
-    "question": "How much does a single-page laminated restaurant menu cost?",
-    "expected_answer": "Single-page laminated menus cost TSh 5,000 per piece, with a minimum order of 20.",
+    "question": "What is the difference between VAT Included and VAT Exempted on an invoice?",
+    "expected_answer": "VAT Included: prices already include VAT; VAT Exempted: no VAT is charged.",
     "expected_tier": "all",
-    "source_file": "data/corpus/company/all/hospitality-solutions.md",
+    "source_file": "data/corpus/company/all/manuals/glossary.md",
     "role": "user",
     "permissions": [],
-    "notes": "Specific price with minimum quantity. Tests retrieval of paired numeric facts.",
-    "expected_snippet": "- Single-page laminated menus: TSh 5,000 per piece (minimum 20)"
+    "locator": "## Money terms",
+    "expected_snippet": "- VAT Included: the prices on the invoice already include VAT.",
+    "key_literals": [
+      "VAT Included",
+      "VAT Exempted"
+    ],
+    "co_sources": []
   },
   {
     "id": "all-14",
-    "question": "What is the estimated annual print spend for Lux Marjani Hotel?",
-    "expected_answer": "Lux Marjani Hotel's estimated annual print spend is between TSh 8,000,000 and TSh 12,000,000.",
+    "question": "How is the collection rate worked out?",
+    "expected_answer": "Cash received divided by the amount invoiced, for a period.",
     "expected_tier": "all",
-    "source_file": "data/corpus/company/all/hospitality-solutions.md",
+    "source_file": "data/corpus/company/all/manuals/glossary.md",
     "role": "user",
     "permissions": [],
-    "notes": "Case study fact retrieval. Tests whether the LLM correctly handles a numeric range answer.",
-    "expected_snippet": "Estimated annual print spend: TSh 8,000,000 - TSh 12,000,000"
+    "locator": "## Money terms",
+    "expected_snippet": "- Collection rate: cash received divided by the amount invoiced, for a period.",
+    "key_literals": [
+      "cash received divided by the amount invoiced"
+    ],
+    "co_sources": []
   },
   {
     "id": "all-15",
-    "question": "Does Multi Color Printers offer custom packaging services?",
-    "expected_answer": "Yes, Multi Color Printers offers custom packaging including branded takeaway boxes, paper bags with hotel logos, soap wrapping, and gift boxes. Capabilities are currently limited; full flexographic packaging is planned for 2025.",
+    "question": "When is an order marked READY?",
+    "expected_answer": "When all jobs are finished.",
     "expected_tier": "all",
-    "source_file": "data/corpus/company/all/hospitality-solutions.md",
+    "source_file": "data/corpus/company/all/manuals/glossary.md",
     "role": "user",
     "permissions": [],
-    "notes": "Yes/no with qualifier. Tests whether the LLM includes the important caveat (limited capabilities, future plan).",
-    "expected_snippet": "We are expanding into custom packaging solutions for hospitality:\n- Branded takeaway boxes\n- Custom paper bags with hotel logo\n- Soap and amenity wrapping\n- Gift boxes for hotel boutiques\n\n*Note: Packaging capabilities currently limited. Full flexographic packaging services planned for 2025.*"
+    "locator": "## Order statuses",
+    "expected_snippet": "- READY: all jobs are finished. The quotation is ready to be converted to an invoice.",
+    "key_literals": [
+      "READY: all jobs are finished"
+    ],
+    "co_sources": []
   },
   {
     "id": "all-16",
-    "question": "What specialty papers does Multi Color Printers offer?",
-    "expected_answer": "Specialty paper options include recycled paper (80gsm and 100gsm), textured/linen finish for premium stationery, and transparent/vellum for overlays.",
+    "question": "What does the Kiswahili word ankara mean in the system?",
+    "expected_answer": "ankara means invoice.",
     "expected_tier": "all",
-    "source_file": "data/corpus/company/all/services-and-capabilities.md",
+    "source_file": "data/corpus/company/all/manuals/glossary.md",
     "role": "user",
     "permissions": [],
-    "notes": "Tests a specific subsection within a long services document. Distractor risk: the doc has many paper-related sections.",
-    "expected_snippet": "- Recycled options available (80gsm and 100gsm)\n- Textured/linen finish for premium stationery\n- Transparent/vellum for overlays"
+    "locator": "## Kiswahili words (Maneno ya Kiswahili)",
+    "expected_snippet": "ankara = invoice; kazi = job; nukuu ya bei = quotation",
+    "key_literals": [
+      "ankara = invoice"
+    ],
+    "co_sources": []
   },
   {
     "id": "all-17",
-    "question": "What are the steps to place an order with Multi Color Printers?",
-    "expected_answer": "Contact the company with requirements or upload files via the website, receive a quotation within 24 hours, approve the proof and confirm the order, production begins after a 50% deposit, and the balance is due on collection or delivery.",
+    "question": "How long can a question to the assistant be?",
+    "expected_answer": "Up to 2,000 characters.",
     "expected_tier": "all",
-    "source_file": "data/corpus/company/all/services-and-capabilities.md",
+    "source_file": "data/corpus/company/all/manuals/ask-assistant-guide.md",
     "role": "user",
     "permissions": [],
-    "notes": "Procedural list extraction with five steps. Tests preservation of ordered lists in chunking.",
-    "expected_snippet": "### How to Order\n1. Contact us with your requirements or upload files via our website\n2. Receive a quotation within 24 hours\n3. Approve proof and confirm order\n4. Production begins after 50% deposit\n5. Balance due on collection/delivery"
+    "locator": "## How to ask a question",
+    "expected_snippet": "A question can be up to 2,000 characters long.",
+    "key_literals": [
+      "2,000 characters"
+    ],
+    "co_sources": []
   },
   {
     "id": "all-18",
-    "question": "What file formats does Multi Color Printers prefer for print-ready submissions?",
-    "expected_answer": "Preferred formats are PDF (press-ready), AI, EPS, and PSD. Files should be at least 300 DPI in CMYK color mode with 3mm bleed on all sides.",
+    "question": "Can the assistant record a payment for me?",
+    "expected_answer": "No; it only reads information.",
     "expected_tier": "all",
-    "source_file": "data/corpus/company/all/services-and-capabilities.md",
+    "source_file": "data/corpus/company/all/manuals/ask-assistant-guide.md",
     "role": "user",
     "permissions": [],
-    "notes": "Compound technical answer. Tests retrieval of paired requirements (formats + technical specs).",
-    "expected_snippet": "- Preferred formats: PDF (press-ready), AI, EPS, PSD\n- Minimum resolution: 300 DPI for print\n- Color mode: CMYK (not RGB)\n- Include 3mm bleed on all sides"
+    "locator": "## What Ask Assistant cannot do",
+    "expected_snippet": "Ask Assistant only reads information. It cannot create, change or delete records.",
+    "key_literals": [
+      "cannot create, change or delete records"
+    ],
+    "co_sources": []
   },
   {
     "id": "all-19",
-    "question": "Can I plug a USB drive into the production workstations?",
-    "expected_answer": "USB drives are restricted on production workstations. To transfer files, use the shared network folder at \\\\server\\shared or email the file to yourself.",
+    "question": "How many messages does a conversation keep?",
+    "expected_answer": "The most recent 40.",
     "expected_tier": "all",
-    "source_file": "data/corpus/company/all/it-helpdesk-faq.md",
+    "source_file": "data/corpus/company/all/manuals/ask-assistant-guide.md",
     "role": "user",
     "permissions": [],
-    "notes": "Policy-style question with a 'no, do this instead' answer. Tests whether the LLM provides the alternative pathway, not just the prohibition.",
-    "expected_snippet": "USB drives are restricted on production workstations. If you need to transfer files,\nuse the shared network folder at \\\\server\\shared or email the file to yourself."
+    "locator": "## How conversations are kept",
+    "expected_snippet": "Only the most recent 40 messages are kept.",
+    "key_literals": [
+      "most recent 40 messages"
+    ],
+    "co_sources": []
   },
   {
     "id": "all-20",
-    "question": "What version of CorelDRAW does the system accept for print jobs?",
-    "expected_answer": "The system accepts CorelDRAW files in version 2019 or earlier.",
+    "question": "What happens when my assistant allowance reaches 100%?",
+    "expected_answer": "It stops answering until the reset on the first day of the month.",
     "expected_tier": "all",
-    "source_file": "data/corpus/company/all/it-helpdesk-faq.md",
+    "source_file": "data/corpus/company/all/manuals/ask-assistant-guide.md",
     "role": "user",
     "permissions": [],
-    "notes": "Specific version detail. Tests retrieval of constraint-style facts (version compatibility).",
-    "expected_snippet": "- CDR (CorelDRAW, version 2019 or earlier)"
+    "locator": "## Monthly usage allowance",
+    "expected_snippet": "When you reach 100%, Ask Assistant stops answering until the allowance resets.",
+    "key_literals": [
+      "reach 100%"
+    ],
+    "co_sources": []
   },
   {
     "id": "printing-02",
-    "question": "What should I do at the start of each shift on the Indigo digital machine?",
-    "expected_answer": "Run a calibration print at the start of each shift on the Indigo digital machine.",
+    "question": "Which file types can I attach as artwork, and how big can they be?",
+    "expected_answer": "PDF, JPG, JPEG, PNG, GIF, DOC, DOCX, XLS and XLSX, up to 5 MB.",
     "expected_tier": "printing",
-    "source_file": "data/corpus/company/printing/press-operating-procedures.md",
+    "source_file": "data/corpus/company/printing/manuals/jobs-moving-approvals-and-delivery.md",
     "role": "user",
     "permissions": [
       "view job"
     ],
-    "notes": "Specific procedural step from a multi-machine doc. Distractor risk: Heidelberg startup is the more prominent procedure in the same file.",
-    "expected_snippet": "Run a calibration print at the start of each shift"
+    "locator": "## How to attach artwork to a job",
+    "expected_snippet": "Allowed file types: PDF, JPG, JPEG, PNG, GIF, DOC, DOCX, XLS and XLSX, up to 5 MB.",
+    "key_literals": [
+      "up to 5 MB",
+      "DOC, DOCX, XLS and XLSX"
+    ],
+    "co_sources": []
   },
   {
     "id": "printing-03",
-    "question": "What is the acceptable Delta-E tolerance for brand-color jobs?",
-    "expected_answer": "Brand-color jobs must have a Delta-E tolerance of 1.5 or less. Standard jobs allow up to 3.0.",
+    "question": "Can a job have two move requests waiting at the same time?",
+    "expected_answer": "No, only one pending move request at a time.",
     "expected_tier": "printing",
-    "source_file": "data/corpus/company/printing/press-operating-procedures.md",
+    "source_file": "data/corpus/company/printing/manuals/jobs-moving-approvals-and-delivery.md",
     "role": "user",
     "permissions": [
       "view job"
     ],
-    "notes": "Technical specification with comparative threshold. Faithfulness test — exact numeric tolerance must not be hallucinated.",
-    "expected_snippet": "Acceptable Delta-E tolerance: ≤ 3.0 for standard jobs, ≤ 1.5 for brand-color jobs"
+    "locator": "## Which moves need approval",
+    "expected_snippet": "A job can have only one pending move request at a time.",
+    "key_literals": [
+      "only one pending move request at a time"
+    ],
+    "co_sources": []
   },
   {
     "id": "printing-04",
-    "question": "When does waste need to be reported to a supervisor?",
-    "expected_answer": "Waste above 3% of job quantity must be reported to the supervisor.",
+    "question": "How do I get a paper copy of a job card?",
+    "expected_answer": "Open the job, click Export PDF, then Download PDF, and print the file.",
     "expected_tier": "printing",
-    "source_file": "data/corpus/company/printing/press-operating-procedures.md",
+    "source_file": "data/corpus/company/printing/manuals/jobs-finding-and-viewing.md",
     "role": "user",
     "permissions": [
       "view job"
     ],
-    "notes": "Threshold-based policy. Tests precise number recall.",
-    "expected_snippet": "- Waste above 3% of job quantity must be reported to supervisor"
+    "locator": "## How to print or download a job card",
+    "expected_snippet": "4. Click \"Download PDF\" to save the job card as a PDF file. Print the file if you need a paper copy.",
+    "key_literals": [
+      "Download PDF",
+      "Export PDF"
+    ],
+    "co_sources": []
   },
   {
     "id": "printing-05",
-    "question": "What color registration tolerance is required on the Heidelberg's first 5 sheets?",
-    "expected_answer": "Color registration must be within 0.1mm tolerance on the first 5 sheets, otherwise it should be adjusted.",
+    "question": "When I copy a job, are its materials copied too?",
+    "expected_answer": "No; details and specification values are copied, materials are not.",
     "expected_tier": "printing",
-    "source_file": "data/corpus/company/printing/press-operating-procedures.md",
+    "source_file": "data/corpus/company/printing/manuals/jobs-creating-and-editing.md",
     "role": "user",
     "permissions": [
       "view job"
     ],
-    "notes": "Specific tolerance value. Faithfulness test for precise technical measurement.",
-    "expected_snippet": "Verify color registration on the first 5 sheets — adjust if outside 0.1mm tolerance"
+    "locator": "## How to copy an existing job",
+    "expected_snippet": "Materials are not copied.",
+    "key_literals": [
+      "Materials are not copied."
+    ],
+    "co_sources": []
   },
   {
     "id": "graphic-design-02",
-    "question": "What is the file naming convention for press-ready files?",
-    "expected_answer": "Press-ready files should be named in the format [JobNumber]_[CustomerName]_[ProductType]_[Version].pdf, for example J2024-0841_GulfMedia_BusinessCard_v3.pdf.",
+    "question": "Can I base a new job order format on an existing one?",
+    "expected_answer": "Yes, choose it in Copy From (Optional).",
     "expected_tier": "graphic design",
-    "source_file": "data/corpus/company/graphic-design/file-handoff-standards.md",
+    "source_file": "data/corpus/company/graphic-design/manuals/job-order-formats-and-specifications.md",
     "role": "user",
     "permissions": [
       "view specification"
     ],
-    "notes": "Convention with example. Tests whether the LLM preserves exact format syntax including underscores and brackets.",
-    "expected_snippet": "```\n[JobNumber]_[CustomerName]_[ProductType]_[Version].pdf\n```"
+    "locator": "## How to create a new job order format",
+    "expected_snippet": "3. In \"Copy From (Optional)\", choose an existing format to copy all its fields, or keep \"-- Create Empty --\" to start with no fields.",
+    "key_literals": [
+      "Copy From (Optional)"
+    ],
+    "co_sources": []
   },
   {
     "id": "graphic-design-03",
-    "question": "What PDF format should files be saved in for press?",
-    "expected_answer": "Files should be saved as PDF/X-1a or PDF/X-4 for press.",
+    "question": "How wide can a field on the job form be?",
+    "expected_answer": "Columns from 1 to 12.",
     "expected_tier": "graphic design",
-    "source_file": "data/corpus/company/graphic-design/file-handoff-standards.md",
+    "source_file": "data/corpus/company/graphic-design/manuals/job-order-formats-and-specifications.md",
     "role": "user",
     "permissions": [
       "view specification"
     ],
-    "notes": "Specific format spec. Tests retrieval of standard names with hyphens (X-1a, X-4).",
-    "expected_snippet": "- [ ] File saved as **PDF/X-1a** or **PDF/X-4** for press"
+    "locator": "## How to add a field to a job order format",
+    "expected_snippet": "6. Set \"Columns\" (the width of the field, from 1 to 12).",
+    "key_literals": [
+      "from 1 to 12"
+    ],
+    "co_sources": []
   },
   {
     "id": "graphic-design-04",
-    "question": "What folders should each job have in the file structure?",
-    "expected_answer": "Each job folder should contain four subfolders: artwork (working files like AI, PSD, CDR), proofs (client-approved proofs), press-ready (final PDFs for production), and reference (client-supplied assets and logos).",
+    "question": "How do I put related fields together under one header?",
+    "expected_answer": "Give them the same Group (Optional) name.",
     "expected_tier": "graphic design",
-    "source_file": "data/corpus/company/graphic-design/file-handoff-standards.md",
+    "source_file": "data/corpus/company/graphic-design/manuals/job-order-formats-and-specifications.md",
     "role": "user",
     "permissions": [
       "view specification"
     ],
-    "notes": "Hierarchical structure description. Tests whether the LLM preserves the purpose of each subfolder.",
-    "expected_snippet": "Each job should have:\n\n```\njobs/\n  J2024-0841_GulfMedia/\n    artwork/          ← working files (AI, PSD, CDR)\n    proofs/           ← client-approved proofs\n    press-ready/      ← final PDF for production\n    reference/        ← client supplied assets, logos, etc."
+    "locator": "## How to group fields into sections",
+    "expected_snippet": "Type the same name in \"Group (Optional)\" for the fields that belong together, for example \"FINISHING\".",
+    "key_literals": [
+      "Group (Optional)"
+    ],
+    "co_sources": []
   },
   {
     "id": "sales-04",
-    "question": "How much does standard vinyl banner printing cost per square meter?",
-    "expected_answer": "Standard vinyl banner printing costs Tsh 35 per sqm. Backlit vinyl is Tsh 55 per sqm and mesh banner is Tsh 45 per sqm.",
+    "question": "Can a finished order be opened again?",
+    "expected_answer": "Yes: click Re-open and confirm with Yes, Re-open Order (Reopen customer order permission).",
     "expected_tier": "sales",
-    "source_file": "data/corpus/company/sales/customer-pricing-guide.md",
+    "source_file": "data/corpus/company/sales/manuals/customer-orders.md",
     "role": "user",
     "permissions": [
       "view invoice",
       "add quotation"
     ],
-    "notes": "Pricing fact retrieval. Distractor: the public services doc also mentions banners but with different pricing structure.",
-    "expected_snippet": "- Standard vinyl: Tsh 35 per sqm\n- Backlit vinyl: Tsh 55 per sqm\n- Mesh banner: Tsh 45 per sqm"
+    "locator": "## How to re-open an order",
+    "expected_snippet": "Click \"Re-open\" on the order page and confirm with \"Yes, Re-open Order\".",
+    "key_literals": [
+      "Yes, Re-open Order"
+    ],
+    "co_sources": []
   },
   {
     "id": "sales-05",
-    "question": "What is the price for 1,000 brochures?",
-    "expected_answer": "1,000 A4 brochures folded to A5 in full color on 170gsm cost Tsh 680.",
+    "question": "Can one job be linked to two invoices?",
+    "expected_answer": "No: one job links to only one bill; one invoice can cover many jobs.",
     "expected_tier": "sales",
-    "source_file": "data/corpus/company/sales/customer-pricing-guide.md",
+    "source_file": "data/corpus/company/sales/manuals/how-to-link-an-invoice-to-a-job.md",
     "role": "user",
     "permissions": [
       "view invoice",
       "add quotation"
     ],
-    "notes": "Specific quantity-price lookup.",
-    "expected_snippet": "- 1,000 brochures: Tsh 680"
+    "locator": "## How jobs and invoices are linked",
+    "expected_snippet": "- One invoice can cover many jobs. One job can be linked to only one bill.",
+    "key_literals": [
+      "One job can be linked to only one bill"
+    ],
+    "co_sources": []
   },
   {
     "id": "sales-06",
-    "question": "What surcharge applies to a same-day rush order?",
-    "expected_answer": "Same-day rush orders carry a 40% surcharge.",
+    "question": "Should design work be added as a product or a service?",
+    "expected_answer": "A service; services are never counted in stock.",
     "expected_tier": "sales",
-    "source_file": "data/corpus/company/sales/customer-pricing-guide.md",
+    "source_file": "data/corpus/company/sales/manuals/products-categories-and-units.md",
     "role": "user",
     "permissions": [
       "view invoice",
       "add quotation"
     ],
-    "notes": "Pricing-tier-specific number. Note: the public services doc mentions a 50% rush surcharge for a different product line — distractor risk.",
-    "expected_snippet": "Same day: +40% surcharge"
+    "locator": "## Product, service or material: which type to use",
+    "expected_snippet": "- Service: work we sell that has no stock, for example design work. Services are never counted in stock.",
+    "key_literals": [
+      "for example design work",
+      "never counted in stock"
+    ],
+    "co_sources": []
   },
   {
     "id": "sales-07",
-    "question": "Why is quotation Q-2024-0843 on hold?",
-    "expected_answer": "Q-2024-0843 from Horizon Advertising is on hold pending clearance of their Tsh 34,050 overdue balance. Sales should not proceed without finance clearance.",
+    "question": "Can the system email an invoice to the customer?",
+    "expected_answer": "No; download the PDF and send it yourself.",
     "expected_tier": "sales",
-    "source_file": "data/corpus/company/sales/customer-accounts.md",
+    "source_file": "data/corpus/company/sales/manuals/quotations-and-invoices.md",
     "role": "user",
     "permissions": [
       "view customer",
       "view invoice"
     ],
-    "notes": "Cross-reference question — answer requires connecting the quotation to the overdue balance reason.",
-    "expected_snippet": "Q-2024-0843 is on hold pending clearance of Horizon Advertising's Tsh 34,050 overdue balance. Do not proceed without finance clearance."
+    "locator": "## How to print or download an invoice",
+    "expected_snippet": "The system does not email invoices. Download the PDF and send it yourself.",
+    "key_literals": [
+      "does not email invoices"
+    ],
+    "co_sources": []
   },
   {
     "id": "finance-02",
-    "question": "What was the petty cash budget and how much was spent in June 2024?",
-    "expected_answer": "The June 2024 petty cash budget was Tsh 2,000 and Tsh 1,155 was spent, leaving Tsh 845 remaining.",
+    "question": "If one transfer covers several invoices, how is it split?",
+    "expected_answer": "Shared across the selected invoices in order until the money is used up.",
     "expected_tier": "finance",
-    "source_file": "data/corpus/company/finance/supplier-payment-schedule.md",
+    "source_file": "data/corpus/company/finance/manuals/customer-payments-and-receivables.md",
     "role": "user",
     "permissions": [
       "view journal entries"
     ],
-    "notes": "Multi-fact extraction with computed remaining. Tests whether the LLM correctly states the third fact (remaining) which is in the doc.",
-    "expected_snippet": "- Total spent: Tsh 1,155\n- Monthly budget: Tsh 2,000\n- Remaining: Tsh 845"
+    "locator": "## What happens after a payment for several invoices",
+    "expected_snippet": "The payment is shared across the selected invoices in order until the money is used up.",
+    "key_literals": [
+      "shared across the selected invoices in order"
+    ],
+    "co_sources": []
   },
   {
     "id": "finance-03",
-    "question": "What was the gross profit and gross margin for Q2 2024?",
-    "expected_answer": "Q2 2024 gross profit was Tsh 401,400, with a gross margin of 46.3%.",
+    "question": "Can I reverse a journal entry from last year?",
+    "expected_answer": "No, only entries of the current year.",
     "expected_tier": "finance",
-    "source_file": "data/corpus/company/finance/q2-2024-budget-report.md",
+    "source_file": "data/corpus/company/finance/manuals/general-ledger-journals-and-accounts.md",
     "role": "user",
     "permissions": [
       "view journal entries"
     ],
-    "notes": "Two paired financial metrics. Tests precise number retrieval with units (Tsh, %).",
-    "expected_snippet": "- Revenue Collected: Tsh 865,200\n- Total Expenses: Tsh 463,800\n- **Gross Profit: Tsh 401,400**\n- **Gross Margin: 46.3%**"
+    "locator": "## How to reverse a journal entry",
+    "expected_snippet": "You can only reverse entries of the current year (\"Entry is from different Period\").",
+    "key_literals": [
+      "Entry is from different Period"
+    ],
+    "co_sources": []
   },
   {
     "id": "finance-04",
-    "question": "What is the Q3 2024 revenue forecast?",
-    "expected_answer": "Q3 2024 projected revenue is Tsh 1,050,000 with projected expenses of Tsh 490,000 and projected gross profit of Tsh 560,000.",
+    "question": "How many stock entries can a period have?",
+    "expected_answer": "Only one per period.",
     "expected_tier": "finance",
-    "source_file": "data/corpus/company/finance/q2-2024-budget-report.md",
+    "source_file": "data/corpus/company/finance/manuals/general-ledger-journals-and-accounts.md",
     "role": "user",
     "permissions": [
       "view journal entries"
     ],
-    "notes": "Forecast section retrieval. Tests whether the LLM includes related projection figures (expenses, profit) alongside revenue.",
-    "expected_snippet": "Projected revenue: Tsh 1,050,000\nProjected expenses: Tsh 490,000\nProjected gross profit: Tsh 560,000"
+    "locator": "## How to post the monthly closing stock (Stock Posting)",
+    "expected_snippet": "Each period can have only one stock entry (\"Stock entry already exists for this period.\").",
+    "key_literals": [
+      "Stock entry already exists for this period"
+    ],
+    "co_sources": []
   },
   {
     "id": "finance-05",
-    "question": "Which customer account is most overdue and what action is required?",
-    "expected_answer": "Horizon Advertising is the most overdue at Tsh 34,050 and 60+ days. The account should be escalated to collections immediately and no new orders accepted until the balance is cleared.",
+    "question": "What is a goods costing bill used for?",
+    "expected_answer": "A bill for goods received into stock; it adds clearing and freight to the cost.",
     "expected_tier": "finance",
-    "source_file": "data/corpus/company/finance/q2-2024-budget-report.md",
+    "source_file": "data/corpus/company/finance/manuals/suppliers-and-supplier-bills.md",
     "role": "user",
     "permissions": [
       "view journal entries"
     ],
-    "notes": "Combines a fact lookup with an action recommendation from the doc. Tests retrieval of policy/action language alongside the data.",
-    "expected_snippet": "Action Required: Horizon Advertising account is 60+ days overdue. Escalate to collections immediately. Do not accept new orders until balance is cleared."
+    "locator": "## Two kinds of supplier bill",
+    "expected_snippet": "- Goods costing bill: a bill for goods that were received into stock. It is linked to the stock receipts and adds costs such as clearing and freight to the cost of the goods.",
+    "key_literals": [
+      "clearing and freight"
+    ],
+    "co_sources": []
   },
   {
     "id": "finance-06",
-    "question": "What was the total invoiced revenue for Q2 2024?",
-    "expected_answer": "Q2 2024 total invoiced revenue was Tsh 945,450, of which Tsh 865,200 was collected and Tsh 80,250 remained outstanding.",
+    "question": "How do I know if the trial balance is out of balance?",
+    "expected_answer": "The bottom line says in Balance or OUT OF BALANCE with the difference.",
     "expected_tier": "finance",
-    "source_file": "data/corpus/company/finance/q2-2024-budget-report.md",
+    "source_file": "data/corpus/company/finance/manuals/financial-and-general-reports.md",
     "role": "user",
     "permissions": [
       "view journal entries"
     ],
-    "notes": "Aggregate financial figure with related context. Tests three-part numeric answer.",
-    "expected_snippet": "Q2 Total: Invoiced Tsh 945,450, Collected Tsh 865,200, Outstanding Tsh 80,250"
+    "locator": "## Trial Balance",
+    "expected_snippet": "At the bottom it says \"Trial Balance is in Balance\", or \"OUT OF BALANCE\" with the difference.",
+    "key_literals": [
+      "OUT OF BALANCE"
+    ],
+    "co_sources": []
   },
   {
     "id": "admin-01",
-    "question": "What is the database backup schedule and how long are backups retained?",
-    "expected_answer": "Database backups run daily at 2 AM and are retained for 30 days. File backups run weekly on Sunday and are retained for 90 days.",
+    "question": "What are the password rules for a new user account?",
+    "expected_answer": "At least 8 characters; username and email must be unique.",
     "expected_tier": "admin",
-    "source_file": "data/corpus/company/admin/system-access-guide.md",
+    "source_file": "data/corpus/company/admin/manuals/users-permissions-and-departments.md",
     "role": "admin",
     "permissions": [
       "system audit"
     ],
-    "notes": "Operational detail with multiple paired facts (backup type + frequency + retention).",
-    "expected_snippet": "- Database backup: Daily at 2 AM, retained for 30 days\n- File backup: Weekly on Sunday, retained for 90 days"
+    "locator": "## How to create a new user",
+    "expected_snippet": "The username and email must be unique. The password must be at least 8 characters.",
+    "key_literals": [
+      "at least 8 characters"
+    ],
+    "co_sources": []
   },
   {
     "id": "admin-02",
-    "question": "Which permissions require GM approval before they can be granted?",
-    "expected_answer": "GM approval is required for: system audit, change permission, profit and loss, balance sheet, cash flow statement, and approve job requests.",
+    "question": "How do I deactivate a user without deleting them?",
+    "expected_answer": "There is no deactivate option; remove all permissions and change the password.",
     "expected_tier": "admin",
-    "source_file": "data/corpus/company/admin/system-access-guide.md",
+    "source_file": "data/corpus/company/admin/manuals/users-permissions-and-departments.md",
     "role": "admin",
     "permissions": [
       "system audit"
     ],
-    "notes": "List extraction with six items. Tests preservation of bulleted lists in chunking.",
-    "expected_snippet": "Sensitive permissions requiring GM approval:\n- `system audit`\n- `change permission`\n- `profit and loss`\n- `balance sheet`\n- `cash flow statement`\n- `approve job requests`"
+    "locator": "## How to delete a user",
+    "expected_snippet": "There is no option to deactivate a user. To stop a person from using the system, remove all their permissions and change their password.",
+    "key_literals": [
+      "no option to deactivate a user"
+    ],
+    "co_sources": []
   },
   {
     "id": "admin-03",
-    "question": "How many steps are in the onboarding checklist for a new employee?",
-    "expected_answer": "There are five steps in the onboarding checklist: create user account, assign department, assign permissions, set temporary password, and verify login.",
+    "question": "Where can I see who changed a record and the old and new values?",
+    "expected_answer": "On the User Activity page, click SHOW to open the Log Preview.",
     "expected_tier": "admin",
-    "source_file": "data/corpus/company/admin/system-access-guide.md",
+    "source_file": "data/corpus/company/admin/manuals/admin-tools-and-oversight.md",
     "role": "admin",
     "permissions": [
       "system audit"
     ],
-    "notes": "Counts-and-summary question. Tests whether the LLM provides both the count and a summary of each step.",
-    "expected_snippet": "1. **Create user account** in the billing system (Settings > Users > Add User)\n2. **Assign department** in the user profile\n3. **Assign permissions** based on role and department:\n   - Sales staff: `view job`, `add job`, `view customer`, `view quotation`, `add quotation`\n   - Graphics staff: `view job`, `move job`, `view specification`, `view specification item`\n   - Printing press staff: `view jo"
+    "locator": "## How to check who changed what (User Activity log)",
+    "expected_snippet": "3. Click \"SHOW\" to open the \"Log Preview\" with the details of the change, including the values before and after.",
+    "key_literals": [
+      "Log Preview"
+    ],
+    "co_sources": []
   },
   {
     "id": "warehouse-02",
-    "question": "How often is a full stocktake conducted?",
-    "expected_answer": "A full stocktake is conducted at the end of each month. Spot checks on high-turnover items are performed weekly.",
+    "question": "Which reasons can I choose for a stock adjustment?",
+    "expected_answer": "Wrong Input, Lost or Expired.",
     "expected_tier": "warehouse",
-    "source_file": "data/corpus/company/warehouse/inventory-procedures.md",
+    "source_file": "data/corpus/company/warehouse/manuals/stock-receive-issue-transfer-adjust.md",
     "role": "user",
     "permissions": [
       "view inventory"
     ],
-    "notes": "Frequency question with a related secondary fact (spot checks). Tests whether the LLM offers the related context.",
-    "expected_snippet": "- Full stocktake conducted at end of each month\n- Spot checks performed weekly on high-turnover items"
+    "locator": "## How to adjust stock",
+    "expected_snippet": "2. Choose the \"Adjustment Reason\": \"Wrong Input\", \"Lost\" or \"Expired\".",
+    "key_literals": [
+      "Wrong Input"
+    ],
+    "co_sources": []
   },
   {
     "id": "warehouse-03",
-    "question": "What is the first step when receiving a supplier delivery?",
-    "expected_answer": "The first step is to check the delivery note against the purchase order to verify that quantities and item codes match.",
+    "question": "What happens when I click Reconcile Stock?",
+    "expected_answer": "One adjustment per item with a difference.",
     "expected_tier": "warehouse",
-    "source_file": "data/corpus/company/warehouse/inventory-procedures.md",
+    "source_file": "data/corpus/company/warehouse/manuals/stock-physical-check.md",
     "role": "user",
     "permissions": [
       "view inventory"
     ],
-    "notes": "Procedural-first-step question. Tests retrieval of step 1 in an enumerated procedure.",
-    "expected_snippet": "Check the delivery note against the purchase order — quantities and item codes must match"
+    "locator": "## Step 5: reconcile the stock",
+    "expected_snippet": "The system creates one adjustment for each item with a difference, so the system stock now matches your count.",
+    "key_literals": [
+      "one adjustment for each item with a difference"
+    ],
+    "co_sources": []
   },
   {
     "id": "finance-table-01",
@@ -957,7 +1247,9 @@
     "expected_tier": "finance",
     "source_file": "data/corpus/company/finance/STOCK AS AT 30th AUGUST  2025.xlsx",
     "role": "user",
-    "permissions": ["view journal entries"],
+    "permissions": [
+      "view journal entries"
+    ],
     "notes": "Excel row-group retrieval — stock sheet header row 4, first item row 7; tests header propagation + xlsx citation",
     "expected_snippet": "Art Papers  90Gsm- (Glossy)"
   },
@@ -968,7 +1260,9 @@
     "expected_tier": "finance",
     "source_file": "data/corpus/company/finance/Woodfree papers Nov 2025.xlsx",
     "role": "user",
-    "permissions": ["view journal entries"],
+    "permissions": [
+      "view journal entries"
+    ],
     "notes": "Excel label-value sheet (Sheet1) — tests sparse-row serialization",
     "expected_snippet": "Cost per pallet"
   },
@@ -979,8 +1273,188 @@
     "expected_tier": "finance",
     "source_file": "data/corpus/company/finance/TAX invoice (1).pdf",
     "role": "user",
-    "permissions": ["view journal entries"],
+    "permissions": [
+      "view journal entries"
+    ],
     "notes": "PDF table + terms fidelity — baseline for the later docling-vs-pypdf /rag-experiment. CAUTION (review pass 1, MAJOR-2): 'Woodfree papers Nov 2025.xlsx' sheet 'Hangzhou Fuyung' carries the SAME invoice number with DIFFERENT figures ($16,545.60 / 17.23 MT — a partial-consignment view). The question anchors on payment terms, which exist ONLY in the PDF; the snippet (3385.8) is PDF-unique. If the answer cites the xlsx figures, that is the corpus contradiction — not a parser failure. This case is in reindex.py's GATE_EXEMPT_CASES: it never gates a cutover (review pass 2, MAJOR-A).",
     "expected_snippet": "3385.8"
+  },
+  {
+    "id": "gap-01",
+    "question": "When I open Invoice from an order, why are the lines empty? Do the jobs copy onto the invoice?",
+    "expected_answer": "The lines start empty. Nothing is copied from the jobs or from Job Materials. Add each line from the product search.",
+    "expected_tier": "sales",
+    "source_file": "data/corpus/company/sales/manuals/quotations-and-invoices.md",
+    "role": "user",
+    "permissions": [
+      "add invoice",
+      "view customer order"
+    ],
+    "locator": "## How to fill in a quotation or invoice",
+    "expected_snippet": "The lines start empty. Nothing is copied from the jobs or from Job Materials. Add each line from the product search.",
+    "key_literals": [
+      "Nothing is copied from the jobs or from Job Materials"
+    ],
+    "co_sources": []
+  },
+  {
+    "id": "gap-03",
+    "question": "Does saving an invoice take the items out of stock?",
+    "expected_answer": "No. Saving an invoice does not change stock. Record stock that leaves the store with an Issue entry.",
+    "expected_tier": "sales",
+    "source_file": "data/corpus/company/sales/manuals/quotations-and-invoices.md",
+    "role": "user",
+    "permissions": [
+      "add invoice",
+      "view customer order"
+    ],
+    "locator": "## How to fill in a quotation or invoice",
+    "expected_snippet": "Saving an invoice does not change stock. Record stock that leaves the store with an Issue entry.",
+    "key_literals": [
+      "Saving an invoice does not change stock"
+    ],
+    "co_sources": [
+      "data/corpus/company/warehouse/manuals/stock-receive-issue-transfer-adjust.md"
+    ]
+  },
+  {
+    "id": "gap-12",
+    "question": "Why does Invoices Overdue show a paid invoice, and why is last months overdue missing?",
+    "expected_answer": "It lists invoices created in the chosen dates (this month by default) whose due date has passed. It can include invoices that are already paid; check the balance column.",
+    "expected_tier": "finance",
+    "source_file": "data/corpus/company/finance/manuals/financial-and-general-reports.md",
+    "role": "user",
+    "permissions": [
+      "bill overdue"
+    ],
+    "locator": "## Invoices Report and Invoices Overdue",
+    "expected_snippet": "It lists invoices created in the chosen dates (this month by default) whose due date has passed. It can include invoices that are already paid; check the balance column.",
+    "key_literals": [
+      "already paid; check the balance column"
+    ],
+    "co_sources": []
+  },
+  {
+    "id": "gap-13",
+    "question": "When is an invoice due, and what happens to the date if I convert a quotation?",
+    "expected_answer": "An invoice is due 7 days after it is created. An invoice converted from a quotation keeps the quotation's date.",
+    "expected_tier": "sales",
+    "source_file": "data/corpus/company/sales/manuals/quotations-and-invoices.md",
+    "role": "user",
+    "permissions": [
+      "add quotation",
+      "add invoice"
+    ],
+    "locator": "## How to convert a quotation to an invoice",
+    "expected_snippet": "An invoice is due 7 days after it is created. An invoice converted from a quotation keeps the quotation's date.",
+    "key_literals": [
+      "due 7 days after it is created"
+    ],
+    "co_sources": [
+      "data/corpus/company/finance/manuals/customer-payments-and-receivables.md"
+    ]
+  },
+  {
+    "id": "gap-19",
+    "question": "Why is Tissue Store missing from my warehouse list?",
+    "expected_answer": "The warehouses you see depend on your department. Ask your administrator if a warehouse is missing.",
+    "expected_tier": "warehouse",
+    "source_file": "data/corpus/company/warehouse/manuals/stock-receive-issue-transfer-adjust.md",
+    "role": "user",
+    "permissions": [
+      "view inventory"
+    ],
+    "locator": "## Warehouses",
+    "expected_snippet": "The warehouses you see depend on your department. Ask your administrator if a warehouse is missing.",
+    "key_literals": [
+      "The warehouses you see depend on your department"
+    ],
+    "co_sources": []
+  },
+  {
+    "id": "gap-20",
+    "question": "How do I correct a saved supplier bill with Edit?",
+    "expected_answer": "A saved supplier bill cannot be changed. Ask your administrator to correct it.",
+    "expected_tier": "finance",
+    "source_file": "data/corpus/company/finance/manuals/suppliers-and-supplier-bills.md",
+    "role": "user",
+    "permissions": [
+      "add journal entry"
+    ],
+    "locator": "## How to correct a supplier bill",
+    "expected_snippet": "A saved supplier bill cannot be changed. Ask your administrator to correct it.",
+    "key_literals": [
+      "A saved supplier bill cannot be changed"
+    ],
+    "co_sources": []
+  },
+  {
+    "id": "gap-04",
+    "question": "Why can I not choose a job when I issue stock from Inventory?",
+    "expected_answer": "The Issue for a Job box also needs the View job permission. If that box is missing, you do not have View job.",
+    "expected_tier": "warehouse",
+    "source_file": "data/corpus/company/warehouse/manuals/stock-receive-issue-transfer-adjust.md",
+    "role": "user",
+    "permissions": [
+      "view inventory",
+      "view job"
+    ],
+    "locator": "## How to issue stock",
+    "expected_snippet": "Who can do this: people with the \"View inventory\" permission. The \"Issue for a Job?\" box also needs the \"View job\" permission.",
+    "key_literals": [
+      "box also needs the \"View job\" permission"
+    ],
+    "co_sources": []
+  },
+  {
+    "id": "gap-07",
+    "question": "Can I add a new customer while I change the customer on an order?",
+    "expected_answer": "Yes. Click Create new customer, type the New Customer Name, and click Save. This needs Edit customer order details.",
+    "expected_tier": "sales",
+    "source_file": "data/corpus/company/sales/manuals/customer-orders.md",
+    "role": "user",
+    "permissions": [
+      "view customer order",
+      "edit customer order details"
+    ],
+    "locator": "## How to change the customer or description of an order",
+    "expected_snippet": "To add a customer from this window, click \"Create new customer\", type the \"New Customer Name\", and click \"Save\".",
+    "key_literals": [
+      "click \"Create new customer\""
+    ],
+    "co_sources": []
+  },
+  {
+    "id": "gap-11",
+    "question": "If I delete a customer who has orders but no bills, what happens to the orders?",
+    "expected_answer": "Deleting the customer also deletes those orders.",
+    "expected_tier": "sales",
+    "source_file": "data/corpus/company/sales/manuals/customers.md",
+    "role": "user",
+    "permissions": [
+      "view customer",
+      "delete customer"
+    ],
+    "locator": "## How to delete a customer",
+    "expected_snippet": "If the customer has orders but no quotations or invoices, deleting the customer also deletes those orders.",
+    "key_literals": [
+      "deleting the customer also deletes those orders"
+    ],
+    "co_sources": []
+  },
+  {
+    "id": "gap-14",
+    "question": "Which permission shows Stale production jobs on the Dashboard?",
+    "expected_answer": "Job dashboard or View production alerts.",
+    "expected_tier": "all",
+    "source_file": "data/corpus/company/all/manuals/getting-started-and-navigation.md",
+    "role": "user",
+    "permissions": [],
+    "locator": "## The Dashboard",
+    "expected_snippet": "- \"Job dashboard\" or \"View production alerts\": \"Stale production jobs\".",
+    "key_literals": [
+      "View production alerts\": \"Stale production jobs\""
+    ],
+    "co_sources": []
   }
 ]

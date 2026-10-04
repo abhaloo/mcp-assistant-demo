@@ -22,6 +22,7 @@ from app.business_query.outcomes import (
     RecordDetail,
     RecordRef,
     ResultColumn,
+    RowIdentity,
     Unsupported,
 )
 from app.business_query.plan import plan_fingerprint
@@ -52,6 +53,8 @@ from app.business_query.seal.result_members import (
 from app.business_query.seal.result_members import (
     result_columns as result_columns,
 )
+from app.business_query.wire.request import BusinessQueryOwnerHint
+from app.rag.provenance.record_links import with_record_hrefs
 
 if TYPE_CHECKING:
     from app.business_query.seal.events import ExecutionEventStore
@@ -88,6 +91,20 @@ class UnsealedAdapterAnswer:
     record_refs: tuple[RecordRef, ...] = ()
     record_details: tuple[RecordDetail, ...] | list[RecordDetail] = ()
     failed_detail_families: tuple[str, ...] = ()
+    row_identity: RowIdentity | None = None
+    selections: tuple[UnsealedSelection, ...] = ()
+
+
+@dataclass(frozen=True)
+class UnsealedSelection:
+    """A time-group selection read in the same transaction as its answer.
+
+    ``scoped`` is the set's own scoped plan with its own answer id, so the selection
+    seals as a separate evidence event shown beside the rows.
+    """
+
+    scoped: ScopedPlan
+    answer: UnsealedAdapterAnswer
 
 
 def answered_from_unsealed(
@@ -96,13 +113,22 @@ def answered_from_unsealed(
     *,
     principal: Principal,
     bundle: DefinitionBundle,
+    owner_hint: BusinessQueryOwnerHint | None = None,
 ) -> Answered:
-    """Mint a compatibility receipt after the adapter returns unsealed facts."""
+    """Mint a compatibility receipt after the adapter returns unsealed facts.
+
+    Every ref leaves this seal with its href under the viewer's link grant,
+    whichever adapter produced it."""
+    from app.business_query.compile.pagination.plan_payload import derived_plan_payload
+
+    derived_payload = (
+        derived_plan_payload(scoped, original_question=None) if scoped.plan.derived_sets else None
+    )
     return Answered(
         answer_text=answer.answer_text,
         rows=answer.rows,
         total_row_count=answer.total_row_count,
-        record_refs=answer.record_refs,
+        record_refs=with_record_hrefs(answer.record_refs, answer.rows, bundle, principal),
         record_details=list(getattr(answer, "record_details", [])),
         failed_detail_families=answer.failed_detail_families,
         result_completeness=("partial" if answer.failed_detail_families else "complete"),
@@ -110,6 +136,9 @@ def answered_from_unsealed(
         columns=answer.evidence.result_columns,
         plan=scoped.plan,
         scope_fingerprint=scoped_plan_fingerprint(scoped),
+        derived_payload=derived_payload,
+        owner_hint=owner_hint,
+        row_identity=answer.row_identity,
         receipt=BusinessQueryReceipt(
             answer_query_id=uuid4().hex,
             bundle_hash=bundle.content_hash,
@@ -117,6 +146,12 @@ def answered_from_unsealed(
             plan_fingerprint=scoped_plan_fingerprint(scoped),
             row_count=len(answer.rows),
             executed_at=datetime.now(tz=UTC),
+        ),
+        companion_answered=tuple(
+            answered_from_unsealed(
+                selection.answer, selection.scoped, principal=principal, bundle=bundle
+            )
+            for selection in answer.selections
         ),
     )
 
@@ -248,6 +283,12 @@ async def seal_execution_answer(
     plan_store: Any | None = None,
     pagination_secret: str | None = None,
     mint_page_cursor: bool = True,
+    stored_plan_ttl_seconds: int = 14400,
+    original_question: str | None = None,
+    root_answer_query_id: str | None = None,
+    changes: tuple[str, ...] = (),
+    continuation_tier: Literal["patch", "planned", "fresh"] | None = "fresh",
+    owner_hint: BusinessQueryOwnerHint | None = None,
 ) -> Answered | Incomplete:
     facts = answer.evidence
     if (
@@ -256,10 +297,30 @@ async def seal_execution_answer(
         or facts.truncated != (facts.total_row_count > len(facts.result_rows))
     ):
         return Incomplete(reason_code="adapter_invalid")
+    sealed_selections: list[Answered] = []
+    for selection in answer.selections:
+        sealed_selection = await seal_execution_answer(
+            evidence_ports,
+            selection.answer,
+            scoped=selection.scoped,
+            principal=principal,
+            correlation_id=correlation_id,
+            evidence=evidence,
+            resolver_query_id=resolver_query_id,
+            step_timeout_seconds=step_timeout_seconds,
+            plan_store=None,
+            mint_page_cursor=False,
+            root_answer_query_id=root_answer_query_id,
+            continuation_tier=continuation_tier,
+        )
+        if not isinstance(sealed_selection, Answered):
+            return sealed_selection
+        sealed_selections.append(sealed_selection)
     answer_query_id = scoped.answer_query_id or answer_query_id_for(evidence.idempotency_key)
     try:
         event = BusinessQueryExecutionEvent.create(
             answer_query_id=answer_query_id,
+            root_answer_query_id=root_answer_query_id,
             project_id=evidence.project_id,
             adapter=facts.adapter,
             backend=facts.backend,
@@ -319,64 +380,89 @@ async def seal_execution_answer(
         return Incomplete(reason_code="evidence_unavailable")
 
     next_page_action: NextPageAction | None = None
-    if (
+    should_mint_cursor = (
         mint_page_cursor
         and facts.pageable
         and (facts.truncated or facts.total_row_count > len(answer.rows))
-        and plan_store is not None
-    ):
+        # A set plan is answered whole: the envelope writer for set plans is not wired,
+        # and a cursor without it would fail to store. Readers already accept versions 2 and 3.
+        and not scoped.plan.derived_sets
+    )
+    from app.business_query.compile.pagination.plan_payload import derived_plan_payload
+
+    derived_payload = (
+        derived_plan_payload(scoped, original_question=original_question)
+        if scoped.plan.derived_sets
+        else None
+    )
+    should_store_plan = plan_store is not None and (
+        scoped.plan.grain in ("entity_rows", "grouped") or should_mint_cursor
+    )
+    if should_store_plan:
         from app.business_query.compile.pagination import StoredPlan
+        from app.business_query.compile.pagination.scope_binding import ScopeBinding
         from app.business_query.seal.action_tokens import ResultPageCursor
 
-        if not pagination_secret:
+        if should_mint_cursor and not pagination_secret:
             raise ValueError("pagination_secret is required to mint a result page cursor")
-        secret = pagination_secret
-        expires_at = datetime.now(tz=UTC) + timedelta(minutes=15)
+        created_at = datetime.now(tz=UTC)
+        expires_at = created_at + timedelta(seconds=stored_plan_ttl_seconds)
+        binding = ScopeBinding.from_principal(
+            principal,
+            project_id=evidence.project_id,
+            bundle_hash=scoped.bundle_hash or "",
+        )
         stored = StoredPlan(
             answer_query_id=answer_query_id,
             plan=scoped.plan,
             # The scope-bound hash, because the page executor re-derives exactly this from
             # the stored row: a plan-only hash makes every cursor read as expired.
             plan_fingerprint=scoped_plan_fingerprint(scoped),
-            created_at=datetime.now(tz=UTC),
+            created_at=created_at,
             expires_at=expires_at,
             principal=str(principal.user_id),
             project_id=evidence.project_id,
             entity_id=principal.entity_id,
+            department_id=binding.department_id,
             bundle_hash=scoped.bundle_hash or "",
             policy_hash=principal.manifest_hash or "",
             total_row_count=facts.total_row_count,
             forced=scoped.forced,
             response_policy=scoped.response_policy,
+            original_question=original_question,
+            derived_payload=derived_payload,
+            owner_hint=owner_hint,
+            display_members_added=tuple(sorted(scoped.display_members_added)),
         )
         try:
             stored_row = await wait_for(
                 plan_store.save_plan(stored),
                 timeout=step_timeout_seconds,
             )
-            # Mint from the row that is actually stored, not from the local scope: an
-            # overlapping retry keeps the first row, and a cursor bound to anything else
-            # would fail closed as cursor_expired.
-            cursor = ResultPageCursor.mint(
-                principal=principal,
-                project_id=evidence.project_id,
-                policy_hash=stored_row.policy_hash or "",
-                bundle_hash=stored_row.bundle_hash or "",
-                answer_query_id=stored_row.answer_query_id,
-                plan_fingerprint=stored_row.plan_fingerprint,
-                page_size=len(answer.rows),
-                expires_at=stored_row.expires_at,
-                total_row_count=stored_row.total_row_count,
-                secret=secret,
-            )
-            next_page_action = NextPageAction(
-                cursor=cursor.encode(),
-                page_size=len(answer.rows),
-                expires_at=stored_row.expires_at,
-            )
+            if should_mint_cursor:
+                secret = pagination_secret
+                # Mint from the row that is actually stored, not from the local scope: an
+                # overlapping retry keeps the first row, and a cursor bound to anything else
+                # would fail closed as cursor_expired.
+                cursor = ResultPageCursor.mint(
+                    principal=principal,
+                    project_id=evidence.project_id,
+                    policy_hash=stored_row.policy_hash or "",
+                    bundle_hash=stored_row.bundle_hash or "",
+                    answer_query_id=stored_row.answer_query_id,
+                    plan_fingerprint=stored_row.plan_fingerprint,
+                    page_size=len(answer.rows),
+                    expires_at=stored_row.expires_at,
+                    total_row_count=stored_row.total_row_count,
+                    secret=secret,
+                )
+                next_page_action = NextPageAction(
+                    cursor=cursor.encode(),
+                    page_size=len(answer.rows),
+                    expires_at=stored_row.expires_at,
+                )
         except Exception as exc:
             logger.warning("plan store save failed: %s", exc)
-            return Incomplete(reason_code="evidence_unavailable")
 
     definition_hash, profile_hash = detail_receipt_hashes(
         getattr(answer, "record_details", []),
@@ -397,6 +483,9 @@ async def seal_execution_answer(
         next_page_action=next_page_action,
         plan=scoped.plan,
         scope_fingerprint=scoped_plan_fingerprint(scoped),
+        derived_payload=derived_payload,
+        owner_hint=owner_hint,
+        row_identity=answer.row_identity,
         receipt=BusinessQueryReceipt(
             answer_query_id=answer_query_id,
             bundle_hash=scoped.bundle_hash or "",
@@ -407,7 +496,11 @@ async def seal_execution_answer(
             resolver_query_id=resolver_query_id,
             definition_hash=definition_hash,
             profile_hash=profile_hash,
+            continuation_tier=continuation_tier,
+            changes=tuple(changes),
+            root_answer_query_id=root_answer_query_id,
         ),
+        companion_answered=tuple(sealed_selections),
     )
 
 
@@ -469,8 +562,11 @@ async def seal_page_execution_evidence(
             raise RuntimeError("execution event store returned a different id")
     except Exception as exc:
         logger.warning("page execution event append failed: %s", exc)
-        return Incomplete(reason_code="evidence_unavailable")
+    from app.business_query.compile.pagination.plan_payload import derived_plan_payload
 
+    derived_payload = (
+        derived_plan_payload(scoped, original_question=None) if scoped.plan.derived_sets else None
+    )
     return Answered(
         answer_text=answer.answer_text,
         rows=answer.rows,
@@ -480,6 +576,8 @@ async def seal_page_execution_evidence(
         columns=facts.result_columns,
         plan=scoped.plan,
         scope_fingerprint=scoped_plan_fingerprint(scoped),
+        derived_payload=derived_payload,
+        owner_hint=None,
         receipt=BusinessQueryReceipt(
             answer_query_id=answer_query_id,
             root_answer_query_id=plan_answer_query_id,
@@ -488,5 +586,7 @@ async def seal_page_execution_evidence(
             plan_fingerprint=scoped_plan_fingerprint(scoped),
             row_count=len(answer.rows),
             executed_at=facts.finished_at,
+            continuation_tier="fresh",
+            changes=(),
         ),
     )

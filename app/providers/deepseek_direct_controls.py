@@ -23,7 +23,7 @@ class DeepSeekDirectControls:
     """Wire-level DeepSeek Chat Completions constraints (thinking + reasoning_effort)."""
 
     thinking_enabled: bool
-    reasoning_effort: ReasoningEffortWire
+    reasoning_effort: ReasoningEffortWire | None = None
 
 
 class DeepSeekDirectSqlEstimandError(PolicyViolationError):
@@ -41,7 +41,9 @@ def normalize_deepseek_direct_effort(effort: str) -> ReasoningEffortWire:
 
 def build_deepseek_direct_extra(controls: DeepSeekDirectControls) -> dict:
     """Build ``extra_body`` for Chat Completions — no OpenRouter ``provider`` block."""
-    body: dict = {"reasoning_effort": controls.reasoning_effort}
-    if controls.thinking_enabled:
-        body["thinking"] = {"type": "enabled"}
+    if not controls.thinking_enabled:
+        return {"thinking": {"type": "disabled"}}
+    body: dict = {"thinking": {"type": "enabled"}}
+    if controls.reasoning_effort is not None:
+        body["reasoning_effort"] = controls.reasoning_effort
     return body

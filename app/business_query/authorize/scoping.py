@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 from collections import defaultdict, deque
 from datetime import date
 from typing import TYPE_CHECKING, Any, Literal
@@ -21,10 +22,14 @@ from app.business_query.plan import (
     canonical_plan_payload,
     local_plan_member_names,
 )
+from app.business_query.plan.derived_sets import SetMode
+from app.business_query.plan.time_groups import ResolvedTimeGroup
 from app.telemetry.spans import scope_stage_span
 
 if TYPE_CHECKING:
     from app.business_query.wire.request import BusinessQueryOwnerHint
+
+logger = logging.getLogger(__name__)
 
 _DENY_MESSAGE = "business query tools are currently unavailable"
 _MAX_JOIN_HOPS = 2
@@ -42,8 +47,9 @@ class ScopedDerivedSet(BaseModel):
 
     id: str
     key: str
-    mode: Literal["complete", "ranked"]
+    mode: SetMode
     scoped: ScopedPlan
+    resolved: ResolvedTimeGroup | None = None
 
 
 class ScopedPlan(BaseModel):
@@ -61,6 +67,9 @@ class ScopedPlan(BaseModel):
     # Minted by the module before adapter work so every SQL ledger row is
     # born joinable to the eventual public receipt.
     answer_query_id: str | None = None
+    # Key members auto-projected to serve as another column's look; consumed
+    # by the seal to mark those result columns role="display".
+    display_members_added: frozenset[str] = frozenset()
 
 
 ScopedDerivedSet.model_rebuild()
@@ -152,6 +161,26 @@ def raw_plan_fingerprint(
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
+def value_names_a_record(dim_type: str, val: str) -> bool:
+    """Whether a bound value can name one record through a member of this kind.
+
+    A number or boolean member takes only a value of its kind. A date or a month
+    is a period, never a record, so a time member binds nothing.
+    """
+    if dim_type == "time":
+        return False
+    if dim_type == "number":
+        try:
+            float(val)
+        except (ValueError, TypeError):
+            return False
+        else:
+            return True
+    if dim_type == "boolean":
+        return val.strip().lower() in {"true", "false", "1", "0"}
+    return True
+
+
 def apply_owner_hint_scope(
     scoped: ScopedPlan,
     owner_hint: BusinessQueryOwnerHint,
@@ -163,6 +192,9 @@ def apply_owner_hint_scope(
     planner output remains backend-neutral and contains no authorization
     predicates.  A hinted resource absent from the bundle or from
     ``scoped.resources`` raises ``PlanRefused(grain_unexpressible)``.
+    Every plan passes here: fresh, continued and restored. A bound value that
+    names no record through its member adds no predicate, so the plan keeps
+    only its own filters and period.
     """
 
     by_name = _resources_by_name(bundle)
@@ -185,6 +217,13 @@ def apply_owner_hint_scope(
         )
         if dimension is None:
             raise PlanRefused("grain_unexpressible", check_site="owner_hint_binding_unexpressible")
+        if not value_names_a_record(dimension.type, str(owner_hint.record_id)):
+            logger.info(
+                "binding dropped: value names no record member=%s kind=%s",
+                owner_hint.binding_member,
+                dimension.type,
+            )
+            return scoped
         owner_column = dimension.sql_expression
 
     owner_predicate = ForcedPredicate(
@@ -359,6 +398,7 @@ def _apply_role_scope_impl(
     bundle: DefinitionBundle,
     *,
     business_date: date | None = None,
+    earlier: tuple[ScopedDerivedSet, ...] = (),
 ) -> ScopedPlan:
     """Mandatory pre-compilation pass: visibility + declaration-driven forced preds."""
     visibility_violation = check_member_visibility(plan, principal, bundle)
@@ -393,39 +433,50 @@ def _apply_role_scope_impl(
             raise ScopeDenied()
         forced.extend(_forced_for_resource(binding, principal))
 
-    derived = tuple(
-        ScopedDerivedSet(
-            id=d.id,
-            key=d.key,
-            mode=d.mode,
-            scoped=_apply_role_scope_impl(
-                d.plan,
-                principal,
-                bundle,
-                business_date=business_date,
-            ),
+    derived: list[ScopedDerivedSet] = []
+    for item in plan.derived_sets:
+        # A set may filter by a set declared before it; those sets are in scope for
+        # its inner plan and the compiler resolves the reference through the same
+        # membership clause the answer plan uses.
+        inner_scoped = _apply_role_scope_impl(
+            item.plan,
+            principal,
+            bundle,
+            business_date=business_date,
+            earlier=tuple(derived),
         )
-        for d in plan.derived_sets
-    )
-
-    from app.business_query.authorize.set_keys import assert_set_key_compatible
-    from app.business_query.plan import PlanFilter, iter_filter_leaves
-
-    derived_by_id = {ds.id: ds for ds in derived}
-    for leaf in iter_filter_leaves(plan.filters):
-        if isinstance(leaf, PlanFilter) and leaf.operator in {"in_set", "not_in_set"}:
-            set_id = str(leaf.values[0])
-            ds = derived_by_id.get(set_id)
-            if ds is None:
-                raise ScopeDenied()
-            assert_set_key_compatible(leaf.member, ds, bundle)
+        derived.append(
+            ScopedDerivedSet(id=item.id, key=item.key, mode=item.mode, scoped=inner_scoped)
+        )
+    in_scope = (*earlier, *derived)
+    _assert_set_filters_compatible(plan, in_scope, bundle)
 
     return ScopedPlan(
         plan=plan,
         resources=resources,
         forced=tuple(forced),
-        derived=derived,
+        derived=in_scope,
         principal=principal,
         business_date=business_date,
         bundle_hash=bundle.content_hash,
     )
+
+
+def _assert_set_filters_compatible(
+    plan: BusinessQueryPlan,
+    derived: tuple[ScopedDerivedSet, ...],
+    bundle: DefinitionBundle,
+) -> None:
+    """Every in_set / not_in_set leaf names a set in scope with a compatible key."""
+    from app.business_query.authorize.set_keys import assert_set_key_compatible
+    from app.business_query.plan import PlanFilter, iter_filter_leaves
+
+    by_id = {item.id: item for item in derived}
+    for leaf in iter_filter_leaves(plan.filters):
+        if isinstance(leaf, PlanFilter) and leaf.operator in {"in_set", "not_in_set"}:
+            item = by_id.get(str(leaf.values[0]))
+            if item is None:
+                raise PlanRefused("member_not_found")
+            assert_set_key_compatible(
+                leaf.member, item, bundle, exclude=leaf.operator == "not_in_set"
+            )

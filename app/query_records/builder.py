@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -11,8 +12,11 @@ from app.pricing.pricer import price_tokens
 from app.query_records.content import prepare_question_columns, subject_digest
 from app.query_records.context import TerminalSnapshot
 from app.query_records.manifest_hash import manifest_hash
+from app.query_records.turn_content import TurnContent, turn_content_columns
 from app.query_records.types import QueryRecordData
 from app.telemetry.correlation import current_thread_id
+
+logger = logging.getLogger(__name__)
 
 
 def _resolve_manifest_hash() -> str | None:
@@ -128,6 +132,21 @@ def _timeout_flag(snapshot: TerminalSnapshot) -> bool | None:
     return None
 
 
+def _turn_content_columns(snapshot: TerminalSnapshot) -> dict[str, str | None]:
+    """The turn content columns; empty when the turn handed none.
+
+    A failure here never costs the terminal row: it keeps every other column.
+    """
+    content = snapshot.turn_content
+    if not isinstance(content, TurnContent):
+        return {}
+    try:
+        return turn_content_columns(content)
+    except Exception as exc:  # noqa: BLE001 - the content is optional; the terminal row is not
+        logger.warning("turn content not kept: %s", type(exc).__name__)
+        return {}
+
+
 def build_query_record(snapshot: TerminalSnapshot) -> QueryRecordData:
     """Map a terminal snapshot to an insert payload."""
     question_cols = prepare_question_columns(
@@ -140,12 +159,20 @@ def build_query_record(snapshot: TerminalSnapshot) -> QueryRecordData:
     if snapshot.prompt_version:
         prompt_versions = json.dumps({"router": snapshot.prompt_version})
 
+    # A turn whose usage was priced when it was filled (the ledger's rows, each
+    # under its own model) keeps that price, and a turn its filler judged unknown
+    # or partial keeps that judgement; only a snapshot with neither is priced
+    # here, from the one model the record column can name.
     priced = price_tokens(
         model=snapshot.model,
         input_tokens=snapshot.input_tokens,
         output_tokens=snapshot.output_tokens,
         reasoning_tokens=snapshot.reasoning_tokens,
+        cached_input_tokens=snapshot.cached_tokens,
     )
+    judged = snapshot.estimated_usd is not None or snapshot.cost_status in ("unknown", "partial")
+    estimated_usd = snapshot.estimated_usd if judged else priced.estimated_usd
+    cost_status = snapshot.cost_status if judged else priced.cost_status
 
     resolved_trace_json = _resolve_bq_trace_json(snapshot)
 
@@ -166,6 +193,9 @@ def build_query_record(snapshot: TerminalSnapshot) -> QueryRecordData:
         thread_id=current_thread_id(),
         citation_mode=None,
         subject_digest=subject_digest(str(snapshot.principal.user_id)),
+        entity_id=str(snapshot.principal.entity_id)
+        if snapshot.principal and snapshot.principal.entity_id is not None
+        else None,
         role_class=snapshot.principal.role,
         context_mode=snapshot.context_mode,
         requested_route=snapshot.requested_route,
@@ -179,9 +209,10 @@ def build_query_record(snapshot: TerminalSnapshot) -> QueryRecordData:
         provider=snapshot.provider,
         input_tokens=snapshot.input_tokens,
         output_tokens=snapshot.output_tokens,
+        cached_tokens=snapshot.cached_tokens,
         reasoning_tokens=snapshot.reasoning_tokens,
-        estimated_usd=priced.estimated_usd,
-        cost_status=priced.cost_status,
+        estimated_usd=estimated_usd,
+        cost_status=cost_status,
         price_table_version=priced.price_table_version,
         resolver_query_id=snapshot.resolver_query_id,
         resolver_disposition=snapshot.resolver_disposition,
@@ -191,4 +222,5 @@ def build_query_record(snapshot: TerminalSnapshot) -> QueryRecordData:
         ),
         timeout=_timeout_flag(snapshot),
         bq_trace_json=resolved_trace_json,
+        **_turn_content_columns(snapshot),
     )

@@ -1,9 +1,8 @@
 """Normalize source paths so eval cases and retrieved chunks compare apples-to-apples.
 
-Eval cases store `source_file` as project-relative `data/corpus/company/<tier>/<file>.md`.
-LangChain loaders typically put an absolute OS path in chunk metadata. We strip
-both to the last-two path components (e.g. `"all/company-handbook.md"`) and use
-that as the comparison key in retrieval metrics.
+Eval cases store `source_file` as `data/corpus/company/<tier>/manuals/<file>.md`.
+Loaders put an OS path in chunk metadata. Both sides strip to the last two path components
+(`manuals/<file>.md`), which is unique because manual basenames are unique.
 """
 
 from __future__ import annotations

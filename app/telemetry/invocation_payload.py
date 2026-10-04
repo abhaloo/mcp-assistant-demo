@@ -103,6 +103,28 @@ def get_recorded_evidence(correlation_id: str) -> list[Any]:
         return list(_recorded_evidence.get(correlation_id, []))
 
 
+async def evidence_records(correlation_id: str) -> Sequence[Any]:
+    """Every model invocation recorded for one correlation, read from the
+    durable ledger once it is configured (after flushing pending writes) and
+    from the in-process cache otherwise. An unreachable ledger raises
+    ``TerminalEvidenceError``: a turn is never priced or sealed from a source
+    that could not be read."""
+    # Deferred import: app.telemetry.invocation_ledger imports this module at
+    # module load time, so a top-level import here would be circular.
+    from app.telemetry import invocation_ledger
+
+    if not invocation_ledger.ledger_store_configured():
+        return get_recorded_evidence(correlation_id)
+    try:
+        await invocation_ledger.flush_ledger_writes()
+        return await invocation_ledger.query_durable_invocation_evidence(correlation_id)
+    except Exception as exc:
+        _logger.warning("durable evidence lookup failed: %s", type(exc).__name__)
+        raise TerminalEvidenceError(
+            f"durable evidence store unreachable for correlation {correlation_id}"
+        ) from None
+
+
 def clear_recorded_evidence_for_tests() -> None:
     """Clear recorded evidence map (used between test runs)."""
     with _evidence_lock:
@@ -300,24 +322,7 @@ async def require_terminal_evidence(
             f"deadline expired before terminal evidence could be verified for correlation {cid}"
         )
 
-    # Deferred import: app.telemetry.invocation_ledger imports this module at
-    # module load time, so a top-level import here would be circular.
-    from app.telemetry import invocation_ledger
-
-    records: Sequence[Any]
-    if invocation_ledger.ledger_store_configured():
-        try:
-            await invocation_ledger.flush_ledger_writes()
-            records = await invocation_ledger.query_durable_invocation_evidence(cid)
-        except Exception as exc:
-            _logger.warning(
-                "durable evidence lookup failed for terminal commit: %s", type(exc).__name__
-            )
-            raise TerminalEvidenceError(
-                f"durable evidence store unreachable for correlation {cid}"
-            ) from None
-    else:
-        records = get_recorded_evidence(cid)
+    records = await evidence_records(cid)
 
     if len(records) < expected_invocations.min_invocations:
         raise TerminalEvidenceError(

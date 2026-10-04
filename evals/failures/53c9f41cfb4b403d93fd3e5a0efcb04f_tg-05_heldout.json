@@ -1,0 +1,17 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "run_id": "53c9f41cfb4b403d93fd3e5a0efcb04f",
+  "case_id": "tg-05",
+  "query_type": "business_query",
+  "mode": "heldout",
+  "role": "admin",
+  "question": "For each customer, show the invoices from their best month.",
+  "outcome_type": "answered",
+  "mismatches": [
+    "clarified_instead_of_refused"
+  ],
+  "reason": "A per-group best period is outside the time-group shape and must stay unsupported. The coordinator asked what 'best month' means instead of refusing; no data was shown, so nothing false reached the person, but a reply could lead to a wrong per-customer answer.",
+  "evidence": "docs/superpowers/evidence/2026-10-02-cq1-composition/live/runs/heldout.jsonl"
+}

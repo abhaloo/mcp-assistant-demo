@@ -15,6 +15,7 @@ from app.business_query.plan.attempts import (
     PlannerRawShapeClass,
     PlannerValidationResult,
 )
+from app.business_query.plan.dialogue import DialogueTurn, render_dialogue_turn
 from app.business_query.plan.planner_prompt import (
     _JSON_OBJECT_PROTOCOL_ADJUNCT,
     build_planner_prompt,
@@ -72,11 +73,14 @@ def assemble_planner_prompt(
     *,
     business_date: date | None = None,
     add_json_object_protocol: bool = False,
-    dialogue: Sequence[tuple[Literal["ai", "human"], str]] | None = None,
+    dialogue: Sequence[DialogueTurn | tuple[Literal["ai", "human"], str]] | None = None,
     clarification_exchange: tuple[str, str] | None = None,
+    card_in_system: bool = False,
 ) -> list[BaseMessage]:
     prompt: list[BaseMessage] = list(
-        build_planner_prompt(question, card, business_date=business_date)
+        build_planner_prompt(
+            question, card, business_date=business_date, card_in_system=card_in_system
+        )
     )
     if add_json_object_protocol:
         prompt = [
@@ -89,7 +93,8 @@ def assemble_planner_prompt(
     # the question makes the model re-plan the earlier exchange.
     if dialogue is not None:
         dialogue_messages: list[BaseMessage] = []
-        for role, text in dialogue:
+        for item in dialogue:
+            role, text = render_dialogue_turn(item)
             if role == "ai":
                 dialogue_messages.append(AIMessage(content=text))
             elif role == "human":

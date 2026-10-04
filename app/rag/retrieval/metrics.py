@@ -97,6 +97,10 @@ def _normalize_ws(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip()
 
 
+def _normalize_phrase(s: str) -> str:
+    return _normalize_ws(re.sub(r"[*_`#>]", "", s.lower()))
+
+
 def snippet_hit_at_n_tokens(
     retrieved_docs,
     expected_snippet: str,
@@ -112,6 +116,22 @@ def snippet_hit_at_n_tokens(
     for doc in retrieved_docs[:k]:
         body = _normalize_ws(getattr(doc, "page_content", ""))
         if target in body:
+            return 1
+    return 0
+
+
+def phrase_hit_at_k(retrieved_docs, phrases: list[str], k: int) -> int:
+    """1 if ALL phrases appear in ONE of the first k retrieved docs after
+    normalisation (lowercase, strip markup characters *_`#>, collapsed whitespace),
+    else 0. Empty phrases returns 0."""
+    if not phrases or k <= 0:
+        return 0
+    targets = [_normalize_phrase(p) for p in phrases]
+    if any(not target for target in targets):
+        return 0
+    for doc in retrieved_docs[:k]:
+        body = _normalize_phrase(getattr(doc, "page_content", ""))
+        if all(target in body for target in targets):
             return 1
     return 0
 

@@ -1,0 +1,18 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "browser",
+  "run_id": "b0b406aaf42aa69412c110005775670d",
+  "case_id": "RS4",
+  "mode": "browser",
+  "role": "finance",
+  "question": "what are our latest orders",
+  "outcome_type": "unsupported",
+  "mismatches": [
+    "chips_lost_on_restore",
+    "stopped_label"
+  ],
+  "reason": "Live: an explained refusal with 3 chips ('Show me the latest customers/invoices/inventory'). After the reload the text comes back (restore 200, snapshot kept - F1 fixed) but the chips are gone (0). Live and restored, the turn header reads 'Stopped after 9.x s' with a stop icon although the person did not stop it.",
+  "evidence": "docs/superpowers/evidence/2026-09-25-failure-recovery/waveH/browser/shots/RS4-t1.png; docs/superpowers/evidence/2026-09-25-failure-recovery/waveH/browser/shots/RS4-reload.png; docs/superpowers/evidence/2026-09-25-failure-recovery/waveH/browser/net-RS4-server.txt"
+}

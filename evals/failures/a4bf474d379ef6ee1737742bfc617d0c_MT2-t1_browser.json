@@ -1,0 +1,18 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "browser",
+  "run_id": "a4bf474d379ef6ee1737742bfc617d0c",
+  "case_id": "MT2",
+  "turn": 1,
+  "mode": "browser",
+  "role": "admin",
+  "question": "who has the biggest job here by invoice value",
+  "outcome_type": "answered",
+  "mismatches": [
+    "ranking_value_not_shown"
+  ],
+  "reason": "Passes its oracle (the caption names the invoice-level ranking), but helpfulness 2: the table has no invoice value column (Job #, Customer name, Job #, Product title, Customer), so the person cannot see the value the answer was ranked by. 63519-t1, the same question earlier the same night, showed Items total 201,250,000.00. The plan's columns vary run to run for one question.",
+  "evidence": "docs/superpowers/evidence/2026-10-01-luna6-e2e/browser/sse/MT2-t1.sse; docs/superpowers/evidence/2026-10-01-luna6-e2e/browser/sse/63519-t1.sse; docs/superpowers/evidence/2026-10-01-luna6-e2e/grades-luna6.json"
+}

@@ -1,0 +1,19 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "browser",
+  "run_id": "88332a5e6ebda01e3e2f2717873c2945",
+  "case_id": "L1",
+  "turn": 8,
+  "mode": "browser",
+  "role": "admin",
+  "question": "<clarification choice: Outstanding now>",
+  "outcome_type": "answered",
+  "mismatches": [
+    "clarification_reply_re_asks",
+    "no_evidence_snapshot"
+  ],
+  "reason": "The person picked 'Outstanding now' on the t7 clarification card. The reply run (operation clarification_reply) asked the same question again as free text, marked answered and trusted, with no query, and wrote no ask_evidence_snapshots row, so the reload shows the notice for it. Same path as Wave I LT1 t6-t7 and the LT1-t7 loss.",
+  "evidence": "docs/superpowers/evidence/2026-09-29-durable-store/browser/sse/L1-t8.sse; docs/superpowers/evidence/2026-09-29-durable-store/browser/dom/L2-reload-dom.json; docs/superpowers/evidence/2026-09-29-durable-store/acceptance-durable-store.json"
+}

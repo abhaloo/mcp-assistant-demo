@@ -1,0 +1,17 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "browser",
+  "run_id": "d9ce7f501f15e95108bd4d01ff500698",
+  "case_id": "MX2",
+  "mode": "browser",
+  "role": "admin",
+  "question": "Can we create a credit note in the system, and which month of 2025 had our highest invoiced revenue in TZS?",
+  "outcome_type": "unsupported",
+  "mismatches": [
+    "record_part_refused"
+  ],
+  "reason": "The document part is right; the record part is refused member_not_found. The planner request carries the whole mixed question (D-COMPOUND) plus 'Suggested reading: Which month of 2025 had our highest invoiced revenue in TZS?'; the planner refuses because 'credit note' has no member, although search_documents already answered that part. The same month question alone answers December 2025 (RS1, gran-month 3/3).",
+  "evidence": "docs/superpowers/evidence/2026-09-25-failure-recovery/waveG/browser/sse/MX2-t1.sse; model_invocations record_reasoning for this run"
+}

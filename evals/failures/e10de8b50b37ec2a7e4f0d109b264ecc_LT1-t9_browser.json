@@ -1,0 +1,18 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "browser",
+  "run_id": "e10de8b50b37ec2a7e4f0d109b264ecc",
+  "case_id": "LT1",
+  "turn": 9,
+  "mode": "browser",
+  "role": "admin",
+  "question": "Go back to the first month you found. What was its total?",
+  "outcome_type": "answered",
+  "mismatches": [
+    "lost_history"
+  ],
+  "reason": "Asks 'customer balances or the July 2025 invoice list?'; turn 1 (December 2025, 244,965,526.15) is gone. conversation_max_turns = 6 (app/config.py:451) keeps only the last 3 exchanges in Redis (HistoryPolicy.trim_for_storage), while the panel keeps 40 messages: the person sees answers the assistant can no longer read. The coordinator request held History for turns 6-8 only.",
+  "evidence": "docs/superpowers/evidence/2026-09-25-failure-recovery/waveG/browser/sse/LT1-t9.sse; model_invocations coordinator request for this run"
+}

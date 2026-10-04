@@ -1,8 +1,8 @@
 {
     "schema_version": 1,
-    "current": "sha256:6a4ceb784e81d3bc8bd507b459a5a48505b813741ff07792beca9bf9aa8db5d7",
+    "current": "sha256:8f7cedd1150ed309ca249f8135f8d04bc6eb761101b56c455f0c45c8880ed2fc",
     "accepted": [
-        "sha256:6a4ceb784e81d3bc8bd507b459a5a48505b813741ff07792beca9bf9aa8db5d7",
-        "sha256:472e1053ee70466cd7da1c8074956d0059ed44b3a2480fd56cd3eb13ab977e80"
+        "sha256:8f7cedd1150ed309ca249f8135f8d04bc6eb761101b56c455f0c45c8880ed2fc",
+        "sha256:ef739e38a3abac9a2f7687103f38709844a69c1476a61932737f91cd3a869934"
     ]
 }

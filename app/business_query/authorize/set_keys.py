@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from app.business_query.outcomes import PlanRefused
 from app.business_query.plan.filter_tree import guaranteed_single_equality
+from app.business_query.plan.query_plan import time_group_for
 
 if TYPE_CHECKING:
     from app.business_query.definitions import DefinitionBundle, DimensionDefinition
@@ -145,20 +146,51 @@ def assert_set_key_compatible(
     outer_member: str,
     derived: Any,
     bundle: DefinitionBundle,
+    *,
+    exclude: bool = False,
 ) -> None:
-    """Verify entity-key compatibility and structural rules between outer and inner set."""
+    """Verify the outer filter may use the set: an entity identity or the same time bucket."""
     inner_plan = derived.scoped.plan
-
     if inner_plan.dimensions != [derived.key]:
         raise PlanRefused("grain_unexpressible", check_site="set_grain")
     if inner_plan.grain not in {"grouped", "entity_rows"}:
         raise PlanRefused("grain_unexpressible", check_site="set_grain")
     if inner_plan.derived_sets:
         raise PlanRefused("grain_unexpressible", check_site="set_grain")
+    if time_group_for(derived.key, inner_plan) is not None:
+        _assert_time_group_compatible(outer_member, derived, bundle, exclude=exclude)
+        return
+    _assert_entity_key_compatible(outer_member, derived, bundle)
 
+
+def _assert_time_group_compatible(
+    outer_member: str, derived: Any, bundle: DefinitionBundle, *, exclude: bool
+) -> None:
+    """A time group selects calendar periods of one time member: the outer filter keeps
+    rows of that same member inside them. Excluding periods is not supported."""
+    if exclude:
+        raise PlanRefused("grain_unexpressible", check_site="time_group_exclusion")
+    if outer_member != derived.key:
+        raise PlanRefused("grain_unexpressible", check_site="time_group_member_mismatch")
+    if _resolve_dimension(outer_member, bundle).type != "time":
+        raise PlanRefused("grain_unexpressible", check_site="set_key_type_mismatch")
+    if derived.mode == "pick":
+        _assert_pick_shape(derived, bundle)
+    _assert_monetary_currency_partition(derived, bundle)
+
+
+def _assert_entity_key_compatible(
+    outer_member: str,
+    derived: Any,
+    bundle: DefinitionBundle,
+) -> None:
+    """Verify entity-key compatibility and structural rules between outer and inner set."""
+    inner_plan = derived.scoped.plan
     if derived.mode == "ranked":
         if inner_plan.grain != "grouped" or len(inner_plan.measures) != 1:
             raise PlanRefused("grain_unexpressible", check_site="set_grain")
+    elif derived.mode == "pick":
+        _assert_pick_shape(derived, bundle)
     elif derived.mode == "complete" and inner_plan.grain == "entity_rows" and inner_plan.measures:
         raise PlanRefused("grain_unexpressible", check_site="set_grain")
 
@@ -181,3 +213,22 @@ def assert_set_key_compatible(
 
     if outer_pk != inner_pk:
         raise PlanRefused("grain_unexpressible", check_site="set_key_identity")
+
+
+def _assert_pick_shape(derived: Any, bundle: DefinitionBundle) -> None:
+    """A pick over rows orders by a dimension of the key's own resource; a pick over
+    groups orders by its single measure."""
+    inner_plan = derived.scoped.plan
+    if not inner_plan.order:
+        raise PlanRefused("grain_unexpressible", check_site="set_grain")
+    basis = inner_plan.order[0].member
+    if inner_plan.grain == "grouped":
+        if len(inner_plan.measures) != 1 or basis != inner_plan.measures[0]:
+            raise PlanRefused("grain_unexpressible", check_site="set_grain")
+        return
+    if inner_plan.measures:
+        raise PlanRefused("grain_unexpressible", check_site="set_grain")
+    key_dim = _resolve_dimension(derived.key, bundle)
+    basis_dim = _resolve_dimension(basis, bundle)
+    if basis_dim.owning_resource != key_dim.owning_resource:
+        raise PlanRefused("grain_unexpressible", check_site="pick_basis_resource")

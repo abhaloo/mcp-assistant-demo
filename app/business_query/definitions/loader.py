@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.resources
 import json
+import logging
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -30,6 +31,7 @@ def get_bundle_dir() -> Path:
 _BUNDLE_DIR = get_bundle_dir()
 _INDEX_PATH = _BUNDLE_DIR / "index.json"
 _BUNDLES_DIR = _BUNDLE_DIR / "bundles"
+logger = logging.getLogger(__name__)
 
 
 def _bundle_path(bundles_dir: Path, bundle_hash: str) -> Path:
@@ -63,6 +65,12 @@ def _read_and_verify_bundle(bundles_dir: Path, bundle_hash: str) -> DefinitionBu
             f"bundle {path.name!r} embedded content_hash {claimed!r} does not match {bundle_hash!r}"
         )
     bundle = DefinitionBundle.model_validate(raw)
+    for dimension in bundle.dimensions:
+        if dimension.type == "number" and not dimension.is_primary_key and dimension.format is None:
+            logger.info(
+                "bundle dimension has no display format; rendering as decimal",
+                extra={"dimension": dimension.name, "bundle_hash": bundle.content_hash},
+            )
     expression_violations = _collect_expression_violations(bundle)
     if expression_violations:
         raise BundleValidationError(

@@ -1,0 +1,2 @@
+{"journey": "gran_month"}
+{"id": "gran-month", "question": "Which month of 2025 had our highest invoiced revenue in TZS?", "expected": {"outcome_type": "answered", "tables_min": 1}}

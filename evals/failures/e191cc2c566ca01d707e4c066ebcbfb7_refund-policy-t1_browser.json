@@ -1,0 +1,18 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "browser",
+  "run_id": "e191cc2c566ca01d707e4c066ebcbfb7",
+  "case_id": "refund-policy",
+  "turn": 1,
+  "mode": "browser",
+  "role": "admin",
+  "question": "what are our refund policies",
+  "outcome_type": "answered",
+  "mismatches": [
+    "document_sources_not_links"
+  ],
+  "reason": "The blind grader failed the clause 'the answer shows source links': the citation_set carries 3 sources (parsed, 1 cited) and the page shows one plain-text item '[1]customer-payments-and-receivables.md - ## Credit notes...' with 0 anchors. Not a regression: the Wave I source payload is field-for-field the same (no link_key, so no anchor), and the Wave I grader read the clause as 'sources shown'. Pre-existing UX defect: document sources show a raw .md file name and a '##' marker, cut mid-word, with no link.",
+  "evidence": "docs/superpowers/evidence/2026-10-01-luna6-e2e/browser/sse/refund-policy-t1.sse; docs/superpowers/evidence/2026-10-01-luna6-e2e/browser/shots/refund-policy-t1.png; docs/superpowers/evidence/2026-10-01-luna6-e2e/browser/page-measurements.md; docs/superpowers/evidence/2026-09-25-failure-recovery/waveI/browser/sse/refund-policy-t1.sse; docs/superpowers/evidence/2026-10-01-luna6-e2e/grades-luna6.json"
+}

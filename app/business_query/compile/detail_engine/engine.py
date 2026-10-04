@@ -181,7 +181,9 @@ class DetailEngine:
         trace: object | None = None,
     ) -> DetailReadResult:
         """Read authorized facts with owner and principal scope predicates."""
-        parent_ids = list(OrderedDict.fromkeys(owner_refs))[:_MAX_PARENT_IDS]
+        parent_ids = [pid for pid in OrderedDict.fromkeys(owner_refs) if pid is not None][
+            :_MAX_PARENT_IDS
+        ]
         if not parent_ids or not selections:
             return DetailReadResult(details=())
         by_family: dict[str, list[CanonicalDetailSelection]] = defaultdict(list)

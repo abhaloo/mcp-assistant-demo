@@ -7,9 +7,10 @@ from typing import Literal
 
 from app.business_query.outcomes import BusinessQueryWireOutcome
 from app.config import settings
-from app.models.ask_v2_events import FollowUpOffer
+from app.models.ask_v2_events import FollowUpOffer, TextContentKind, TurnBudgetReport
 from app.models.result_presentation import ResultPresentation
 from app.models.schemas import Answer, CitationsPayload, QueryType, Question, Source, SqlProvenance
+from app.models.ui_link import UiLink
 from app.providers.model_purpose import ModelPurpose
 from app.providers.stage_model_report import (
     FIXED_RESPONSE_MODEL_SENTINEL,
@@ -39,7 +40,12 @@ def make_answer(
     presentation: ResultPresentation | None = None,
     follow_up_offer: FollowUpOffer | None = None,
     answer_mode: Literal["explanation", "direct"] | None = None,
+    text_kind: TextContentKind | None = None,
     source_exchange_ids: Sequence[str] = (),
+    reason_code: str | None = None,
+    budget: TurnBudgetReport | None = None,
+    unanswered_part: str | None = None,
+    ui_links: Sequence[UiLink] = (),
 ) -> Answer:
     """Single Answer construction site for all query paths."""
     if fixed_response:
@@ -69,5 +75,10 @@ def make_answer(
         presentation=presentation,
         follow_up_offer=follow_up_offer,
         answer_mode=answer_mode,
+        text_kind=text_kind,
         source_exchange_ids=list(source_exchange_ids),
+        reason_code=reason_code,
+        budget=budget,
+        unanswered_part=unanswered_part,
+        ui_links=list(ui_links),
     )

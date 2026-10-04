@@ -6,13 +6,21 @@ from collections.abc import Callable
 from datetime import date
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.auth import Principal
 from app.business_query.authorize.scoping import ScopedPlan
 from app.business_query.definitions import DefinitionBundle
 from app.business_query.outcomes import Answered
 from app.business_query.plan import BusinessQueryPlan
+from app.business_query.plan.dialogue import AssistantTurn, DialogueTurn, UserTurn
+from app.business_query.plan.plan_patch import PlanPatch
+
+# A legacy history item is a (role, text) pair.
+_ROLE_TEXT_PAIR = 2
+
+# Display budget for streamed Ask answers. Default equals the hard cap.
+MAX_ANSWER_CHARS = 16_000
 
 
 class BusinessQueryOwnerHint(BaseModel):
@@ -21,6 +29,7 @@ class BusinessQueryOwnerHint(BaseModel):
     resource_type: str
     record_id: int | str
     binding_member: str | None = None
+    source: Literal["page", "binding"] = "page"
 
 
 class BusinessQueryRequest(BaseModel):
@@ -38,15 +47,35 @@ class BusinessQueryRequest(BaseModel):
     correlation_id: str = Field(min_length=1)
     business_date: date | None = None
     max_rows: int = Field(default=20, ge=1, le=50)
-    max_answer_chars: int = Field(default=8_000, ge=1, le=8_000)
+    max_answer_chars: int = Field(default=MAX_ANSWER_CHARS, ge=1, le=MAX_ANSWER_CHARS)
     continuation: str | None = None
     clarification_reply: str | None = None
     clarification_prompt: str | None = None
     owner_hint: BusinessQueryOwnerHint | None = None
     page_cursor: str | None = None
     response_policy: Literal["strict", "allow_partial"] = "allow_partial"
-    # Prior structured turns as (role, text) pairs — roles are "human" / "ai".
-    history: tuple[tuple[str, str], ...] = ()
+    history: tuple[DialogueTurn, ...] = ()
+    reading: str | None = None
+    patch: PlanPatch | None = None
+
+    @field_validator("history", mode="before")
+    @classmethod
+    def _coerce_history(cls, value: object) -> object:
+        if isinstance(value, (list, tuple)):
+            coerced: list[DialogueTurn] = []
+            for item in value:
+                if isinstance(item, tuple) and len(item) == _ROLE_TEXT_PAIR:
+                    role, text = item
+                    if role in ("human", "user"):
+                        coerced.append(UserTurn(text=text))
+                    elif role in ("ai", "assistant"):
+                        coerced.append(AssistantTurn(text=text))
+                    else:
+                        raise ValueError(f"unsupported dialogue role: {role!r}")
+                else:
+                    coerced.append(item)
+            return tuple(coerced)
+        return value
 
     @model_validator(mode="after")
     def _exclusive_page_cursor(self) -> BusinessQueryRequest:
@@ -58,6 +87,8 @@ class BusinessQueryRequest(BaseModel):
             or self.clarification_reply is not None
             or self.clarification_prompt is not None
             or self.history
+            or self.reading is not None
+            or self.patch is not None
         ):
             raise ValueError(
                 "page_cursor cannot combine with question, continuation, or clarification_reply"
@@ -75,13 +106,34 @@ class NewBusinessQueryRequest(BaseModel):
     correlation_id: str = Field(min_length=1)
     business_date: date | None = None
     max_rows: int = Field(default=20, ge=1, le=50)
-    max_answer_chars: int = Field(default=8_000, ge=1, le=8_000)
+    max_answer_chars: int = Field(default=MAX_ANSWER_CHARS, ge=1, le=MAX_ANSWER_CHARS)
     continuation: str | None = None
     clarification_reply: str | None = None
     clarification_prompt: str | None = None
     owner_hint: BusinessQueryOwnerHint | None = None
     response_policy: Literal["strict", "allow_partial"] = "allow_partial"
-    history: tuple[tuple[str, str], ...] = ()
+    history: tuple[DialogueTurn, ...] = ()
+    reading: str | None = None
+    patch: PlanPatch | None = None
+
+    @field_validator("history", mode="before")
+    @classmethod
+    def _coerce_history(cls, value: object) -> object:
+        if isinstance(value, (list, tuple)):
+            coerced: list[DialogueTurn] = []
+            for item in value:
+                if isinstance(item, tuple) and len(item) == _ROLE_TEXT_PAIR:
+                    role, text = item
+                    if role in ("human", "user"):
+                        coerced.append(UserTurn(text=text))
+                    elif role in ("ai", "assistant"):
+                        coerced.append(AssistantTurn(text=text))
+                    else:
+                        raise ValueError(f"unsupported dialogue role: {role!r}")
+                else:
+                    coerced.append(item)
+            return tuple(coerced)
+        return value
 
     def as_wire(self) -> BusinessQueryRequest:
         """Ask compose uses this; the module still consumes BusinessQueryRequest."""
@@ -98,6 +150,8 @@ class NewBusinessQueryRequest(BaseModel):
             owner_hint=self.owner_hint,
             response_policy=self.response_policy,
             history=self.history,
+            reading=self.reading,
+            patch=self.patch,
         )
 
 
@@ -111,10 +165,12 @@ def build_new_business_query_wire(
     clarification_prompt: str | None = None,
     owner_hint: BusinessQueryOwnerHint | None = None,
     response_policy: Literal["strict", "allow_partial"] = "allow_partial",
-    history: tuple[tuple[str, str], ...] = (),
+    history: tuple[DialogueTurn, ...] = (),
     business_date: date | None = None,
     max_rows: int = 20,
-    max_answer_chars: int = 8_000,
+    max_answer_chars: int = MAX_ANSWER_CHARS,
+    reading: str | None = None,
+    patch: PlanPatch | None = None,
 ) -> BusinessQueryRequest:
     """Compose a closed new-question wire request for Ask."""
     return NewBusinessQueryRequest(
@@ -130,6 +186,8 @@ def build_new_business_query_wire(
         owner_hint=owner_hint,
         response_policy=response_policy,
         history=history,
+        reading=reading,
+        patch=patch,
     ).as_wire()
 
 
@@ -143,7 +201,7 @@ class ResultPageRequest(BaseModel):
     correlation_id: str = Field(min_length=1)
     business_date: date | None = None
     max_rows: int = Field(default=20, ge=1, le=50)
-    max_answer_chars: int = Field(default=8_000, ge=1, le=8_000)
+    max_answer_chars: int = Field(default=MAX_ANSWER_CHARS, ge=1, le=MAX_ANSWER_CHARS)
     response_policy: Literal["strict", "allow_partial"] = "allow_partial"
 
     def as_wire(self) -> BusinessQueryRequest:

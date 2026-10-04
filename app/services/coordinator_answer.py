@@ -5,14 +5,16 @@ from __future__ import annotations
 import math
 import re
 from collections.abc import Sequence
+from dataclasses import dataclass, replace
 from typing import Literal
 
 from app.business_query.outcomes import BusinessQueryWireOutcome, UnifiedResultEnvelope
 from app.business_query.wire.ask_result import AskBusinessQueryResult, CommittedBqResult
 from app.conversation.coordinator.action_lifecycle import ActionOutcome
 from app.conversation.coordinator.contracts import FinishAnswer, Observation, ValueRef
+from app.conversation.followup_context import SelectedSources
 from app.core.turn_budget import TurnBudget
-from app.models.citations import CitationsPayload
+from app.models.citations import CitationsPayload, CitedSourceRef
 from app.models.tool_results import TurnResult
 from app.providers.model_purpose import ModelPurpose
 from app.providers.stage_model_report import StageModelAccumulator
@@ -27,13 +29,16 @@ NARRATIVE_UNAVAILABLE_MESSAGE = (
 
 _SQL_RE = re.compile(r"(?i)\bselect\s+\*|\bselect\b.*?\bfrom\b|\bbilling_[a-zA-Z0-9_]+\b")
 
+# The longest id a cited reference takes (CitedSourceRef.id).
+_MAX_CITED_ID_CHARS = 256
+
 
 def committed_business_result(outcomes: Sequence[ActionOutcome]) -> AskBusinessQueryResult | None:
-    """The last business result the turn committed, with its wire outcome.
+    """The last business result the turn holds, with its wire outcome — answered or not.
 
-    A finished answer written over that result must carry it forward: the
-    evidence snapshot, the restore reference and the tables the panel shows
-    all come from this one object, never from the model's text.
+    A finished answer written over it carries it forward: the evidence snapshot,
+    the restore reference and the tables when it answered; the reason code and
+    the trace when it did not.
     """
     found: AskBusinessQueryResult | None = None
     for outcome in outcomes:
@@ -46,17 +51,98 @@ def committed_business_result(outcomes: Sequence[ActionOutcome]) -> AskBusinessQ
 
 
 def retrieved_passages(outcomes: Sequence[ActionOutcome]) -> tuple[RetrievedSource, ...]:
-    """Every passage the turn's document searches returned, in search order.
+    """Every distinct passage the turn's document searches returned, in search order.
 
-    A finished answer written over those passages carries them as its
-    sources: the panel lists them and the evidence gate grounds the text
-    against them.
+    A passage that two searches return counts once.
     """
-    passages: list[RetrievedSource] = []
+    distinct: dict[str, RetrievedSource] = {}
     for outcome in outcomes:
         if isinstance(outcome.result, DocumentSearchResult):
-            passages.extend(outcome.result.passages)
-    return tuple(passages)
+            for passage in outcome.result.passages:
+                distinct.setdefault(passage.id, passage)
+    return tuple(distinct.values())
+
+
+@dataclass(frozen=True)
+class CitedPassages:
+    """The passages a finished answer cites, and the citations that bind them."""
+
+    sources: tuple[RetrievedSource, ...]
+    citations: CitationsPayload
+
+
+def cited_passages(draft: FinishAnswer, passages: Sequence[RetrievedSource]) -> CitedPassages:
+    """The passages the draft's blocks cite, numbered from 1 in the order the draft cites them.
+
+    Each search numbers its own passages from 1, so the markers of two searches
+    collide. The coordinator model cites passage ids, never markers, so the turn
+    numbers only its cited passages, once. A passage the draft does not cite is
+    not a source of the answer. With no cited passage the answer carries no
+    source and its citations stay unparsed.
+    """
+    by_id = {p.id: p for p in passages if len(p.id) <= _MAX_CITED_ID_CHARS}
+    cited_ids = dict.fromkeys(
+        eid for block in draft.blocks for eid in block.evidence_ids if eid in by_id
+    )
+    numbered = list(enumerate(cited_ids, start=1))
+    return CitedPassages(
+        sources=tuple(replace(by_id[eid], marker=number) for number, eid in numbered),
+        citations=CitationsPayload(
+            parsed=bool(numbered),
+            cited=[CitedSourceRef(marker=number, id=eid) for number, eid in numbered],
+        ),
+    )
+
+
+def restored_sources(outcomes: Sequence[ActionOutcome]) -> tuple[SelectedSources, ...]:
+    """Every earlier answer the turn's explain_sources actions restored, in order."""
+    return tuple(o.result for o in outcomes if isinstance(o.result, SelectedSources))
+
+
+def restored_exchange_ids(outcomes: Sequence[ActionOutcome]) -> tuple[str, ...]:
+    """The exchanges the turn restored, at most the eight the wire carries."""
+    return tuple(e for s in restored_sources(outcomes) for e in s.exchange_ids)[:8]
+
+
+def restored_refs(outcomes: Sequence[ActionOutcome]) -> tuple[str, ...]:
+    """The restore references of the answers the turn restored; a restore re-checks each."""
+    return tuple(r for s in restored_sources(outcomes) for r in s.restore_refs)
+
+
+def own_turn_result(outcomes: Sequence[ActionOutcome]) -> TurnResult:
+    """The turn result of a finished answer the coordinator wrote itself.
+
+    Every finished draft keeps one, so a reload restores the text as shown, in its
+    own thread only; an answer over passages names the search.
+    """
+    return TurnResult(
+        outcome_type="answered",
+        completeness="full",
+        trusted=True,
+        selected=("document_search",) if retrieved_passages(outcomes) else (),
+        omissions=(),
+        components=(),
+    )
+
+
+# A stop is never an answer: no finished draft stands behind its copy.
+_STOPPED_TURN = TurnResult(
+    outcome_type="incomplete",
+    completeness="none",
+    trusted=False,
+    selected=(),
+    omissions=(),
+    components=(),
+)
+
+
+def stop_turn_result(outcomes: Sequence[ActionOutcome]) -> TurnResult | None:
+    """A stop's turn result: none over a failed query, whose own outcome stands;
+    incomplete and untrusted otherwise."""
+    bq = committed_business_result(outcomes)
+    if bq is not None and bq.disposition != "answered":
+        return None
+    return _STOPPED_TURN
 
 
 async def publish_answer_draft(

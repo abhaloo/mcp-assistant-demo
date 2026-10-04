@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import date, datetime
+from decimal import Decimal
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
@@ -11,6 +13,7 @@ from app.models.citations import CitationsPayload, Source
 from app.models.result_presentation import ResultPresentation
 from app.models.sql_provenance import QueryExplanation
 from app.models.tool_results import ComponentEvidence, ToolOmission
+from app.models.ui_link import UiLink
 
 # Text on the stream is either prose a person should read or the deterministic
 # row serialization a consumer with a typed table can hide. An older consumer
@@ -18,7 +21,7 @@ from app.models.tool_results import ComponentEvidence, ToolOmission
 TextContentKind = Literal["narrative", "table_fallback"]
 
 
-TableColumnRole = Literal["current", "previous", "delta", "delta_pct"]
+TableColumnRole = Literal["current", "previous", "delta", "delta_pct", "display"]
 
 
 class TableColumn(BaseModel):
@@ -32,6 +35,7 @@ class TableColumn(BaseModel):
     currency_key: str | None = None
     href_template: str | None = None
     role: TableColumnRole | None = None
+    display_key: str | None = None
 
     @model_serializer(mode="wrap")
     def _omit_unset_optional_fields(self, serializer):
@@ -40,6 +44,8 @@ class TableColumn(BaseModel):
             data.pop("href_template", None)
         if data.get("role") is None:
             data.pop("role", None)
+        if data.get("display_key") is None:
+            data.pop("display_key", None)
         return data
 
 
@@ -53,6 +59,16 @@ class InteractionOption(BaseModel):
     # Optional subtitle: the choice rewrite or value_prompt when the stall
     # card carries one. Resolver candidates omit it.
     detail: str | None = None
+    # The record link the seal minted for a resolver candidate under the
+    # viewer's grant; the card renders it beside the radio, never instead of it.
+    href: str | None = None
+
+    @model_serializer(mode="wrap")
+    def _omit_unset_optional_fields(self, serializer):
+        data = serializer(self)
+        if data.get("href") is None:
+            data.pop("href", None)
+        return data
 
 
 class AskV2EventBase(BaseModel):
@@ -103,6 +119,18 @@ class FollowUpOffer(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     actions: list[FollowUpAction] = Field(min_length=1, max_length=3)
+
+
+class TurnAcceptedEvent(AskV2EventBase):
+    """First frame of a turn: the attempt identity the writer and reader share.
+
+    ``thread_id`` echoes the request; ``restore_ref`` names the snapshot the
+    server writes for this attempt, whatever its terminal (answered, stopped,
+    or failed). Everything downstream reads the same reference."""
+
+    event_type: Literal["turn_accepted"] = "turn_accepted"
+    thread_id: str | None = None
+    restore_ref: str = Field(min_length=43, max_length=43)
 
 
 class ActivityEvent(AskV2EventBase):
@@ -251,6 +279,18 @@ class CitationSetEvent(AskV2EventBase):
         return data
 
 
+class TurnBudgetReport(BaseModel):
+    """Report of turn spend and account period budget on the wire."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    this_turn_usd: Decimal | None = None
+    used_usd: Decimal
+    limit_usd: Decimal
+    period_end: date
+    reset_at: datetime
+
+
 class TurnOutcomeEvent(AskV2EventBase):
     """Terminal turn outcome with evidence and trusted answer attribution."""
 
@@ -280,6 +320,7 @@ class TurnOutcomeEvent(AskV2EventBase):
     # hashes only -- no SQL, prompt, reasoning or tool arguments -- and only a
     # terminal event may carry it.
     business_query: BusinessQueryWireOutcome | None = None
+    budget: TurnBudgetReport | None = None
 
     # Version 1 tool result fields (additive per Spec §6)
     tool_result_version: Literal[1] | None = None
@@ -289,6 +330,11 @@ class TurnOutcomeEvent(AskV2EventBase):
     restore_ref: str | None = None
     answer_mode: Literal["explanation", "direct"] | None = None
     source_exchange_ids: list[str] = Field(default_factory=list, max_length=8)
+    unanswered_part: str | None = None
+    ui_links: list[UiLink] = Field(default_factory=list)
+    # Authorises late timing and thumbs writes for this run. Minted on every
+    # v2 turn_outcome. Checked when the page posts timing or thumbs.
+    feedback_token: str | None = None
 
     @model_serializer(mode="wrap")
     def _omit_unset_tool_results(self, serializer):
@@ -303,6 +349,8 @@ class TurnOutcomeEvent(AskV2EventBase):
             data.pop("answer_mode", None)
         if not data.get("source_exchange_ids"):
             data.pop("source_exchange_ids", None)
+        if not data.get("feedback_token"):
+            data.pop("feedback_token", None)
         return data
 
 
@@ -318,7 +366,8 @@ class StreamErrorEvent(AskV2EventBase):
 
 
 AskV2Event = Annotated[
-    ActivityEvent
+    TurnAcceptedEvent
+    | ActivityEvent
     | TextDeltaEvent
     | ThoughtStartEvent
     | ThoughtDeltaEvent

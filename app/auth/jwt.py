@@ -180,6 +180,7 @@ async def verify_principal(
         scope_values=record_access.scope_values if record_access else None,
         resources=record_access.resources if record_access else None,
         document_tiers=record_access.document_tiers if record_access else None,
+        ask_budget=record_access.ask_budget if record_access else None,
         record_context_digest=record_context_digest,
         tool_result_version=tool_result_version,
     )

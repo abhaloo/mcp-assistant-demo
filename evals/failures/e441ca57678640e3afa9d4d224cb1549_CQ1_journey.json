@@ -1,0 +1,18 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "journey",
+  "run_id": "e441ca57678640e3afa9d4d224cb1549",
+  "case_id": "CQ1",
+  "mode": "journey",
+  "role": "admin",
+  "question": "cq_month.jsonl",
+  "outcome_type": "unsupported",
+  "mismatches": [
+    "dependency_not_explained",
+    "unanswered_part_missing"
+  ],
+  "reason": "Refused with the right first chip, but the answer says only 'These two steps need to be run separately' and blames 'the available result' when no result exists; it does not say one part needs the other's answer. unanswered_part is null.",
+  "evidence": "docs/superpowers/evidence/2026-09-25-failure-recovery/waveI/cq-2.json; docs/superpowers/evidence/2026-09-25-failure-recovery/waveI/grades-waveI.json; docs/superpowers/evidence/2026-09-25-failure-recovery/waveI/grade-verification.md"
+}

@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Response
 from fastapi.responses import JSONResponse
 
-from app.config import EffectiveRouteSettings, effective_route_settings
+from app.config import EffectiveRouteSettings
+from app.core.ask_budget import scaled_route_settings
 from app.health.checks import SOFT_CHECK_NAMES, build_check_registry
 from app.health.state import error_tracker, health_cache
 from app.policy.compatibility import render_compatibility_document
@@ -43,7 +44,7 @@ async def readyz():
         "ready": ready,
         "checks": checks,
         "errors_500_window": error_tracker.count(),
-        EffectiveRouteSettings.BODY_KEY: effective_route_settings().model_dump(),
+        EffectiveRouteSettings.BODY_KEY: scaled_route_settings().model_dump(),
     }
     if ready:
         return body

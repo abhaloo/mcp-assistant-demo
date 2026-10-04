@@ -1,0 +1,18 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "browser",
+  "run_id": "6750ab940828557a6780f9136ae41c30",
+  "case_id": "LT1-mobile",
+  "turn": 2,
+  "mode": "browser",
+  "role": "admin",
+  "question": "only March",
+  "outcome_type": "answered",
+  "mismatches": [
+    "wrong_year"
+  ],
+  "reason": "Asked after Dec 2025 → March 2025 → April 2025 in one thread; answered March 2026, 117,825,600.00. The coordinator's reading was 'Show the same result for March instead of April' (no year) and the planner took the latest March from today's date (2026-09-29). Readings that said '2025' gave March 2025 (7999c543…, 3e61a6a9…). A continued answer does not carry the earlier period's year to the planner.",
+  "evidence": "docs/superpowers/evidence/2026-09-25-failure-recovery/waveG/screenshots/mobile-7.png (first mobile pass; replaced later by a new-thread re-take); record_reasoning plan period 2026-03-01..2026-03-31"
+}

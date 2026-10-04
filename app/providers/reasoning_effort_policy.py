@@ -14,11 +14,15 @@ _AZURE_SUPPORTED_EFFORTS: dict[str, frozenset[str]] = {
     # Azure gpt-5.6-luna deployment attested 2026-08-03 (prod-luna ARM snapshot).
     "gpt-5.6-luna": _AZURE_GPT5_EFFORTS,
 }
-# Official OpenAI API ladder for gpt-5.6-luna (developers.openai.com, 2026-08-12):
+# Official OpenAI API ladder for gpt-6-luna (developers.openai.com):
+# none, low, medium, high, xhigh, max.
+_OPENAI_GPT6_LUNA_EFFORTS = frozenset({"none", "low", "medium", "high", "xhigh", "max"})
+# Official OpenAI API ladder for gpt-5.6-luna (developers.openai.com):
 # none, low, medium (default), high, xhigh, max. Distinct from the Azure table.
 _OPENAI_GPT56_LUNA_EFFORTS = frozenset({"none", "low", "medium", "high", "xhigh", "max"})
 _OPENAI_GPT5_EFFORTS = frozenset({"minimal", "low", "medium", "high"})
 _OPENAI_SUPPORTED_EFFORTS: dict[str, frozenset[str]] = {
+    "gpt-6-luna": _OPENAI_GPT6_LUNA_EFFORTS,
     "gpt-5.6-luna": _OPENAI_GPT56_LUNA_EFFORTS,
     "gpt-5-nano": _OPENAI_GPT5_EFFORTS,
 }

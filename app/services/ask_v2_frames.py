@@ -10,6 +10,7 @@ TERMINAL_EVENT_TYPES: frozenset[str] = frozenset({"turn_outcome", "stream_error"
 
 KNOWN_EVENT_TYPES: frozenset[str] = frozenset(
     {
+        "turn_accepted",
         "activity",
         "text_delta",
         "thought_start",

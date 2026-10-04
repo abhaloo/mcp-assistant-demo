@@ -10,6 +10,8 @@ and the suite would have to report them degraded on every live run.
 
 from __future__ import annotations
 
+import time
+import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
 from unittest.mock import patch
@@ -41,8 +43,17 @@ def _ids_of(docs: list[Document]) -> list[str]:
 def _json_spy(capture: RetrievalCapture) -> Iterator[None]:
     from app.services.ask import _retrieve_documents as real_retrieve
 
-    async def spy(turn_input, access_tiers, config):
-        docs = await real_retrieve(turn_input, access_tiers, config)
+    async def spy(  # noqa: PLR0913 - mirrors app.services.ask._retrieve_documents
+        turn_input, access_tiers, config, *, principal, turn_budget=None, resources=None
+    ):
+        docs = await real_retrieve(
+            turn_input,
+            access_tiers,
+            config,
+            principal=principal,
+            turn_budget=turn_budget,
+            resources=resources,
+        )
         capture.granted_tiers = list(access_tiers)
         capture.served_ids = _ids_of(docs)
         return docs
@@ -55,8 +66,17 @@ def _json_spy(capture: RetrievalCapture) -> Iterator[None]:
 def _sse_spy(capture: RetrievalCapture) -> Iterator[None]:
     from app.services.ask import _retrieve_documents as real_retrieve
 
-    async def spy(turn_input, access_tiers, config):
-        docs = await real_retrieve(turn_input, access_tiers, config)
+    async def spy(  # noqa: PLR0913 - mirrors app.services.ask._retrieve_documents
+        turn_input, access_tiers, config, *, principal, turn_budget=None, resources=None
+    ):
+        docs = await real_retrieve(
+            turn_input,
+            access_tiers,
+            config,
+            principal=principal,
+            turn_budget=turn_budget,
+            resources=resources,
+        )
         capture.granted_tiers = list(access_tiers)
         capture.served_ids = _ids_of(docs)
         return docs
@@ -65,12 +85,24 @@ def _sse_spy(capture: RetrievalCapture) -> Iterator[None]:
         yield
 
 
+def _ask_body(case: ProdAskCase) -> dict:
+    """Canonical v2 request (app/models/ask_v2_request.py); one run per call."""
+    return {
+        "operation": "new_question",
+        "run_id": f"live-{case.id}-{uuid.uuid4().hex[:8]}",
+        "thread_id": f"live-thread-{case.id}",
+        "question": case.question,
+        "idempotency_key": f"live-{case.id}-{uuid.uuid4().hex}",
+        "deadline_at_ms": int(time.time() * 1000) + 10_000,
+    }
+
+
 def run_live_json(client: TestClient, case: ProdAskCase) -> AskObservation:
     capture = RetrievalCapture()
     with _json_spy(capture):
         response = client.post(
             "/api/ask",
-            json={"question": case.question},
+            json=_ask_body(case),
             headers={"Authorization": f"Bearer {mint_token(case)}"},
         )
     if response.status_code != 200:
@@ -90,7 +122,7 @@ def run_live_sse(client: TestClient, case: ProdAskCase) -> AskObservation:
     with _sse_spy(capture):
         response = client.post(
             "/api/ask",
-            json={"question": case.question},
+            json=_ask_body(case),
             headers={
                 "Authorization": f"Bearer {mint_token(case)}",
                 "Accept": "text/event-stream",

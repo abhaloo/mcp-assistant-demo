@@ -80,6 +80,46 @@ def token_usage_from_message(
     )
 
 
+def _raw_cached_tokens(meta: dict) -> int | None:
+    for container in (meta.get("token_usage"), meta.get("usage")):
+        if not isinstance(container, dict):
+            continue
+        cached = container.get("prompt_cache_hit_tokens")
+        if cached is not None:
+            return int(cached)
+        prompt_details = container.get("prompt_tokens_details")
+        if isinstance(prompt_details, dict):
+            cached = prompt_details.get("cached_tokens")
+            if cached is not None:
+                return int(cached)
+        input_details = container.get("input_tokens_details")
+        if isinstance(input_details, dict):
+            cached = input_details.get("cached_tokens")
+            if cached is not None:
+                return int(cached)
+    return None
+
+
+def cached_input_tokens_from_message(message: object) -> int | None:
+    """Extract cached input tokens from message metadata across provider shapes."""
+    if message is None:
+        return None
+
+    usage = getattr(message, "usage_metadata", None)
+    if isinstance(usage, dict):
+        input_details = usage.get("input_token_details")
+        if isinstance(input_details, dict):
+            cached = input_details.get("cache_read")
+            if cached is not None:
+                return int(cached)
+
+    meta = getattr(message, "response_metadata", None)
+    if isinstance(meta, dict):
+        return _raw_cached_tokens(meta)
+
+    return None
+
+
 def set_gen_ai_usage(span: Span, message: HasTokenUsage) -> tuple[int, int] | None:
     """Stamp token counts off a LangChain ``AIMessage`` onto the span.
 

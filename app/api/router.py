@@ -161,7 +161,7 @@ async def ask_question(
             resources=resources,
             deadline=deadline,
         )
-        return JSONResponse(status_code=200, content=jsonable_encoder(result))
+        return JSONResponse(status_code=200, content=jsonable_encoder(result.json_body()))
     except DeadlineExpiredError as e:
         return JSONResponse(
             status_code=504,

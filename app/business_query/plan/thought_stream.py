@@ -7,32 +7,7 @@ from typing import Any
 from langchain_core.callbacks import AsyncCallbackHandler
 
 from app.business_query.ports import BusinessProgressSink
-
-
-def reasoning_summary_text(message: Any) -> str:
-    """Summary text carried by one message or chunk.
-
-    langchain-openai delivers a Responses reasoning item either as a content
-    block of type ``reasoning`` or, in its v0 output shape, under
-    ``additional_kwargs["reasoning"]``. Answer text blocks are never thoughts.
-    """
-    blocks: list[dict[str, Any]] = []
-    kwargs = getattr(message, "additional_kwargs", None) or {}
-    item = kwargs.get("reasoning")
-    if isinstance(item, dict):
-        blocks.append(item)
-    content = getattr(message, "content", None)
-    if isinstance(content, list):
-        blocks.extend(b for b in content if isinstance(b, dict) and b.get("type") == "reasoning")
-    parts: list[str] = []
-    for block in blocks:
-        for part in block.get("summary") or []:
-            if not isinstance(part, dict) or part.get("type") != "summary_text":
-                continue
-            text = part.get("text")
-            if isinstance(text, str) and text:
-                parts.append(text)
-    return "".join(parts)
+from app.providers.reasoning import reasoning_summary_text
 
 
 class ThoughtStreamObserver(AsyncCallbackHandler):

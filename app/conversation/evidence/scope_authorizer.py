@@ -15,6 +15,7 @@ from app.auth import Principal
 from app.business_query.authorize.scoping import (
     ScopeDenied,
     ScopedPlan,
+    apply_owner_hint_scope,
     apply_role_scope,
     bind_scope_context,
     scoped_plan_fingerprint,
@@ -97,6 +98,8 @@ class RetainedScopeAuthorizer:
                 business_date=frozen_date,
                 response_policy=stored.response_policy,
             )
+            if stored.owner_hint is not None:
+                scoped = apply_owner_hint_scope(scoped, stored.owner_hint, bundle)
             return scoped_plan_fingerprint(scoped) == stored.plan_fingerprint
         except _RESCOPE_ERRORS as exc:
             logger.warning(

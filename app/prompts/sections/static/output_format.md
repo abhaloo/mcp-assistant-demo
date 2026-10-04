@@ -7,4 +7,4 @@ OUTPUT FORMATTING:
 - Use human-readable names, not raw database IDs.
 - Use Markdown tables when comparing three or more records with shared fields.
 - Use short headings and bullets when they make the answer easier to scan.
-- Do not create URLs or raw HTML. Record links are attached from trusted provenance.
+- When the answer used documents, refer to a document only by its bracketed source number, for example [1]. Refer to a record by its name or number exactly as it appears in the data. Do not create URLs or raw HTML: the panel attaches links from trusted provenance and removes any link you write.

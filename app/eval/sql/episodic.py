@@ -64,7 +64,12 @@ def is_quarantined_case_id(case_id: str | None, *, contract_path: Path | None = 
 
 
 def expected_embedding_dimension() -> int | None:
-    """Known dimension for text-embedding-3-small; None if unknown."""
+    """Known dimension for configured embedding backends; None if unknown."""
+    if (
+        settings.embedding_provider == "fastembed"
+        and settings.fastembed_model == "BAAI/bge-small-en-v1.5"
+    ):
+        return 384
     if settings.embedding_model == "text-embedding-3-small":
         return 1536
     return None
@@ -175,10 +180,7 @@ class EpisodicStore:
         if self._vectors:
             store_dim = len(self._vectors[0])
             if len(qv) != store_dim:
-                logger.warning(
-                    "query vector dimension %d != store dimension %d", len(qv), store_dim
-                )
-                return []
+                raise ValueError(f"query vector dimension {len(qv)} != store dimension {store_dim}")
 
         scored: list[tuple[float, dict]] = []
         for ex, v in zip(self._exemplars, self._vectors, strict=True):

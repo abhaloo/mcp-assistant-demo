@@ -258,6 +258,10 @@ def test_corpus_tier_of(source_id, expected):
     assert corpus_tier_of(source_id) == expected
 
 
+def test_corpus_tier_of_reads_the_tier_folder_not_the_manuals_folder():
+    assert corpus_tier_of("data/corpus/company/graphic-design/manuals/x.md:0") == "graphic design"
+
+
 # ---------------------------------------------------------------------------
 # Citations
 # ---------------------------------------------------------------------------

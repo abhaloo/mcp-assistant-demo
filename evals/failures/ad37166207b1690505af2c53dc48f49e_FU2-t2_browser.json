@@ -1,0 +1,18 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "browser",
+  "run_id": "ad37166207b1690505af2c53dc48f49e",
+  "case_id": "FU2-t2",
+  "turn": 2,
+  "mode": "browser",
+  "role": "admin",
+  "question": "Which customers owe the most in TZS?",
+  "outcome_type": "answered",
+  "mismatches": [
+    "clarification_reply_re_asks"
+  ],
+  "reason": "At 390 x 844 in a new thread, the question got a clarify card (run 07b4bf9bd538eceeb0ca7e97a58fface: 'Do you mean amounts currently outstanding, or amounts owed during a particular period?'). The person chose 'Outstanding now' and pressed Continue. The reply turn's coordinator call (model_invocations id 28651) shows 'Current Question: Which customers owe the most in TZS?' with no trace of the chosen option, and the model clarified again with the same question, which streamed as an answered turn. The same question in FU1-t3 (desktop, a thread with earlier turns) was answered directly. This is the clarification-reply gap first logged on 2026-09-30 (insights-log 'the clarification reply is the one hole'); it is still open on feat/analytics-w2-recover at 9916639e.",
+  "evidence": "docs/superpowers/evidence/2026-10-02-luna6-followups/browser/sse/FU2-t2.sse; docs/superpowers/evidence/2026-10-02-luna6-followups/browser/sse/FU2-extra1.sse; docs/superpowers/evidence/2026-10-02-luna6-followups/browser/shots/FU2-refs.png; docs/superpowers/evidence/2026-10-02-luna6-followups/browser/RUN-REPORT.md"
+}

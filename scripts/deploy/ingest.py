@@ -19,6 +19,7 @@ from app.rag.ingestion.loader import load_documents, split_documents
 from app.rag.ingestion.manifest import build_manifest, write_manifest
 from app.rag.ingestion.provenance import stamp_chunks
 from app.rag.retrieval.retriever_factory import get_indexer
+from app.resources import ProcessResources, bind_process_resources, reset_process_resources
 
 
 def _corpus_container_client():
@@ -156,12 +157,18 @@ def main():
             "the alias/config. Pass --force to override deliberately."
         )
 
-    run_ingest(
-        args.docs_dir,
-        args.parser,
-        collection=target,
-        allow_partial=args.allow_partial,
-    )
+    resources = ProcessResources.from_settings()
+    token = bind_process_resources(resources)
+    try:
+        run_ingest(
+            args.docs_dir,
+            args.parser,
+            collection=target,
+            allow_partial=args.allow_partial,
+        )
+    finally:
+        reset_process_resources(token)
+        resources.shutdown()
 
 
 if __name__ == "__main__":

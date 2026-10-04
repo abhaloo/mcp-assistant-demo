@@ -27,8 +27,17 @@ from app.models.ask_v2_request import AskV2Request
 from app.providers.stage_model_report import FIXED_RESPONSE_MODEL_SENTINEL
 from app.resources import ProcessResources
 from app.services.ask_deadline import Deadline
+from app.services.ask_observation import TerminalWriter
 from app.services.ask_service import AskService
 from app.services.ask_v2_gate_c import GateCStatus, check_gate_c_readiness
+from app.services.ask_v2_replay import reauthorize_replay
+from app.services.ask_v2_result import (
+    ClarificationCard,
+    V2Reply,
+    V2Result,
+    replayed_result,
+    stored_result,
+)
 from app.services.continuation_tokens import (
     claim_pending_continuation,
     complete_pending_continuation,
@@ -55,23 +64,32 @@ class OperationOutcome:
     a new turn does.
     """
 
-    result: dict[str, Any]
+    result: V2Result
     expected_invocations: int
 
 
 def _choice_dicts(entries: Any) -> list[dict[str, Any]]:
-    """Normalize id/label rows from a list of mappings or objects."""
+    """Normalize choice rows and keep Continue fields the reply path reads."""
     if not entries:
         return []
     choices: list[dict[str, Any]] = []
     for entry in entries:
         if isinstance(entry, dict):
             identifier, label = entry.get("id"), entry.get("label")
+            extras = {
+                key: entry[key] for key in ("rewrite", "value_prompt", "detail") if key in entry
+            }
         else:
             identifier, label = getattr(entry, "id", None), getattr(entry, "label", None)
+            extras = {}
+            for key in ("rewrite", "value_prompt", "detail"):
+                if hasattr(entry, key):
+                    extras[key] = getattr(entry, key)
         if identifier is None:
             continue
-        choices.append({"id": str(identifier), "label": str(label or identifier)})
+        row: dict[str, Any] = {"id": str(identifier), "label": str(label or identifier)}
+        row.update(extras)
+        choices.append(row)
     return choices
 
 
@@ -90,6 +108,32 @@ def _clarification_choices(disambiguation: Any) -> list[dict[str, Any]]:
         else getattr(disambiguation, "candidates", None)
     )
     return _choice_dicts(candidates)
+
+
+def _disambiguation_term(disambiguation: Any) -> str:
+    if disambiguation is None:
+        return ""
+    if isinstance(disambiguation, dict):
+        return str(disambiguation.get("term") or "")
+    return str(getattr(disambiguation, "term", "") or "")
+
+
+def _ensure_choice_rewrites(
+    choices: list[dict[str, Any]], *, question: str, term: str
+) -> list[dict[str, Any]]:
+    """Fill Continue rewrite when the producer only sent id/label."""
+    from app.business_query.plan.value_resolver import clarification_choice_rewrite
+
+    filled: list[dict[str, Any]] = []
+    for row in choices:
+        next_row = dict(row)
+        if not next_row.get("rewrite"):
+            next_row["rewrite"] = clarification_choice_rewrite(
+                question, term, str(next_row.get("label") or "")
+            )
+            next_row.setdefault("detail", None)
+        filled.append(next_row)
+    return filled
 
 
 def _wire_clarification_choices(business_query: Any) -> list[dict[str, Any]]:
@@ -128,6 +172,11 @@ def _planner_question_from_reply(
             raise ContinuationClaimRejectedError("Unknown clarification choice")
         if choice.get("value_prompt"):
             return choice, ""
+        if pending.get("origin") == "coordinator":
+            label = choice.get("label")
+            if not isinstance(label, str) or not label.strip():
+                raise ContinuationClaimRejectedError("Clarification choice has no label")
+            return choice, label
         rewrite = choice.get("rewrite") or choice.get("label")
         if not isinstance(rewrite, str) or not rewrite.strip():
             raise ContinuationClaimRejectedError("Clarification choice has no rewrite or label")
@@ -135,15 +184,6 @@ def _planner_question_from_reply(
     if not isinstance(free_text, str) or not free_text.strip():
         raise ContinuationClaimRejectedError("Clarification reply is empty")
     return None, free_text
-
-
-def _operation_result(answer: Answer) -> dict[str, Any]:
-    """The wire dump plus the TurnResult the Answer keeps out of it.
-
-    The stream projects the tool-result fields and the restore reference from
-    that object, so every operation hands it over the same way.
-    """
-    return {**answer.model_dump(), "turn_result": answer.turn_result}
 
 
 class AskV2Service:
@@ -185,6 +225,8 @@ class AskV2Service:
         *,
         correlation_id: str,
         question: str,
+        thread_id: str | None = None,
+        principal: Principal | None = None,
     ) -> None:
         """Open the Query Record row before the turn runs.
 
@@ -198,6 +240,8 @@ class AskV2Service:
             project_id=settings.query_record_project_id or "mcp-default",
             environment=settings.environment,
             question=question,
+            thread_id=thread_id,
+            principal=principal,
         )
 
     async def ask(
@@ -210,7 +254,8 @@ class AskV2Service:
         progress: BusinessProgressSink | None = None,
         readiness_already_checked: bool = False,
         expiry_event: asyncio.Event | None = None,
-    ) -> dict[str, Any]:
+        terminal: TerminalWriter | None = None,
+    ) -> V2Reply:
         """Public budget wrapper around one v2 operation body."""
         from app.services.ask_v2_turn_bound import (
             is_timeout_cause,
@@ -224,7 +269,7 @@ class AskV2Service:
         reservation_attempted = False
         correlation_id = self._normalize_run_id(request.run_id)
 
-        async def _body() -> dict[str, Any]:
+        async def _body() -> V2Reply:
             nonlocal reservation_attempted
             return await self._ask_body(
                 request,
@@ -235,6 +280,7 @@ class AskV2Service:
                 readiness_already_checked=readiness_already_checked,
                 expiry_event=signal,
                 mark_reservation=lambda: _set_reservation(),
+                terminal=terminal,
             )
 
         def _set_reservation() -> None:
@@ -272,7 +318,8 @@ class AskV2Service:
         readiness_already_checked: bool,
         expiry_event: asyncio.Event,
         mark_reservation: Callable[[], None],
-    ) -> dict[str, Any]:
+        terminal: TerminalWriter | None = None,
+    ) -> V2Reply:
         """Execute Ask AI v2 JSON operation with Gate C check and execution reservation."""
         # Both entry paths (JSON handler and the SSE producer task) pass here,
         # so the query record stamps the thread on every v2 terminal.
@@ -288,6 +335,8 @@ class AskV2Service:
             await self._reserve_execution_if_configured(
                 correlation_id=correlation_id,
                 question=request.question or "",
+                thread_id=request.thread_id,
+                principal=principal,
             )
 
         if request.operation == "new_question":
@@ -299,6 +348,7 @@ class AskV2Service:
                 correlation_id=correlation_id,
                 progress=progress,
                 expiry_event=expiry_event,
+                terminal=terminal,
             )
         elif request.operation == "clarification_reply":
             outcome = await self._handle_clarification_reply(
@@ -309,6 +359,7 @@ class AskV2Service:
                 correlation_id=correlation_id,
                 progress=progress,
                 expiry_event=expiry_event,
+                terminal=terminal,
             )
         elif request.operation == "regenerate":
             outcome = await self._handle_regenerate(
@@ -319,6 +370,7 @@ class AskV2Service:
                 correlation_id=correlation_id,
                 progress=progress,
                 expiry_event=expiry_event,
+                terminal=terminal,
             )
         elif request.operation == "result_page":
             outcome = await self._handle_result_page(
@@ -329,6 +381,7 @@ class AskV2Service:
                 correlation_id=correlation_id,
                 progress=progress,
                 expiry_event=expiry_event,
+                terminal=terminal,
             )
         else:
             raise ValueError(f"Unsupported operation: {request.operation}")
@@ -344,10 +397,7 @@ class AskV2Service:
             InvocationExpectation(min_invocations=outcome.expected_invocations),
             deadline=deadline,
         )
-        res = outcome.result
-        if "evidence_digest" not in res:
-            res["evidence_digest"] = receipt.evidence_digest
-        return res
+        return V2Reply(outcome.result, receipt.evidence_digest)
 
     def _normalize_run_id(self, run_id: str) -> str:
         return normalize_run_id(run_id)
@@ -362,6 +412,7 @@ class AskV2Service:
         correlation_id: str,
         progress: BusinessProgressSink | None = None,
         expiry_event: asyncio.Event | None = None,
+        terminal: TerminalWriter | None = None,
     ) -> OperationOutcome:
         q_body = Question(
             question=request.question or " ",
@@ -380,54 +431,78 @@ class AskV2Service:
             progress=progress,
             turn_budget=deadline,
             expiry_event=expiry_event,
+            terminal=terminal,
         )
 
         # new_question commits to dispatching a real turn -- the operation
         # itself decides this before any answer exists, independent of what
         # the dispatch produces.
 
-        # Answer.business_query is the typed wire outcome, not a mapping. Read
-        # its fields; the clarification prompt is the outcome's own question.
-        # Options come from outcome.choices, then disambiguation candidates.
-        business_query = answer.business_query
-        if business_query is not None and business_query.outcome == "clarification_required":
-            # The pending record stores the same option list the card shows, so a
-            # clicked resolver candidate resolves exactly like a planner choice.
-            choices = _wire_clarification_choices(business_query)
-            pending = business_query.model_dump(mode="json")
-            pending["choices"] = choices
-            ticket, jti = mint_clarify_ticket(principal=principal, ttl_seconds=300)
-            await create_pending_continuation(
-                store=resources.conversation_store,
-                resources=resources,
-                jti=jti,
-                execution_id=correlation_id,
-                thread_id=request.thread_id,
-                principal=principal,
-                question=request.question or "",
-                pending_data=pending,
-                expires_at=int(time.time()) + 300,
-            )
-            return OperationOutcome(
-                result={
-                    "outcome": "clarification_required",
-                    "question": answer.question,
-                    "continuation_ref": ticket,
-                    "continuation": business_query.continuation,
-                    "prompt": business_query.question,
-                    "choices": choices,
-                    "allow_free_text": True,
-                    "disambiguation": answer.disambiguation,
-                },
-                expected_invocations=1,
-            )
+        card = await self._card_for(
+            answer,
+            request,
+            principal,
+            resources,
+            question=request.question or "",
+            correlation_id=correlation_id,
+        )
+        if card is not None:
+            return OperationOutcome(result=card, expected_invocations=1)
 
         # The AskService marks a reply no model produced (greeting, stale
         # context, capability refusal) with the fixed-response sentinel; such a
         # turn has no invocation to prove.
         fixed = answer.model == FIXED_RESPONSE_MODEL_SENTINEL
-        return OperationOutcome(
-            result=_operation_result(answer), expected_invocations=0 if fixed else 1
+        return OperationOutcome(result=answer, expected_invocations=0 if fixed else 1)
+
+    async def _card_for(  # noqa: PLR0913 - the answer, its request, the caller authorities, the reply question
+        self,
+        answer: Answer,
+        request: AskV2Request,
+        principal: Principal,
+        resources: ProcessResources,
+        *,
+        question: str,
+        correlation_id: str,
+    ) -> ClarificationCard | None:
+        """The clarification card for an answer whose query asks back; None otherwise."""
+        business_query = answer.business_query
+        if business_query is None or business_query.outcome != "clarification_required":
+            return None
+        # Answer.business_query is the typed wire outcome, not a mapping. Read
+        # its fields; the clarification prompt is the outcome's own question.
+        # Options come from outcome.choices, then disambiguation candidates.
+        # Resolver cards carry a disambiguation term. Planner/stall choices
+        # do not; leave those rows as the producer sent them.
+        choices = _wire_clarification_choices(business_query)
+        term = _disambiguation_term(getattr(business_query, "disambiguation", None))
+        if term:
+            choices = _ensure_choice_rewrites(choices, question=question, term=term)
+        pending = business_query.model_dump(mode="json")
+        pending["choices"] = choices
+        pending["origin"] = (
+            "coordinator" if settings.conversation_coordinator_enabled else "structured"
+        )
+        ticket, jti = mint_clarify_ticket(principal=principal, ttl_seconds=300)
+        await create_pending_continuation(
+            store=resources.conversation_store,
+            resources=resources,
+            jti=jti,
+            execution_id=correlation_id,
+            thread_id=request.thread_id,
+            principal=principal,
+            question=question,
+            pending_data=pending,
+            expires_at=int(time.time()) + 300,
+        )
+        return ClarificationCard(
+            question=answer.question,
+            continuation_ref=ticket,
+            continuation=business_query.continuation,
+            prompt=business_query.question,
+            choices=choices,
+            allow_free_text=True,
+            disambiguation=answer.disambiguation,
         )
 
     async def _handle_clarification_reply(
@@ -440,6 +515,7 @@ class AskV2Service:
         correlation_id: str,
         progress: BusinessProgressSink | None = None,
         expiry_event: asyncio.Event | None = None,
+        terminal: TerminalWriter | None = None,
     ) -> OperationOutcome:
         if request.continuation_ref is None:
             raise ContinuationRefRequiredError("clarification_reply requires continuation_ref")
@@ -464,7 +540,11 @@ class AskV2Service:
         # execution below -- never itself expects fresh terminal evidence at
         # this transport layer.
         if claim.status == "completed" and claim.answer is not None:
-            return OperationOutcome(result=claim.answer, expected_invocations=0)
+            replayed = replayed_result(claim.answer)
+            reauthorize_replay(
+                replayed, principal, correlation_id=correlation_id, progress=progress
+            )
+            return OperationOutcome(result=replayed, expected_invocations=0)
         elif claim.status == "in_progress":
             join_res = await join_continuation(
                 request.continuation_ref,
@@ -473,7 +553,11 @@ class AskV2Service:
                 resources=resources,
             )
             if join_res.status == "completed" and join_res.answer is not None:
-                return OperationOutcome(result=join_res.answer, expected_invocations=0)
+                joined = replayed_result(join_res.answer)
+                reauthorize_replay(
+                    joined, principal, correlation_id=correlation_id, progress=progress
+                )
+                return OperationOutcome(result=joined, expected_invocations=0)
             raise ContinuationUnavailableError("continuation_unavailable")
         elif claim.status == "rejected":
             raise ContinuationClaimRejectedError("Continuation claim rejected")
@@ -487,6 +571,7 @@ class AskV2Service:
             progress=progress,
             turn_budget=deadline,
             expiry_event=expiry_event,
+            terminal=terminal,
         )
 
     async def _dispatch_claimed_clarification(
@@ -500,6 +585,7 @@ class AskV2Service:
         progress: BusinessProgressSink | None,
         turn_budget: Deadline,
         expiry_event: asyncio.Event | None = None,
+        terminal: TerminalWriter | None = None,
     ) -> OperationOutcome:
         payload = await load_pending_continuation_payload(
             store=resources.conversation_store, jti=jti
@@ -519,13 +605,14 @@ class AskV2Service:
                 original_question=payload.question,
                 continuation=payload.pending.get("continuation"),
                 value_prompt=str(choice["value_prompt"]),
+                origin=payload.pending.get("origin", "structured"),
             )
             await complete_pending_continuation(
                 store=resources.conversation_store,
                 resources=resources,
                 jti=jti,
                 execution_id=mint_execution_id,
-                terminal_outcome=outcome.result,
+                terminal_outcome=stored_result(outcome.result),
             )
             return outcome
 
@@ -547,17 +634,26 @@ class AskV2Service:
                 progress=progress,
                 turn_budget=turn_budget,
                 expiry_event=expiry_event,
+                terminal=terminal,
             )
-            res_dict = _operation_result(answer)
+            card = await self._card_for(
+                answer,
+                request,
+                principal,
+                resources,
+                question=clarify_val,
+                correlation_id=correlation_id,
+            )
+            result = card or answer
             await complete_pending_continuation(
                 store=resources.conversation_store,
                 resources=resources,
                 jti=jti,
                 execution_id=mint_execution_id,
-                terminal_outcome=answer.model_dump(mode="json"),
+                terminal_outcome=stored_result(result),
             )
             completed = True
-            return OperationOutcome(result=res_dict, expected_invocations=0)
+            return OperationOutcome(result=result, expected_invocations=0)
         except (asyncio.CancelledError, DeadlineExpiredError):
             if not completed:
                 await fail_pending_continuation(
@@ -589,6 +685,7 @@ class AskV2Service:
         original_question: str,
         continuation: str | None,
         value_prompt: str,
+        origin: str = "structured",
     ) -> OperationOutcome:
         """Deterministic second card asking for the value a choice needs.
 
@@ -611,20 +708,20 @@ class AskV2Service:
                 "continuation": continuation,
                 "choices": [],
                 "allow_free_text": True,
+                "origin": origin,
             },
             expires_at=int(time.time()) + 300,
         )
         return OperationOutcome(
-            result={
-                "outcome": "clarification_required",
-                "question": original_question,
-                "continuation_ref": ticket,
-                "continuation": continuation,
-                "prompt": value_prompt,
-                "choices": [],
-                "allow_free_text": True,
-                "disambiguation": None,
-            },
+            result=ClarificationCard(
+                question=original_question,
+                continuation_ref=ticket,
+                continuation=continuation,
+                prompt=value_prompt,
+                choices=[],
+                allow_free_text=True,
+                disambiguation=None,
+            ),
             expected_invocations=0,
         )
 
@@ -638,6 +735,7 @@ class AskV2Service:
         correlation_id: str,
         progress: BusinessProgressSink | None = None,
         expiry_event: asyncio.Event | None = None,
+        terminal: TerminalWriter | None = None,
     ) -> OperationOutcome:
         q_body = Question(
             question=request.question or "regenerate",
@@ -657,8 +755,17 @@ class AskV2Service:
             progress=progress,
             turn_budget=deadline,
             expiry_event=expiry_event,
+            terminal=terminal,
         )
-        return OperationOutcome(result=_operation_result(answer), expected_invocations=1)
+        card = await self._card_for(
+            answer,
+            request,
+            principal,
+            resources,
+            question=request.question or "",
+            correlation_id=correlation_id,
+        )
+        return OperationOutcome(result=card or answer, expected_invocations=1)
 
     async def _handle_result_page(
         self,
@@ -670,6 +777,7 @@ class AskV2Service:
         correlation_id: str,
         progress: BusinessProgressSink | None = None,
         expiry_event: asyncio.Event | None = None,
+        terminal: TerminalWriter | None = None,
     ) -> OperationOutcome:
         if not settings.ask_result_page_enabled:
             raise ResultPageDisabledError("Paging through results is not available in Ask AI.")
@@ -689,8 +797,9 @@ class AskV2Service:
             progress=progress,
             turn_budget=deadline,
             expiry_event=expiry_event,
+            terminal=terminal,
         )
-        return OperationOutcome(result=_operation_result(answer), expected_invocations=0)
+        return OperationOutcome(result=answer, expected_invocations=0)
 
     async def stream(
         self,

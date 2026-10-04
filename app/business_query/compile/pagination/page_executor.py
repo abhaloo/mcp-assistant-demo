@@ -10,13 +10,14 @@ from typing import Any
 
 from app.auth import Principal
 from app.business_query.authorize.scoping import (
-    ForcedPredicate,
-    ScopedDerivedSet,
     ScopeDenied,
     ScopedPlan,
     apply_role_scope,
-    bind_scope_context,
-    canonical_forced,
+)
+from app.business_query.compile.pagination.continued_operation import (
+    ContinuationRefused,
+    execute_continued_operation,
+    restore_stored_scope,
 )
 from app.business_query.compile.pagination.keyset import apply_keyset_to_plan
 from app.business_query.compile.pagination.plan_payload import stored_plan_fingerprint
@@ -58,36 +59,6 @@ _DEFAULT_SECRET = settings.rag_jwt_secret
 _DENY_MESSAGE = "business query tools are currently unavailable"
 
 
-def _reconcile_forced_predicates(
-    reauthorized_forced: tuple[ForcedPredicate, ...],
-    stored_forced: tuple[ForcedPredicate, ...],
-    *,
-    is_derived: bool = False,
-) -> tuple[ForcedPredicate, ...]:
-    """Reconcile reauthorized forced predicates against stored forced predicates."""
-    curr_principal = [p for p in reauthorized_forced if p.source == "principal_scope"]
-    stored_principal = [p for p in stored_forced if p.source == "principal_scope"]
-
-    if stored_principal or is_derived:
-        if canonical_forced(curr_principal) != canonical_forced(stored_principal):
-            raise ScopeDenied("principal scope mismatch")
-
-    curr_record = [p for p in reauthorized_forced if p.source == "record_referent"]
-    stored_record = [p for p in stored_forced if p.source == "record_referent"]
-
-    if curr_record and canonical_forced(curr_record) != canonical_forced(stored_record):
-        raise ScopeDenied("record referent mismatch")
-
-    merged = list(curr_principal)
-    seen = {item.model_dump_json() for item in merged}
-    for item in stored_record:
-        dump = item.model_dump_json()
-        if dump not in seen:
-            merged.append(item)
-            seen.add(dump)
-    return tuple(merged)
-
-
 class ResultPageExecutor:
     """Executes subsequent result pages using a signed ResultPageCursor."""
 
@@ -112,7 +83,7 @@ class ResultPageExecutor:
         executor: Executor | None = None,
         step_timeout_seconds: float = 10.0,
         terminal_reserve_seconds: float = 2.0,
-        max_answer_chars: int = 8_000,
+        max_answer_chars: int = 16_000,
     ) -> None:
         self._plan_store = plan_store
         # Injected, not imported here: wire/answer_finalization.py sits above
@@ -287,13 +258,26 @@ class ResultPageExecutor:
         if stored.plan_fingerprint not in {expected_fingerprint, legacy_fingerprint}:
             return Incomplete(reason_code="cursor_expired")
 
-        stored_scope = ScopeBinding.from_stored_plan(stored)
-        if not stored_scope.verify_stored(
-            cursor_scope,
-            caller_scope,
-            self._project_id,
-            bundle.content_hash,
-        ):
+        # Fingerprint checks already loaded this row. The shared function loads it
+        # again so patch continuations and page continuations share one bind path.
+        continued = await execute_continued_operation(
+            subject=plan_answer_query_id,
+            patch=None,
+            principal=principal,
+            bundle=bundle,
+            plan_store=self._plan_store,
+            scope_fn=self._scope_fn,
+            now=current_time,
+            business_date=(
+                stored.derived_payload.business_date if stored.derived_payload is not None else None
+            ),
+            project_id=self._project_id,
+        )
+        if isinstance(continued, ContinuationRefused):
+            if continued.reason == "subject_unknown":
+                return Incomplete(reason_code="cursor_expired")
+            if continued.reason == "unauthorized_member":
+                return Denied(message=_DENY_MESSAGE, reason_code="policy_denied")
             return Denied(message=_DENY_MESSAGE, reason_code="cursor_scope_mismatch")
 
         try:
@@ -307,50 +291,17 @@ class ResultPageExecutor:
 
         # 7. Reauthorize plan, restore scope context, and apply keyset pagination
         try:
-            scoped = self._scope_fn(stored.plan, principal, bundle)
-            frozen_date = (
-                stored.derived_payload.business_date if stored.derived_payload is not None else None
-            )
-            scoped = bind_scope_context(
-                scoped,
+            scoped = restore_stored_scope(
+                self._scope_fn(stored.plan, principal, bundle),
+                stored,
                 principal=principal,
-                bundle_hash=bundle.content_hash,
-                business_date=frozen_date,
-                response_policy=stored.response_policy,
+                bundle=bundle,
             )
-
-            is_derived = stored.derived_payload is not None
-            reconciled_outer_forced = _reconcile_forced_predicates(
-                scoped.forced,
-                stored.forced,
-                is_derived=is_derived,
+            # The display projection ran before page 1 was sealed; carrying its
+            # members here keeps page 2's column roles identical to page 1's.
+            scoped = scoped.model_copy(
+                update={"display_members_added": frozenset(stored.display_members_added)}
             )
-            scoped = scoped.model_copy(update={"forced": reconciled_outer_forced})
-
-            if stored.derived_payload is not None:
-                snapshots_by_id = {s.id: s.forced for s in stored.derived_payload.derived}
-                if set(snapshots_by_id.keys()) != {d.id for d in scoped.derived}:
-                    raise ScopeDenied()
-                reconciled_derived: list[ScopedDerivedSet] = []
-                for d in scoped.derived:
-                    inner_stored_forced = snapshots_by_id[d.id]
-                    reconciled_inner_forced = _reconcile_forced_predicates(
-                        d.scoped.forced,
-                        inner_stored_forced,
-                        is_derived=True,
-                    )
-                    reconciled_inner_scoped = d.scoped.model_copy(
-                        update={"forced": reconciled_inner_forced}
-                    )
-                    reconciled_derived.append(
-                        ScopedDerivedSet(
-                            id=d.id,
-                            key=d.key,
-                            mode=d.mode,
-                            scoped=reconciled_inner_scoped,
-                        )
-                    )
-                scoped = scoped.model_copy(update={"derived": tuple(reconciled_derived)})
 
             paginated_plan = apply_keyset_to_plan(
                 scoped.plan,

@@ -21,6 +21,8 @@ _UNSUPPORTED_REASON_CODES = Literal[
     "measure_filter_unsupported",
     "optional_join_unsupported",
     "unsupported_operator",
+    "anchor_not_root",
+    "needs_prior_answer",
 ]
 
 
@@ -29,6 +31,16 @@ class AdapterUnsupported(Exception):
 
     def __init__(self, reason_code: str) -> None:
         self.reason_code = reason_code
+
+
+class RefusalDetail(BaseModel):
+    """Why a plan was refused, for the coordinator. Never on the wire."""
+
+    model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
+    rule: str | None = None
+    members: list[str] = Field(default_factory=list)
+    outside_access: list[str] = Field(default_factory=list)
+    available: list[str] = Field(default_factory=list)
 
 
 class PlanRefused(Exception):
@@ -44,9 +56,12 @@ class PlanRefused(Exception):
             "unsupported_relative_period",
         ],
         check_site: str | None = None,
+        *,
+        members: tuple[str, ...] = (),
     ) -> None:
         self.reason_code = reason_code
         self.check_site = check_site
+        self.members = members
 
 
 class ClarificationRequired(BaseModel):
@@ -67,6 +82,7 @@ class Unsupported(BaseModel):
     reason_code: _UNSUPPORTED_REASON_CODES
     message: str
     resolver_query_id: str | None = None
+    detail: RefusalDetail | None = None
 
 
 class Incomplete(BaseModel):
@@ -76,11 +92,14 @@ class Incomplete(BaseModel):
         "budget",
         "timeout",
         "adapter_invalid",
+        "data_contract_mismatch",
+        "unavailable",
         "request_conflict",
         "no_progress",
         "cursor_expired",
         "evidence_unavailable",
         "detail_source_unavailable",
+        "cancelled",
     ]
     resolver_query_id: str | None = None
 
@@ -189,6 +208,20 @@ class BusinessQueryReceipt(BaseModel):
     definition_hash: str | None = None
     profile_hash: str | None = None
     record_referent_digest: str | None = None
+    changes: tuple[
+        Literal[
+            "projection",
+            "limit",
+            "order",
+            "period",
+            "filter",
+            "membership",
+            "grain",
+            "anchor",
+        ],
+        ...,
+    ] = ()
+    continuation_tier: Literal["patch", "planned", "fresh"] | None = None
     # Internal continuation provenance. It is available to the Query Record
     # projection but excluded from the public JSON/SSE receipt.
     source_question: str | None = Field(default=None, exclude=True)
@@ -223,6 +256,9 @@ class RecordRef(BaseModel):
     resource: str
     record_id: int
     label: str | None = None
+    # The same-origin path minted by the seal under the viewer's link grant;
+    # None when the reference is not resolvable for this viewer.
+    href: str | None = None
     preview: RecordPreview | None = None
     row_index: int | None = Field(default=None, ge=0, exclude=True)
 
@@ -247,7 +283,7 @@ ResultValueKind = Literal[
     "boolean", "integer", "decimal", "percent", "currency", "string", "date", "datetime"
 ]
 DECIMAL_VALUE_KINDS = frozenset({"decimal", "percent", "currency"})
-ResultColumnRole = Literal["current", "previous", "delta", "delta_pct"]
+ResultColumnRole = Literal["current", "previous", "delta", "delta_pct", "display"]
 
 
 _COMPARISON_SUFFIX_BY_ROLE: dict[ResultColumnRole, str] = {
@@ -278,6 +314,25 @@ class ResultColumn(BaseModel):
     is_identifier: bool = False
     is_count: bool = False
     role: ResultColumnRole | None = None
+    label: str | None = None
+    link_key: str | None = None
+    # The look member whose value the key cell should show; the key's own value stays.
+    display_key: str | None = None
+    # The row-key template the seal minted from the bundle's record_route under
+    # the viewer's link grant; the wire copies it and mints nothing itself.
+    href_template: str | None = None
+
+
+class RowIdentity(BaseModel):
+    """What one row is, and how many anchors the rows cover."""
+
+    model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
+    anchor: str
+    expanded: str | None = None
+    anchor_count: int = Field(ge=0)
+    requested_anchor_count: int | None = None
+    row_count: int = Field(ge=0)
+    anchors_without_children: int = Field(ge=0)
 
 
 class Answered(BaseModel):
@@ -299,9 +354,12 @@ class Answered(BaseModel):
     companion_answered: tuple[Answered, ...] = ()
     columns: tuple[ResultColumn, ...] = ()
     presentation: ResultPresentation | None = None
+    row_identity: RowIdentity | None = None
     # Scoped plan fingerprint (plan + forced predicates + response policy) so a
     # retained answer can prove exact scope equality later; never on the wire.
     scope_fingerprint: str | None = None
+    derived_payload: Any = None
+    owner_hint: Any = None
 
 
 class UnifiedResultEnvelope(BaseModel):
@@ -335,6 +393,7 @@ class UnifiedResultEnvelope(BaseModel):
     failed_detail_families: tuple[str, ...] = ()
     columns: tuple[ResultColumn, ...] = ()
     presentation: ResultPresentation | None = None
+    row_identity: RowIdentity | None = None
 
 
 BusinessQueryWireDisposition = Literal[
@@ -448,6 +507,7 @@ def _build_unified_envelope(
         failed_detail_families=answered.failed_detail_families,
         columns=answered.columns,
         presentation=answered.presentation,
+        row_identity=answered.row_identity,
     )
 
 

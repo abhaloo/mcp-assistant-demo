@@ -11,7 +11,7 @@ from langsmith import traceable
 from opentelemetry import trace
 
 from app.auth import Principal
-from app.config import settings
+from app.config import settings  # noqa: F401 -- conversation_enabled patch anchor for tests
 from app.conversation.turn import TurnContext
 from app.core.ask_errors import (
     report_ask_failure,
@@ -27,7 +27,6 @@ from app.providers.route_policy import RouteResolutionError
 from app.providers.stage_model_report import (
     StageModelAccumulator,
 )
-from app.query_records.bq_usage import fill_terminal_usage_from_bq
 from app.query_records.context import TerminalUsageCapture
 from app.query_records.wiring import monotonic_start, resolve_prompt_version
 from app.rag.page_context import UnknownPageContextProfileError
@@ -88,6 +87,7 @@ from app.services.stream_transport import (
     sse_producer_errors as _sse_producer_errors,
 )
 from app.services.stream_transport import sse_sources_from_answer_sources
+from app.services.terminal_usage import fill_terminal_usage
 from app.telemetry.correlation import (
     bind_correlation_id,
     bind_thread_id,
@@ -228,10 +228,7 @@ async def _produce_semantic_stream(
         output_tokens = answered.usage.output_tokens if answered.usage is not None else None
         cost_status = answered.usage.cost_status if answered.usage is not None else None
         if usage is not None and answered.usage is not None:
-            usage.input_tokens = answered.usage.input_tokens
-            usage.output_tokens = answered.usage.output_tokens
-            usage.reasoning_tokens = answered.usage.reasoning_tokens
-            usage.cost_status = answered.usage.cost_status
+            usage.take_usage(answered.usage)
         source_payload = [to_sse_source(src) for src in answered.sources]
         for piece in _chunk_answer_tokens(answered.answer_text):
             if await _client_gone(disconnected, run_id):
@@ -394,10 +391,7 @@ async def _run_sse_attempt(
                 if isinstance(ladder_outcome, Stopped):
                     query_type = ladder_outcome.query_type
                     if usage_capture is not None and ladder_outcome.usage is not None:
-                        usage_capture.input_tokens = ladder_outcome.usage.input_tokens
-                        usage_capture.output_tokens = ladder_outcome.usage.output_tokens
-                        usage_capture.reasoning_tokens = ladder_outcome.usage.reasoning_tokens
-                        usage_capture.cost_status = ladder_outcome.usage.cost_status
+                        usage_capture.take_usage(ladder_outcome.usage)
                     note_request_outcome(query_type=query_type, outcome="stopped")
                     outcome = "stopped"
                     return {"outcome": outcome, "query_type": query_type, "committed": False}
@@ -468,19 +462,14 @@ async def _run_sse_attempt(
                     committed = outcome == "completed" and terminal.terminal == "done"
                     return {"outcome": outcome, "query_type": query_type, "committed": committed}
                 if isinstance(ladder_outcome, CapabilityUnavailable):
-                    if usage_capture is not None and ladder_outcome.bq is not None:
-                        fill_terminal_usage_from_bq(usage_capture, ladder_outcome.bq)
+                    if usage_capture is not None:
+                        fill_terminal_usage(usage_capture, bq=ladder_outcome.bq, turn_usage=None)
                     raise CapabilityUnavailableError(ladder_outcome.detail)
                 if isinstance(ladder_outcome, Answered):
                     query_type = ladder_outcome.query_type
                     if ladder_outcome.query_type == "semantic":
                         trace.get_current_span().set_attribute("requested_route", "semantic")
                         effective_route = "semantic"
-                        if usage_capture is not None and ladder_outcome.usage is not None:
-                            usage_capture.input_tokens = ladder_outcome.usage.input_tokens
-                            usage_capture.output_tokens = ladder_outcome.usage.output_tokens
-                            usage_capture.reasoning_tokens = ladder_outcome.usage.reasoning_tokens
-                            usage_capture.cost_status = ladder_outcome.usage.cost_status
                         outcome = await _produce_semantic_stream(
                             body,
                             principal,
@@ -558,19 +547,12 @@ async def _run_sse_attempt(
             input_tokens=usage_capture.input_tokens,
             output_tokens=usage_capture.output_tokens,
             reasoning_tokens=usage_capture.reasoning_tokens,
+            cached_tokens=usage_capture.cached_input_tokens,
+            estimated_usd=usage_capture.estimated_usd,
             cost_status=usage_capture.cost_status,
-            # Exact None-check, not truthiness: an empty-string model is a real
-            # captured value and must not fall through to the default. A BQ turn
-            # fills usage_capture.model with the resolved route model (e.g.
-            # gpt-5.6-luna); a semantic turn never sets it, so the fallback
-            # (settings.active_chat_model) applies when tokens were captured.
-            model=(
-                usage_capture.model
-                if usage_capture.model is not None
-                else (
-                    settings.active_chat_model if usage_capture.input_tokens is not None else None
-                )
-            ),
+            # The model a call in this turn used, or none.
+            model=usage_capture.model_for_record(),
+            provider=usage_capture.provider_for_record(),
             bq_trace_json=usage_capture.bq_trace_json,
             resolver_disposition=usage_capture.resolver_disposition,
             correlation_id=run_id,

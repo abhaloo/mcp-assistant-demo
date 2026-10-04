@@ -151,9 +151,9 @@ def assert_deepseek_direct_identity(route, settings) -> None:
     base_url = settings.deepseek_direct_base_url.rstrip("/")
     if base_url != "https://api.deepseek.com":
         fail(f"DeepSeek direct base URL must be https://api.deepseek.com, found {base_url!r}")
-    if route.deployment != "deepseek-v4-flash":
+    if route.deployment != "deepseek-flash":
         fail(
-            "DeepSeek direct must be deepseek-v4-flash "
+            "DeepSeek direct must be deepseek-flash "
             f"(v4 flash 0731 family), found {route.deployment!r}"
         )
 
@@ -182,7 +182,7 @@ def build_arm_record(route, model, deployment: str, settings) -> dict[str, Any]:
         "prompt_adjunct_hash": json_object_protocol_hash()
         if route.structured_output_mode == "json_object"
         else None,
-        "schema_hash": planner_schema_hash(route.structured_output_mode),
+        "schema_hash": planner_schema_hash(route.structured_output_mode, route.provider),
         "direct_model_env_set": bool(settings.deepseek_direct_model)
         if route.provider == "deepseek_direct"
         else None,

@@ -17,13 +17,13 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from app.config import settings
+from app.config import FROZEN_DECRYPT_ROLES, FROZEN_TRACE_RETENTION_DAYS, settings
 from app.eval.ask_route.case import ProdAskCase, load_cases, load_sql_oracle
-from app.eval.ask_route.checks import check_accuracy, check_citations
+from app.eval.ask_route.checks import check_accuracy, check_citations, corpus_tier_of
 from app.eval.ask_route.markdown import parse_markdown, total_list_items, widest_table
 from app.eval.ask_route.scorer import score_observation, transport_parity
 from app.eval.ask_route.scorer import write_failures as prod_ask_write_failures
-from app.eval.ask_route.text import contains_number, contains_phrase
+from app.eval.ask_route.text import contains_number, contains_phrase, normalize_text
 from app.main import app
 from app.policy.manifest_loader import load_manifest
 from app.rag.access_tiers import get_access_tiers
@@ -31,6 +31,18 @@ from tests.harness.prod_ask_stub_driver import run_stub_json, run_stub_sse
 
 CASES_PATH = Path("evals/prod_ask/cases.jsonl")
 ORACLE_PATH = Path("evals/prod_ask/oracle-results.jsonl")
+REPO_ROOT = Path(__file__).parents[2]
+CORPUS_COMPANY = REPO_ROOT / "data" / "corpus" / "company"
+
+
+def _manuals_with_tiers() -> list[tuple[Path, str]]:
+    results: list[tuple[Path, str]] = []
+    for p in sorted(CORPUS_COMPANY.glob("*/manuals/*.md")):
+        tier = corpus_tier_of(p.as_posix())
+        if tier:
+            results.append((p, tier))
+    return results
+
 
 _DASHES = dict.fromkeys(map(ord, "‐‑‒–—―"), "-")
 
@@ -55,6 +67,22 @@ def client():
 def _enable_document_rag_for_stub_transport(monkeypatch):
     """The stub cases exercise semantic JSON/SSE parity, not deployment-off UX."""
     monkeypatch.setattr(settings, "document_rag_enabled", True)
+
+
+@pytest.fixture(autouse=True)
+def _enable_gate_c(monkeypatch):
+    monkeypatch.setattr(settings, "business_query_mode", "enabled")
+    monkeypatch.setattr(settings, "canary_encryption_ready", True)
+    monkeypatch.setattr(settings, "gate_b_new_write_ready", True)
+    monkeypatch.setattr(
+        settings,
+        "zero_plaintext_backfill_receipt",
+        json.dumps(
+            {"encrypted_count": 10, "error_count": 0, "verified": True, "key_version": "v1"}
+        ),
+    )
+    monkeypatch.setattr(settings, "frozen_trace_retention_days", FROZEN_TRACE_RETENTION_DAYS)
+    monkeypatch.setattr(settings, "frozen_decrypt_roles", FROZEN_DECRYPT_ROLES)
 
 
 def _provenance_text(raw: str) -> str:
@@ -120,14 +148,61 @@ def test_forbidden_corpus_facts_are_really_in_the_withheld_document(cases):
 
 
 def test_forbidden_facts_belong_to_a_tier_the_principal_lacks(cases):
+    manuals = _manuals_with_tiers()
     for case in cases.values():
         if case.accuracy is None or not case.accuracy.forbidden_facts:
             continue
         corpus_file = case.accuracy.oracle.corpus_file
         if corpus_file is None:
             continue
-        tier = Path(corpus_file).parent.name.replace("-", " ")
-        assert tier not in {t.casefold() for t in case.expected_access_tiers}, case.id
+        tier = corpus_tier_of(corpus_file)
+        expected_tiers = {t.casefold() for t in case.expected_access_tiers}
+        assert tier not in expected_tiers, case.id
+        for fact in case.accuracy.forbidden_facts:
+            if fact.kind == "number":
+                continue
+            assert normalize_text(fact.text) not in normalize_text(case.question), (
+                f"{case.id}: forbidden fact '{fact.text}' is a substring of the question"
+            )
+            for manual_path, manual_tier in manuals:
+                if manual_tier in expected_tiers:
+                    manual_text = manual_path.read_text(encoding="utf-8")
+                    assert not contains_phrase(manual_text, fact.text), (
+                        f"{case.id}: forbidden fact '{fact.text}' "
+                        f"found in readable manual {manual_path.name}"
+                    )
+
+
+def test_required_text_facts_have_declared_sources_within_the_principal_tiers(cases):
+    manuals = _manuals_with_tiers()
+    for case in cases.values():
+        if case.accuracy is None or case.accuracy.oracle.kind != "corpus":
+            continue
+        corpus_file = case.accuracy.oracle.corpus_file
+        if corpus_file is None:
+            continue
+        expected_tiers = {t.casefold() for t in case.expected_access_tiers}
+        supporting = set(case.citations.supporting_source_files) if case.citations else set()
+        declared = {Path(corpus_file).name} | supporting
+        if case.citations and case.citations.supporting_source_files:
+            assert case.citations.max_cited is None or case.citations.max_cited >= len(
+                case.citations.supporting_source_files
+            ), f"{case.id}: max_cited smaller than supporting_source_files"
+        for fact in case.accuracy.required_facts:
+            if fact.kind != "text":
+                continue
+            matching_manuals = {
+                manual_path.name
+                for manual_path, manual_tier in manuals
+                if (
+                    manual_tier in expected_tiers
+                    and contains_phrase(manual_path.read_text(encoding="utf-8"), fact.text)
+                )
+            }
+            assert matching_manuals <= declared, (
+                f"{case.id}: required fact '{fact.text}' occurs in undeclared readable "
+                f"manual(s) {matching_manuals - declared}"
+            )
 
 
 def test_stub_fixture_chunks_are_traceable_to_their_document(cases):
@@ -150,7 +225,7 @@ def test_stub_fixture_tier_matches_its_corpus_folder(cases):
         if case.stub is None:
             continue
         for chunk in case.stub.docs:
-            folder = Path(chunk.source_file).parent.name.replace("-", " ")
+            folder = corpus_tier_of(chunk.source_file)
             assert chunk.access_tier == folder, f"{case.id}: {chunk.source_file}"
 
 
@@ -279,7 +354,7 @@ def test_binding_a_marker_to_the_wrong_document_fails_the_allowlist(cases, clien
     outcomes = check_citations(case, wrong)
     check = next(o for o in outcomes if o.check_id == "citations.cited_files_contain_the_claim")
     assert not check.passed
-    assert "company-handbook.md" in check.detail
+    assert "getting-started-and-navigation.md" in check.detail
 
 
 def test_an_unstripped_marker_would_fail_the_citation_hygiene_check(cases, client):

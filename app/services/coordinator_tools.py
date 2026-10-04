@@ -6,20 +6,31 @@ root; the coordinator passes business-level questions only.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable, Sequence
+from dataclasses import replace
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from app.auth import Principal
-from app.business_query.definitions import BundleSelectionError
+from app.business_query.definitions import (
+    BundleSelectionError,
+    DefinitionBundle,
+    bundle_for_manifest,
+)
+from app.business_query.definitions.schema import UiDestination
 from app.business_query.plan import PlannedQuerySet
 from app.business_query.plan.attempts import AttemptConflictError
+from app.business_query.plan.plan_patch import PlanPatch
 from app.business_query.ports import ProgressStage
 from app.business_query.wire.ask_result import AskBusinessQueryResult, CommittedBqResult
-from app.conversation.coordinator.contracts import ActionKind
+from app.business_query.wire.module_scoping import load_bundle
+from app.conversation.coordinator.contracts import ActionKind, BusinessQuestion
+from app.conversation.coordinator.observations import document_search_offer_text
 from app.conversation.followup_context import SelectedSources, restore_selected
 from app.conversation.followup_contracts import SourceCandidate, SourceSelection
 from app.core.errors import CapabilityUnavailableError
 from app.core.turn_budget import UNBOUNDED_BUDGET, TurnBudget
+from app.rag.provenance.ui_links import offered_for_text, permitted_destinations
 from app.rag.retrieval.document_contracts import DocumentFailure, DocumentSearchResult
 from app.services.ask_frames import AskStage
 from app.services.business_query_mapping import (
@@ -43,6 +54,21 @@ if TYPE_CHECKING:
     from app.conversation.evidence.ports import EvidenceRestoreService
     from app.models.record_context import RecordContext
     from app.services.business_query_operation import PreparedBqOperation
+
+logger = logging.getLogger(__name__)
+
+
+def _page_offers_for_result(
+    principal: Principal, result: DocumentSearchResult, correlation_id: str
+) -> tuple[UiDestination, ...]:
+    """Destinations mentioned in the same summary the observation shows."""
+    if not principal.manifest_hash:
+        return ()
+    haystack = document_search_offer_text(result.passages)
+    bundle = load_bundle(bundle_for_manifest, principal, correlation_id)
+    if not isinstance(bundle, DefinitionBundle):
+        return ()
+    return offered_for_text(permitted_destinations(bundle, principal), haystack)
 
 
 @runtime_checkable
@@ -72,7 +98,9 @@ class CoordinatorProgress(Protocol):
 class CoordinatorTools(Protocol):
     """Governed application ports available to the conversational coordinator."""
 
-    async def query_business(self, question: str) -> CommittedBqResult | AskBusinessQueryResult: ...
+    async def query_business(
+        self, question: BusinessQuestion, continues: PlanPatch | None = None
+    ) -> CommittedBqResult | AskBusinessQueryResult: ...
 
     async def search_documents(self, question: str) -> DocumentSearchResult | DocumentFailure: ...
 
@@ -94,7 +122,9 @@ class AskCoordinatorTools:
         correlation_id: str = "",
         record_context: RecordContext | None = None,
         bq_operation: PreparedBqOperation | None = None,
-        bq_operation_factory: Callable[[str], PreparedBqOperation] | None = None,
+        bq_operation_factory: (
+            Callable[[BusinessQuestion, PlanPatch | None], PreparedBqOperation] | None
+        ) = None,
         document_handler: DocumentHandler | None = None,
         candidates: Sequence[SourceCandidate] = (),
         thread_id: str = "",
@@ -127,7 +157,9 @@ class AskCoordinatorTools:
             available.add("explain_sources")
         return frozenset(available)
 
-    async def query_business(self, question: str) -> CommittedBqResult | AskBusinessQueryResult:
+    async def query_business(
+        self, question: BusinessQuestion, continues: PlanPatch | None = None
+    ) -> CommittedBqResult | AskBusinessQueryResult:
         if self._closed:
             raise RuntimeError("AskCoordinatorTools is already closed")
 
@@ -138,7 +170,7 @@ class AskCoordinatorTools:
         # returns, so the turn finishes honestly instead of dying in the graph.
         try:
             if self._operation is None and self._bq_operation_factory is not None:
-                self._operation = self._bq_operation_factory(question)
+                self._operation = self._bq_operation_factory(question, continues)
             assert self._operation is not None
             prepared = await self._operation.prepare()
             if isinstance(prepared, PlannedQuerySet):
@@ -156,8 +188,8 @@ class AskCoordinatorTools:
                 # written over this result retains its evidence.
                 return with_turn_result(executed, principal=self._principal)
             return with_turn_result(prepared, principal=self._principal)
-        except (CapabilityUnavailableError, BundleSelectionError):
-            return denied_capability_result()
+        except (CapabilityUnavailableError, BundleSelectionError) as exc:
+            return denied_capability_result(exc, correlation_id=self._correlation_id)
         except AttemptConflictError:
             return request_conflict_result(correlation_id=self._correlation_id)
         except BQ_COMPOSITION_ERRORS as exc:
@@ -179,7 +211,13 @@ class AskCoordinatorTools:
             record_context=self._record_context,
             origin="ask",
         )
-        return await self._document_handler(DocumentSearchInput(query=question), ctx)
+        result = await self._document_handler(DocumentSearchInput(query=question), ctx)
+        if isinstance(result, DocumentSearchResult):
+            offers = _page_offers_for_result(self._principal, result, self._correlation_id)
+            if offers == result.page_offers:
+                return result
+            return replace(result, page_offers=offers)
+        return result
 
     async def explain_sources(self, selection: SourceSelection) -> SelectedSources | None:
         if self._closed:

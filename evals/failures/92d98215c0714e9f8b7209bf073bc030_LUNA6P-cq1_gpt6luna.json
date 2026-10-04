@@ -1,0 +1,20 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "records",
+  "run_id": "92d98215c0714e9f8b7209bf073bc030",
+  "case_id": "LUNA6P-gpt6luna-cq1-rep1",
+  "turn": 1,
+  "mode": "gpt6luna",
+  "role": "admin",
+  "question": "Which month of 2025 had our highest invoiced revenue in TZS, and list the invoices from that month.",
+  "outcome_type": "unsupported",
+  "mismatches": [
+    "needs_prior_answer",
+    "month_not_shown",
+    "no_invoice_list"
+  ],
+  "reason": "CQ1 on GPT-6 Luna after the luna6-planner merge (RAG 5d18a4cc). The coordinator called query_business with only the first part (\"Which month of 2025 had the highest invoiced revenue in TZS?\"), but the planner request carried the user's full question with that part as a \"Suggested reading:\" line. The prompt says the question's own words win, so the planner answered unsupported needs_prior_answer (the invoice list needs the month first) and the coordinator finished with an explanation instead of asking for the month on its own. Expected from the independent oracle: 2025-12, TZS 244,965,526.15, 118 invoices. Not caused by the four luna6-planner fixes (no repair round, no time-grouping refusal); hypothesis: the coordinator-to-planner reading contract for multi-part questions.",
+  "evidence": "docs/superpowers/evidence/2026-10-02-luna6-planner-phase2/README.md; docs/superpowers/evidence/2026-10-02-luna6-planner-phase2/gpt6luna.jsonl; docs/superpowers/evidence/2026-10-02-luna6-planner-phase2/gpt6luna-grade.tsv; docs/superpowers/evidence/2026-10-02-luna6-planner-phase2/gpt6luna-ledger-s1-3.out; docs/superpowers/evidence/2026-10-02-luna6-planner-phase2/oracle-cq1-2025-top-month-invoices.tsv"
+}

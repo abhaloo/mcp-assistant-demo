@@ -2,9 +2,16 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
 from app.conversation.reference_artifact import ReferenceArtifact
 from app.models.tool_results import ComponentEvidence, ToolOmission
@@ -13,6 +20,10 @@ from app.services.record_intent import RecordAggregateContinuation
 ContextMode = Literal["jobs", "none"]
 TURN_CONTENT_MAX = 4000
 _MAX_EXCHANGE_ID_LEN = 64
+_MAX_SHOWN_KEYS = 3
+_MAX_SHOWN_VALUES_PER_KEY = 20
+_MAX_SHOWN_VALUE_LEN = 64
+_PLAN_FINGERPRINT_LEN = 64
 
 
 class BqTurnDigest(BaseModel):
@@ -20,7 +31,7 @@ class BqTurnDigest(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    outcome: Literal["answered", "timeout"] = "answered"
+    outcome: Literal["answered", "timeout", "stopped"] = "answered"
     plan_fingerprint: str = Field(max_length=64)
     grain: Literal["scalar", "grouped", "entity_rows"]
     measures: list[str] = Field(default_factory=list)
@@ -28,10 +39,36 @@ class BqTurnDigest(BaseModel):
     row_count: int = Field(ge=0)
     scalar_value: str | None = None
     receipt_title: str = Field(min_length=1, max_length=120)
+    anchor: str | None = None
+    limit: int | None = None
+    set_ids: list[str] = Field(default_factory=list)
+    answer_query_id: str | None = None
+    plan_answer_query_id: str | None = None
+    summary: str | None = Field(default=None, max_length=300)
+    shown: dict[str, list[str]] = Field(default_factory=dict)
+    # The plan's period as JSON, so a follow-up re-plans in the same year.
+    period: dict[str, Any] | None = None
+    # The receipt's facts as the person read them (filters, then the period).
+    facts: list[str] = Field(default_factory=list, max_length=8)
+
+    @field_validator("shown")
+    @classmethod
+    def _validate_shown(cls, value: dict[str, list[str]]) -> dict[str, list[str]]:
+        if len(value) > _MAX_SHOWN_KEYS:
+            raise ValueError(f"shown cannot contain more than {_MAX_SHOWN_KEYS} keys")
+        for k, vals in value.items():
+            if len(vals) > _MAX_SHOWN_VALUES_PER_KEY:
+                raise ValueError(
+                    f"shown key {k} cannot contain more than {_MAX_SHOWN_VALUES_PER_KEY} values"
+                )
+            for v in vals:
+                if len(v) > _MAX_SHOWN_VALUE_LEN:
+                    raise ValueError(f"shown value '{v}' exceeds {_MAX_SHOWN_VALUE_LEN} characters")
+        return value
 
     @model_validator(mode="after")
     def _outcome_shape(self) -> BqTurnDigest:
-        if self.outcome == "timeout":
+        if self.outcome in ("timeout", "stopped"):
             if (
                 self.plan_fingerprint != ""
                 or self.grain != "scalar"
@@ -39,10 +76,11 @@ class BqTurnDigest(BaseModel):
                 or self.scalar_value is not None
             ):
                 raise ValueError(
-                    "timeout digest must use an empty fingerprint, scalar grain, and no rows"
+                    f"{self.outcome} digest must use an empty fingerprint, scalar grain, "
+                    "and no rows"
                 )
             return self
-        if len(self.plan_fingerprint) != 64:
+        if len(self.plan_fingerprint) != _PLAN_FINGERPRINT_LEN:
             raise ValueError("answered digest needs a 64-character plan fingerprint")
         return self
 

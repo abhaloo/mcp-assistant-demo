@@ -1,0 +1,19 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "browser",
+  "run_id": "520de6c2c7ece425cc12d220b81929ca",
+  "case_id": "LK4",
+  "turn": 1,
+  "mode": "browser",
+  "role": "admin",
+  "question": "who has the biggest job here by invoice value",
+  "outcome_type": "unsupported",
+  "mismatches": [
+    "false_refusal",
+    "inconsistent_across_runs"
+  ],
+  "reason": "At 390 x 844 the panel answered 'I can't identify the biggest job by invoice value because the business records don't keep invoice value at the job level.' The business query outcome is unsupported / grain_unexpressible. The same question in the same session three minutes earlier (LK2-t1, run 32f62f3cc25f38d528cec2ad2f4a1af6, desktop) was answered: job 18602, ZRA- ZANZIBAR REVENEW AUTHORITY. The activity frames stop after 'planning' (no authorize, querying or sealing), so the plan was refused before compilation. The record-label change (compile and seal stages) is not on this path; this is planner variance on one question. The record-label oracle for this case (no 'Invoice #<id>' chip) holds trivially: no record link is shown.",
+  "evidence": "docs/superpowers/evidence/2026-10-02-luna6-links/browser/sse/LK4-t1.sse; docs/superpowers/evidence/2026-10-02-luna6-links/browser/shots/LK4-t1.png; docs/superpowers/evidence/2026-10-02-luna6-links/browser/sse/LK2-t1.sse; docs/superpowers/evidence/2026-10-02-luna6-links/browser/shots/LK2-t1.png"
+}

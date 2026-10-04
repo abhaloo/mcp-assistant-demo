@@ -40,7 +40,15 @@ def _business_query_denial(
 ) -> DenialReason | None:
     payload = snapshot.payload
     bq = payload.restored_turn.business_query
-    if bq is not None:
+    # A refused or clarified query shows text only: no plan was stored, and none
+    # is re-scoped. Identity, expiry and document checks still apply.
+    text_only = (
+        bq is not None
+        and bq.outcome != "answered"
+        and not bq.envelopes
+        and not payload.stored_plans
+    )
+    if bq is not None and not text_only:
         if not payload.stored_plans:
             return "dependency_unverifiable"
         if len(payload.stored_plans) > 2 or len(bq.envelopes) > 2:

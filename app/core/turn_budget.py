@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import math
+import threading
 from collections.abc import Awaitable, Callable
 from concurrent.futures import Executor
 from typing import Protocol, TypeVar, runtime_checkable
@@ -18,6 +19,9 @@ class TurnBudget(Protocol):
     @property
     def remaining_seconds(self) -> float: ...
 
+    @property
+    def cancel_token(self) -> threading.Event: ...
+
     def check_not_expired(self) -> None: ...
 
 
@@ -25,6 +29,10 @@ class _UnboundedBudget:
     @property
     def remaining_seconds(self) -> float:
         return math.inf
+
+    @property
+    def cancel_token(self) -> threading.Event:
+        return threading.Event()
 
     def check_not_expired(self) -> None:
         return None
@@ -78,19 +86,21 @@ async def await_with_budget(  # noqa: PLR0913
     selected_by_ceiling = _ceiling_selected(
         budget, ceiling_seconds=ceiling_seconds, reserve_seconds=reserve_seconds
     )
-    if allowance <= 0:
-        budget.check_not_expired()
-        raise DeadlineExpiredError("Turn budget has no remaining allowance")
-    if allowance == math.inf:
-        return await operation()
-
     child: asyncio.Task[T] | None = None
     timer: asyncio.Task[None] | None = None
 
     async def _run() -> T:
         return await operation()
 
-    try:
+    async def _race() -> T:
+        """Run the operation against the allowance timer; raise on the losing side."""
+        nonlocal child, timer
+        if allowance <= 0:
+            budget.check_not_expired()
+            raise DeadlineExpiredError("Turn budget has no remaining allowance")
+        if allowance == math.inf:
+            return await operation()
+
         child = asyncio.create_task(_run())
         timer = asyncio.create_task(asyncio.sleep(allowance))
         done, _pending = await asyncio.wait({child, timer}, return_when=asyncio.FIRST_COMPLETED)
@@ -106,7 +116,11 @@ async def await_with_budget(  # noqa: PLR0913
         if selected_by_ceiling:
             raise TimeoutError("stage ceiling exceeded")
         raise DeadlineExpiredError("Turn budget expired")
+
+    try:
+        return await _race()
     except asyncio.CancelledError:
+        budget.cancel_token.set()
         if child is not None and not child.done():
             child.cancel()
             if join_cancelled_child:
@@ -114,6 +128,9 @@ async def await_with_budget(  # noqa: PLR0913
         if timer is not None and not timer.done():
             timer.cancel()
             await _join_task(timer)
+        raise
+    except DeadlineExpiredError:
+        budget.cancel_token.set()
         raise
 
 

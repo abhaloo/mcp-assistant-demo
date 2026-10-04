@@ -14,6 +14,14 @@ class Source(BaseModel):
     )
     content: str = Field(description="The text content of the source chunk")
     source_file: str = Field(description="Filename or path of the source document")
+    title: str | None = Field(
+        default=None,
+        description="Display name of the source document; retrieval takes it from the file name",
+    )
+    snippet: str | None = Field(
+        default=None,
+        description="Opening text of the passage, for the source card",
+    )
     chunk_index: int | None = Field(default=None, description="Chunk position within its document")
     marker: int | None = Field(
         default=None,

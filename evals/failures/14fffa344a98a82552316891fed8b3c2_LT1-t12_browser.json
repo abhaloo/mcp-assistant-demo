@@ -1,0 +1,19 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "browser",
+  "run_id": "14fffa344a98a82552316891fed8b3c2",
+  "case_id": "LT1",
+  "turn": 12,
+  "mode": "browser",
+  "role": "admin",
+  "question": "Summarise what we found in this conversation.",
+  "outcome_type": "answered",
+  "mismatches": [
+    "compose_failed",
+    "trusted_on_stop"
+  ],
+  "reason": "'I could not put that answer together properly. Please ask the question again.' Both finish_answer drafts cite earlier exchange ids as evidence_ids (no tool ran this turn); the second adds a made-up id. The stop copy is a coordinator stop (_STOP_MESSAGES), but the wire says answered, trusted=true, reason_code=null.",
+  "evidence": "docs/superpowers/evidence/2026-09-25-failure-recovery/waveG/browser/sse/LT1-t12.sse; model_invocations coordinator responses for this run"
+}

@@ -108,6 +108,16 @@ class ThreadRecord:
     entity_id: int | None = None
 
 
+def _new_record(
+    user_id: str | int, entity_id: int | None, started_at: float | None
+) -> ThreadRecord:
+    """A new thread record. A thread rebuilt from its Query Records keeps its first
+    turn's time, so the absolute lifetime still counts from there (ADR 0028)."""
+    if started_at is None:
+        return ThreadRecord(owner=str(user_id), entity_id=entity_id)
+    return ThreadRecord(owner=str(user_id), entity_id=entity_id, created_at=started_at)
+
+
 def _record_expired(record: ThreadRecord) -> bool:
     if record.created_at <= 0:
         return True
@@ -152,6 +162,8 @@ class ConversationStore(Protocol):
         user_id: str | int,
         turns: list[TranscriptTurn],
         entity_id: int | None = None,
+        *,
+        started_at: float | None = None,
     ) -> None: ...
 
     async def replace_latest_exchange(
@@ -269,11 +281,11 @@ class InMemoryConversationStore:
         user_id: str | int,
         turns: list[TranscriptTurn],
         entity_id: int | None = None,
+        *,
+        started_at: float | None = None,
     ) -> None:
         self._check_owner(thread_id, user_id, entity_id)
-        record = self._records.setdefault(
-            thread_id, ThreadRecord(owner=str(user_id), entity_id=entity_id)
-        )
+        record = self._records.setdefault(thread_id, _new_record(user_id, entity_id, started_at))
         record.turns = self._policy.trim_for_storage(record.turns + list(turns))
 
     async def replace_latest_exchange(
@@ -548,6 +560,8 @@ class RedisConversationStore:
         user_id: str | int,
         turns: list[TranscriptTurn],
         entity_id: int | None = None,
+        *,
+        started_at: float | None = None,
     ) -> None:
         key = self._key(thread_id)
         for attempt in range(self._max_append_retries):
@@ -560,9 +574,9 @@ class RedisConversationStore:
                             raw, user_id, thread_id=thread_id, entity_id=entity_id
                         )
                         if _record_expired(record):
-                            record = ThreadRecord(owner=str(user_id), entity_id=entity_id)
+                            record = _new_record(user_id, entity_id, started_at)
                     else:
-                        record = ThreadRecord(owner=str(user_id), entity_id=entity_id)
+                        record = _new_record(user_id, entity_id, started_at)
                     record.turns = self._policy.trim_for_storage(record.turns + list(turns))
                     pipe.multi()
                     pipe.set(key, self._encode(record), ex=self._ttl)

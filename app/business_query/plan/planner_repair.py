@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
+from pydantic_core import ValidationError as PydanticValidationError
+
 if TYPE_CHECKING:
     from app.business_query.outcomes import Incomplete
 from app.business_query.plan.attempts import (
@@ -57,6 +59,21 @@ def _capture_first_planner_payload(writer: QueryTrace | None, raw: object) -> No
     writer.planner_raw_payload = f"<non-dict:{type(raw).__name__} len={len(str(raw))}>"
 
 
+def validation_error_paths(cause: BaseException | None) -> list[dict[str, str]]:
+    """Location and type of each error that made a planner reply invalid.
+
+    The values the reply carried are never read, so a recorded path holds no
+    customer data. A failure that is not a pydantic error records its class name."""
+    if cause is None:
+        return []
+    if not isinstance(cause, PydanticValidationError):
+        return [{"loc": "", "type": type(cause).__name__}]
+    return [
+        {"loc": ".".join(str(part) for part in error["loc"]), "type": error["type"]}
+        for error in cause.errors(include_input=False, include_url=False, include_context=False)
+    ]
+
+
 class _PlannerProtocolFailure(Exception):
     def __init__(
         self,
@@ -90,6 +107,8 @@ class PlannerRepairMixin:
     ) -> tuple[str | None, str] | Incomplete:
         if exc.code in _REPAIRABLE_CODES:
             _capture_first_planner_payload(writer, raw)
+        if exc.code == "planner_schema_invalid" and writer is not None:
+            writer.planner_validation_errors.extend(validation_error_paths(exc.__cause__))
         repair_max = PLANNER_REPAIR_MAX + (
             DERIVED_SET_REPAIR_BONUS if _plan_declares_derived_sets(raw) else 0
         )

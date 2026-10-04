@@ -1,0 +1,17 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "run_id": "ae38b122fffc4c829b9c233ad3354be1",
+  "case_id": "tg-03",
+  "query_type": "business_query",
+  "mode": "heldout",
+  "role": "admin",
+  "question": "Show the invoices from our two best months of 2025 by invoiced revenue in TZS.",
+  "outcome_type": "answered",
+  "mismatches": [
+    "answer_prose_missing"
+  ],
+  "reason": "Both tables are right (2025-12 and 2025-03 selected; 202 invoices, 20 shown), but the answer text is only the table context ('Limited to the 2 months with the highest Invoiced revenue (TZS) / Showing 20 of 202'): it never names the two months. The browser follow-up 'only the ones over 5 million' (run 8dea7f40353b73f7554fcd69ad8a7448) answered with only 'Showing 13 of 13' the same way.",
+  "evidence": "docs/superpowers/evidence/2026-10-02-cq1-composition/live/runs/heldout.jsonl; docs/superpowers/evidence/2026-10-02-cq1-composition/browser/sse/BR1-t2.sse"
+}

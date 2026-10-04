@@ -58,10 +58,17 @@ def get_embeddings(
     A request timeout or retry bound switches to the document HTTP clients so
     the process-wide clients keep their defaults.
     """
+    if settings.embedding_credential_source == "openai":
+        api_key = settings.openai_api_key
+        api_base = settings.openai_base_url
+    else:
+        api_key = settings.model_api_key
+        api_base = settings.base_url
+
     return OpenAIEmbeddings(
         model=settings.embedding_model,
-        openai_api_key=settings.model_api_key,
-        openai_api_base=settings.base_url,
+        openai_api_key=api_key,
+        openai_api_base=api_base,
         **embedding_client_kwargs(
             resources, request_timeout_s=request_timeout_s, max_retries=max_retries
         ),

@@ -31,11 +31,12 @@ class DerivedScopeSnapshot(BaseModel):
 
 
 class DerivedPlanPayload(BaseModel):
-    """Envelope version 2 payload for plans containing derived sets."""
+    """Envelope payload for plans containing derived sets; version 3 marks plans
+    that use pick or chained sets."""
 
     model_config = ConfigDict(strict=True, extra="forbid")
 
-    format_version: Literal[2]
+    format_version: Literal[2, 3]
     plan: BusinessQueryPlan
     forced: tuple[ForcedPredicate, ...]
     derived: tuple[DerivedScopeSnapshot, ...]
@@ -54,6 +55,21 @@ class DerivedPlanPayload(BaseModel):
         if set(snapshot_ids) != plan_set_ids:
             raise ValueError("derived snapshots must match plan derived_sets one-to-one")
         return self
+
+
+def derived_plan_payload(scoped: Any, *, original_question: str | None) -> DerivedPlanPayload:
+    """Build the version-3 envelope StoredPlan requires for a set-bearing plan."""
+    return DerivedPlanPayload(
+        format_version=3,
+        plan=scoped.plan,
+        forced=scoped.forced,
+        derived=tuple(
+            DerivedScopeSnapshot(id=item.id, forced=item.scoped.forced) for item in scoped.derived
+        ),
+        business_date=scoped.business_date,
+        response_policy=scoped.response_policy,
+        original_question=original_question,
+    )
 
 
 def stored_plan_fingerprint(stored: Any) -> str:

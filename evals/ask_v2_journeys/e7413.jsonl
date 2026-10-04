@@ -1,0 +1,3 @@
+{"journey": "e7413", "ask_budget": {"limit_usd": "1000", "period": "month"}}
+{"id": "e7413-list", "question": "what are our latest invoices and what are their job details", "expected": {"outcome_type": "answered", "trusted": true, "tables_min": 1, "restore_ref_present": true}, "note": "turn 1 of the RCA journey; the question must not name E7413 - the thread has to remember it from the table"}
+{"id": "e7413-no-job", "question": "why does E7413 have no job", "expected": {"no_interaction": true, "answer_contains_any": ["CREATED", "no job", "no linked job"], "outcome_type": "answered"}, "reply": {"choose": "Invoice"}}

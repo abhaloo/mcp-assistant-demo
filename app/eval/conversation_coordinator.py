@@ -32,6 +32,7 @@ Stratum = Literal[
     "general",
     "explanation",
     "fresh_bq",
+    "follow_up",
     "documents_mixed",
     "ambiguity_regeneration_focus",
     "failure_access_budget",
@@ -99,6 +100,8 @@ class CoordinatorRunOutput(BaseModel):
     # observation to backend capture rows and the invocation ledger.
     run_ids: tuple[str, ...] = ()
     thread_id: str | None = None
+    continuation_tier: Literal["patch", "planned", "fresh"] | None = None
+    continues_subject: str | None = None
     # Why the capture is unproven, when it is; null for a complete observation.
     reason: str | None = None
 
@@ -130,6 +133,8 @@ def _extract_run_data(run_output: object) -> CoordinatorRunOutput:
             model=run_output.get("model"),
             run_ids=tuple(run_output.get("run_ids", ())),
             thread_id=run_output.get("thread_id"),
+            continuation_tier=run_output.get("continuation_tier"),
+            continues_subject=run_output.get("continues_subject"),
         )
 
     if isinstance(run_output, FinishedDraft):
@@ -206,6 +211,8 @@ def _extract_run_data(run_output: object) -> CoordinatorRunOutput:
         status=getattr(run_output, "status", None),
         route_id=getattr(run_output, "route_id", None),
         model=getattr(run_output, "model", None),
+        continuation_tier=getattr(run_output, "continuation_tier", None),
+        continues_subject=getattr(run_output, "continues_subject", None),
     )
 
 
@@ -283,9 +290,19 @@ def score(case: CoordinatorCase, run_output: object) -> CaseResult:
         total_unnecessary = max(excess_tools, obs.unnecessary_calls)
 
     forbidden_executed = any(action in case.forbidden_calls for action in obs.actions)
-    violations = trajectory_invariants(obs.actions)
+    violations = list(trajectory_invariants(obs.actions))
+    if case.expected_question_origin == "model" and obs.continuation_tier != "patch":
+        violations.append("continuation_tier_not_patch")
+    if obs.continues_subject is not None:
+        last_business = None
+        for candidate in case.context.candidates:
+            if candidate.grain in {"entity_rows", "grouped", "scalar"}:
+                last_business = candidate
+        if last_business is None or obs.continues_subject != last_business.restore_ref:
+            violations.append("continues_subject_mismatch")
+    violations_t = tuple(violations)
     trajectory_fails = False
-    if forbidden_executed or violations:
+    if forbidden_executed or violations_t:
         trajectory_fails = True
     if obs.false_tool_receipts:
         trajectory_fails = True
@@ -328,7 +345,7 @@ def score(case: CoordinatorCase, run_output: object) -> CaseResult:
         time_to_first_token_ms=obs.time_to_first_token_ms,
         latency_ms=obs.latency_ms,
         tokens=obs.tokens,
-        invariant_violations=violations,
+        invariant_violations=violations_t,
     )
 
 

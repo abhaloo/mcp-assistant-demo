@@ -6,32 +6,37 @@ from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import date
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy.engine import Engine
 
 from app.auth import Principal
-from app.business_query.budget import INTERACTIVE_BUDGET_POLICY
+from app.business_query.budget import BusinessQueryBudgetPolicy
 from app.business_query.compile import CubeAdapter
 from app.business_query.compile.adapter import InternalCompilerAdapter
 from app.business_query.compile.business_time import business_today
 from app.business_query.cube import HttpCubeTransport, generate_cube_model, model_revision
+from app.business_query.cube.shape_allowlist import AgreedShapes, load_agreed_shapes
 from app.business_query.definitions import DefinitionBundle
 from app.business_query.outcomes import PlanRefused
 from app.business_query.plan import LlmPlanner
 from app.business_query.plan.value_resolver import SqlValueResolver
 from app.business_query.ports import (
+    ClarificationChoiceSuggester,
     ExecutionAdapter,
     PlannerAdapter,
     PlanStore,
     QueryRecordWritePort,
 )
+from app.business_query.wire.clarification_suggestions import LlmClarificationChoiceSuggester
 from app.business_query.wire.module import (
     BusinessQueryEvidencePorts,
     BusinessQueryModule,
 )
 from app.business_query.wire.trace import QueryTrace
 from app.config import Settings, settings
+from app.core.ask_budget import scale_ask_optional_seconds, scale_ask_seconds
 from app.core.ask_errors import resolve_production_route
 from app.providers.model_purpose import ModelPurpose
 from app.providers.route_policy import ResolvedModelRoute
@@ -43,6 +48,13 @@ if TYPE_CHECKING:
     from app.business_query.ports import PlannerAttemptSink
 
 DEFAULT_STEP_TIMEOUT_SECONDS: float = 30.0
+
+
+def interactive_budget_policy() -> BusinessQueryBudgetPolicy:
+    return BusinessQueryBudgetPolicy(
+        execution_and_seal_reserve_seconds=scale_ask_seconds(3.0),
+        terminal_reserve_seconds=scale_ask_seconds(2.0),
+    )
 
 
 @dataclass(frozen=True)
@@ -99,8 +111,8 @@ def module_step_timeout_seconds(route: ResolvedModelRoute) -> float:
     planner site alone; eval and canary builders keep the full route budget.
     """
     if route.request_timeout_s is None:
-        return DEFAULT_STEP_TIMEOUT_SECONDS
-    return float(route.request_timeout_s)
+        return scale_ask_seconds(DEFAULT_STEP_TIMEOUT_SECONDS)
+    return scale_ask_seconds(float(route.request_timeout_s))
 
 
 @dataclass(frozen=True)
@@ -116,6 +128,7 @@ class ModulePlugins:
     query_record_writer: QueryRecordWritePort | None = None
     planner: PlannerAdapter | None = None
     adapters_override: Sequence[ExecutionAdapter] | None = None
+    choice_suggester: ClarificationChoiceSuggester | None = None
 
 
 def _planner_from_plugins(plugins: ModulePlugins) -> PlannerAdapter:
@@ -129,27 +142,36 @@ def _planner_from_plugins(plugins: ModulePlugins) -> PlannerAdapter:
     )
 
 
+def _agreed_shapes_path(settings: Settings) -> Path | None:
+    raw = settings.business_query_cube_agreed_shapes_path
+    return Path(raw) if raw else None
+
+
 def build_cube_adapter(
     *,
     principal: Principal,
     bundle: DefinitionBundle,
     database_identity: str,
     settings: Settings = settings,
+    agreed_shapes: AgreedShapes | None = None,
 ) -> CubeAdapter:
     """The one place a Cube adapter is assembled: transport from settings, model from the bundle."""
     if settings.business_query_cube_url is None or settings.business_query_cube_api_secret is None:
         raise ValueError("cube adapter requested without a configured Cube service")
+    if agreed_shapes is None:
+        agreed_shapes = load_agreed_shapes(_agreed_shapes_path(settings))
     return CubeAdapter(
         transport=HttpCubeTransport(
             settings.business_query_cube_url,
             settings.business_query_cube_api_secret,
-            timeout_seconds=settings.business_query_cube_timeout_seconds,
+            timeout_seconds=scale_ask_seconds(settings.business_query_cube_timeout_seconds),
         ),
         principal=principal,
         bundle=bundle,
         model=generate_cube_model(bundle),
         model_revision=model_revision(bundle),
         database_identity=database_identity,
+        agreed_shapes=agreed_shapes,
     )
 
 
@@ -167,6 +189,8 @@ def build_module(
     """Construct BusinessQueryModule with route budget and always-on resolver."""
     route = resolve_production_route(ModelPurpose.record_reasoning)
     module_step_timeout = module_step_timeout_seconds(route)
+    statement_timeout_seconds = scale_ask_seconds(statement_timeout_seconds)
+    planner_step_ceiling_seconds = scale_ask_optional_seconds(planner_step_ceiling_seconds)
     adapter = InternalCompilerAdapter(
         principal,
         engine,
@@ -197,7 +221,7 @@ def build_module(
         bundle_resolver=lambda _h: bundle,
         step_timeout_seconds=module_step_timeout,
         planner_step_ceiling_seconds=planner_step_ceiling_seconds,
-        budget_policy=INTERACTIVE_BUDGET_POLICY,
+        budget_policy=interactive_budget_policy(),
         trace=plugins.trace,
         evidence_ports=plugins.evidence_ports,
         plan_store=plugins.plan_store,
@@ -212,6 +236,7 @@ def build_module(
         executor=executor,
         default_business_date=_bundle_business_date(bundle),
         query_record_writer=plugins.query_record_writer,
+        choice_suggester=plugins.choice_suggester or LlmClarificationChoiceSuggester(),
     )
 
 

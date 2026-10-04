@@ -1,0 +1,18 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "browser",
+  "run_id": "01b4202a8cf841b6c4920d28655c49af",
+  "case_id": "LT1",
+  "turn": 6,
+  "mode": "browser",
+  "role": "admin",
+  "question": "Which customers owe the most in TZS?",
+  "outcome_type": "clarification_required",
+  "mismatches": [
+    "message_lost_on_restore"
+  ],
+  "reason": "After the reload 23 of 24 messages came back (page-measurements.md). All 12 LT1 runs have a stored snapshot, so the loss is on the panel side; the likely message is this turn's clarification (no answer text; a restore does not re-open an interaction card). To confirm in the trace.",
+  "evidence": "docs/superpowers/evidence/2026-09-25-failure-recovery/waveH/browser/page-measurements.md; docs/superpowers/evidence/2026-09-25-failure-recovery/waveH/browser/shots/LT1-reload.png; docs/superpowers/evidence/2026-09-25-failure-recovery/waveH/browser/sse/LT1-t6.sse"
+}

@@ -1,0 +1,2 @@
+{"journey": "fu_spend"}
+{"id": "fu-spend", "question": "How many customer orders are open right now?", "expected": {"terminal_in": ["unsupported", "capability_unavailable"]}}

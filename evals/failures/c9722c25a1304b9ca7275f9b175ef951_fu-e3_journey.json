@@ -1,0 +1,16 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "journey",
+  "case_id": "fu-e3",
+  "role": "finance",
+  "mode": "journey",
+  "run_id": "c9722c25a1304b9ca7275f9b175ef951",
+  "question": "what are our latest orders",
+  "reason": "terminal_in mismatch: expected unsupported or stream_error, got answered",
+  "mismatches": [
+    "terminal_in"
+  ],
+  "outcome_type": "answered"
+}

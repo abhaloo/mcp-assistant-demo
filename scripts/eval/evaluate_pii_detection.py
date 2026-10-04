@@ -4,7 +4,7 @@ a labeled ground truth file (tests/guardrails/fixtures/pii_ground_truth.jsonl).
 
 This is a SEPARATE eval from RAGAS. RAGAS measures answer quality with redaction
 toggled. This script measures whether the redaction layer correctly identifies
-PII spans in the corpus — independent of any LLM call.
+PII spans in the fixture corpus — independent of any LLM call.
 
 Usage:
     python scripts/eval/evaluate_pii_detection.py

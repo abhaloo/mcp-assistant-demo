@@ -1,0 +1,18 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "browser",
+  "run_id": "2b7bca5725f6c7cdbc39e461f4a5c81b",
+  "case_id": "LT2",
+  "turn": 11,
+  "mode": "browser",
+  "role": "finance",
+  "question": "How do I create an invoice?",
+  "outcome_type": "answered",
+  "mismatches": [
+    "document_answer_without_sources"
+  ],
+  "reason": "A repeat of an earlier document question is answered from the conversation history with an empty source list (citation_set sources []), so the answer carries no document citation.",
+  "evidence": "docs/superpowers/evidence/2026-09-25-failure-recovery/waveH/browser/sse/LT2-t11.sse; docs/superpowers/evidence/2026-09-25-failure-recovery/waveH/grades-waveH.json"
+}

@@ -11,6 +11,7 @@ import logging
 import secrets
 from typing import TYPE_CHECKING
 
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -28,6 +29,10 @@ if TYPE_CHECKING:
     from app.crypto.event_keyring import EventEncryptionKeyring
 
 logger = logging.getLogger(__name__)
+
+# The newest payload schema this reader knows. A field that changes what a
+# restore may release bumps the writer's version, so an older reader refuses it.
+_READABLE_SCHEMA_VERSION = 1
 
 
 def canonical_binding_bytes(bound: SnapshotBindings) -> bytes:
@@ -116,6 +121,13 @@ class SqlAlchemyEvidenceSnapshotStore:
 
         if row is None:
             return None
+        if row.schema_version > _READABLE_SCHEMA_VERSION:
+            logger.warning(
+                "Snapshot schema_version %s is newer than this reader for restore_ref %s",
+                row.schema_version,
+                restore_ref,
+            )
+            return None
 
         bound = SnapshotBindings(
             project="default",
@@ -152,12 +164,8 @@ class SqlAlchemyEvidenceSnapshotStore:
             logger.warning("Digest mismatch for restore_ref %s", restore_ref)
             return None
 
-        try:
-            payload = SnapshotPayload.model_validate_json(plain)
-        except Exception as exc:
-            logger.warning(
-                "Snapshot payload validation failed for restore_ref %s: %s", restore_ref, exc
-            )
+        payload = _read_payload(plain, restore_ref)
+        if payload is None:
             return None
 
         return EvidenceSnapshot(
@@ -165,6 +173,61 @@ class SqlAlchemyEvidenceSnapshotStore:
             bindings=bound,
             payload=payload,
         )
+
+
+def _payload_without(
+    plain: bytes, unknown: list[tuple[int | str, ...]], restore_ref: str
+) -> SnapshotPayload | None:
+    """Drop the fields this reader does not know, then validate the rest."""
+    fields = sorted(".".join(str(part) for part in loc) for loc in unknown)
+    data = json.loads(plain)
+    try:
+        for *path, field in unknown:
+            node = data
+            for part in path:
+                node = node[part]
+            node.pop(field)
+    except (KeyError, IndexError, TypeError):
+        # A location through a union member names the member, not a key.
+        logger.warning(
+            "Snapshot fields this reader does not know could not be dropped for restore_ref %s: %s",
+            restore_ref,
+            fields,
+        )
+        return None
+    logger.warning(
+        "Snapshot fields this reader does not know were dropped for restore_ref %s: %s",
+        restore_ref,
+        fields,
+    )
+    try:
+        # Strict models take arrays and date strings only from JSON, so validate JSON.
+        return SnapshotPayload.model_validate_json(json.dumps(data))
+    except ValidationError as exc:
+        logger.warning(
+            "Snapshot payload validation failed for restore_ref %s: %s", restore_ref, exc
+        )
+        return None
+
+
+def _read_payload(plain: bytes, restore_ref: str) -> SnapshotPayload | None:
+    """The payload, keeping what this reader knows when a newer writer added a field.
+
+    A rolled-back reader restores the turn instead of blanking it. Any error other
+    than an unknown field refuses the payload.
+    """
+    try:
+        return SnapshotPayload.model_validate_json(plain)
+    except ValidationError as exc:
+        unknown = [
+            tuple(error["loc"]) for error in exc.errors() if error["type"] == "extra_forbidden"
+        ]
+        if len(unknown) != exc.error_count():
+            logger.warning(
+                "Snapshot payload validation failed for restore_ref %s: %s", restore_ref, exc
+            )
+            return None
+    return _payload_without(plain, unknown, restore_ref)
 
 
 # Export canonical alias

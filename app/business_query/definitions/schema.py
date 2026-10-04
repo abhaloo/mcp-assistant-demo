@@ -47,6 +47,27 @@ class ResourceBinding(BaseModel):
     department_scope_mode: Literal["none", "filter_when_present", "required_match"]
     record_predicates: dict[str, str | int | float | bool]
     scope_columns: ScopeColumns
+    # Record-link declaration. The one href family reads these; nothing infers
+    # a route or a grant from a member name. A binding without a record_route
+    # is not resolvable.
+    record_route: str | None = None
+    link_permissions: list[str] = Field(default_factory=list)
+    link_permission_mode: Literal["any", "all"] = "any"
+    label: str | None = None
+
+
+class UiDestination(BaseModel):
+    """Billing-declared app page or action the assistant may link (never model-minted)."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    key: str = Field(min_length=1, max_length=80, pattern=r"^[a-z0-9][a-z0-9._-]*$")
+    kind: Literal["page", "action"]
+    label: str = Field(min_length=1, max_length=80)
+    aliases: list[str] = Field(default_factory=list)
+    href: str = Field(min_length=1, max_length=300)
+    link_permissions: list[str] = Field(default_factory=list)
+    link_permission_mode: Literal["any", "all"] = "any"
 
 
 class DetailDefinition(BaseModel):
@@ -177,6 +198,9 @@ class MeasureDefinition(BaseModel):
         return self.agg_type in {"count", "count_distinct"}
 
 
+DimensionFormat = Literal["id", "number", "currency", "percent", "date", "datetime"]
+
+
 class DimensionDefinition(BaseModel):
     model_config = ConfigDict(strict=True, extra="forbid")
 
@@ -192,6 +216,14 @@ class DimensionDefinition(BaseModel):
     ) = None
     direct_relationships: list[str] = Field(default_factory=list)
     resolvable_as: Literal["customer", "product", "department"] | None = None
+    # Display declaration. Renderers read these; they never infer a role from the
+    # member name or the storage type.
+    format: DimensionFormat | None = None
+    label: str | None = None
+    display_of: str | None = None
+    link_key: str | None = None
+    # The sibling member whose row value holds the id this look column links by.
+    link_via: str | None = None
 
 
 class JoinDefinition(BaseModel):
@@ -313,6 +345,7 @@ class DefinitionBundle(BaseModel):
     detail_definitions: list[DetailDefinition] = Field(default_factory=list)
     detail_sources: list[DetailSource] = Field(default_factory=list)
     detail_families: list[DetailFamilyDefinition] = Field(default_factory=list)
+    ui_destinations: list[UiDestination] = Field(default_factory=list)
 
     @field_validator("schema_version", mode="before")
     @classmethod

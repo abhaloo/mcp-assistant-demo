@@ -1,0 +1,18 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "browser",
+  "run_id": "5dfa8669391e2cc2fa3600912f81766c",
+  "case_id": "MT2",
+  "turn": 2,
+  "mode": "browser",
+  "role": "admin",
+  "question": "why? try again?",
+  "outcome_type": "answered",
+  "mismatches": [
+    "no_next_questions"
+  ],
+  "reason": "The oracle expects an explained failure with one to three clickable next questions. In this run turn 1 answered (an invoice-level ranking), so turn 2 re-ran and answered with no chips. The oracle's premise (a failed turn 1) did not hold; graded fail on the chips clause.",
+  "evidence": "docs/superpowers/evidence/2026-09-25-failure-recovery/waveH/browser/sse/MT2-t2.sse; docs/superpowers/evidence/2026-09-25-failure-recovery/waveH/grades-waveH.json"
+}

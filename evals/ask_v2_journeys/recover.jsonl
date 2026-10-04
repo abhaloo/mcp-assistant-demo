@@ -1,0 +1,4 @@
+{"journey": "recover"}
+{"id": "recover-rank", "question": "Which five unpaid July 2025 invoices have the highest invoiced revenue?", "expected": {"outcome_type": "answered", "tables_min": 1, "no_interaction": true}}
+{"id": "recover-basis", "question": "How much revenue is from unpaid invoices in July 2025 in TZS?", "expected": {"outcome_type": "answered", "no_interaction": true, "summary_contains_all": ["Invoiced revenue", "203,508,537.50"]}}
+{"id": "recover-scope", "question": "what are our latest orders", "expected": {"terminal_in": ["unsupported", "capability_unavailable"], "answer_excludes_all": ["member_not_found", "field or grouping", "customer_order"]}}

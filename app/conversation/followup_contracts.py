@@ -2,10 +2,14 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+# The earlier answers a turn lists and may restore: twenty exchanges, the forty
+# messages the panel keeps.
+MAX_SOURCE_CANDIDATES = 20
+
 
 class SourceCandidate(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
-    position: int = Field(ge=1, le=8)
+    position: int = Field(ge=1, le=MAX_SOURCE_CANDIDATES)
     exchange_id: str
     restore_ref: str
     grain: Literal["scalar", "grouped", "entity_rows", "documents", "mixed"]
@@ -19,8 +23,12 @@ class SourceSelection(BaseModel):
     @model_validator(mode="after")
     def valid_positions(self) -> "SourceSelection":
         values = self.source_positions
-        if len(set(values)) != len(values) or any(p < 1 or p > 8 for p in values):
-            raise ValueError("source positions must be unique and between 1 and 8")
+        if len(set(values)) != len(values) or any(
+            p < 1 or p > MAX_SOURCE_CANDIDATES for p in values
+        ):
+            raise ValueError(
+                f"source positions must be unique and between 1 and {MAX_SOURCE_CANDIDATES}"
+            )
         return self
 
 

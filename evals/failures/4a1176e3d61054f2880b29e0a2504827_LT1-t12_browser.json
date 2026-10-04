@@ -1,0 +1,18 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "browser",
+  "run_id": "4a1176e3d61054f2880b29e0a2504827",
+  "case_id": "LT1",
+  "turn": 12,
+  "mode": "browser",
+  "role": "admin",
+  "question": "Summarise what we found in this conversation.",
+  "outcome_type": "answered",
+  "mismatches": [
+    "uncited_document_claim"
+  ],
+  "reason": "The summary published on its first draft (3 coordinator calls: explain_sources, search_documents, finish_answer; 0 repairs; 22.0 s) and every figure in it appears in an earlier turn. Its third block restates the payment and refund guidance, but it cites the two restored document answers (f912a440..., 7bfd036f...) instead of the three passages the turn's search returned (customer-payments-and-receivables.md:0, :9, :1). The citation_set streamed 0 sources (parsed false), so the guidance shows no source link. Cause: the restore note that says 'search_documents before you restate them, and cite the passages it returns' is hidden once a search succeeds (app/conversation/coordinator/prompt.py, _observations_block passes searched=True), so the drafting decision (model call 26085) no longer read 'cite the passages'. The restate check (draft_checks.restates_a_document_answer) is satisfied by any succeeded search, so the draft passed. In luna6 (run eccb5481) the repair text stayed in the observations and draft 3 cited passage :9 (1 source).",
+  "evidence": "docs/superpowers/evidence/2026-10-02-luna6-summary/browser/sse/LT1-t12.sse; docs/superpowers/evidence/2026-10-02-luna6-summary/db-checks.txt; docs/superpowers/evidence/2026-10-02-luna6-summary/browser/shots/LT1-t12.png; docs/superpowers/evidence/2026-10-02-luna6-summary/browser/shots/own-LT1-after-run.png; docs/superpowers/evidence/2026-10-01-luna6-e2e/browser/sse/LT1-t12.sse"
+}

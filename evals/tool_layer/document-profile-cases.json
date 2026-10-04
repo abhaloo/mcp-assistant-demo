@@ -1,39 +1,39 @@
 [
   {
     "id": "all-01",
-    "question": "What are the standard working hours at Multi Color Printers?",
+    "question": "How do I log in to the billing system?",
     "role": "user",
     "permissions": [],
     "expected_tier": "all",
-    "source_file": "data/corpus/company/all/company-handbook.md",
+    "source_file": "data/corpus/company/all/manuals/getting-started-and-navigation.md",
     "expected_source_ids": [
-      "data/corpus/company/all/company-handbook.md"
+      "data/corpus/company/all/manuals/getting-started-and-navigation.md"
     ],
     "expected_markers": []
   },
   {
     "id": "all-02",
-    "question": "What paper stocks does Multi Color Printers offer and what finishing options are available?",
+    "question": "I want a new password for my account. What are the steps?",
     "role": "user",
     "permissions": [],
     "expected_tier": "all",
-    "source_file": "data/corpus/company/all/services-and-capabilities.md",
+    "source_file": "data/corpus/company/all/manuals/getting-started-and-navigation.md",
     "expected_source_ids": [
-      "data/corpus/company/all/services-and-capabilities.md"
+      "data/corpus/company/all/manuals/getting-started-and-navigation.md"
     ],
     "expected_markers": []
   },
   {
     "id": "printing-01",
-    "question": "What is the daily startup procedure for the Heidelberg Speedmaster?",
+    "question": "How do I withdraw a move request I submitted?",
     "role": "user",
     "permissions": [
       "view job"
     ],
     "expected_tier": "printing",
-    "source_file": "data/corpus/company/printing/press-operating-procedures.md",
+    "source_file": "data/corpus/company/printing/manuals/jobs-moving-approvals-and-delivery.md",
     "expected_source_ids": [
-      "data/corpus/company/printing/press-operating-procedures.md"
+      "data/corpus/company/printing/manuals/jobs-moving-approvals-and-delivery.md"
     ],
     "expected_markers": []
   }

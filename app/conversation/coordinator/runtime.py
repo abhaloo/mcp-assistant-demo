@@ -14,7 +14,7 @@ from app.conversation.coordinator.contracts import (
     Observation,
     StopReason,
 )
-from app.conversation.coordinator.policy import CoordinatorPolicy
+from app.conversation.coordinator.policy import CoordinatorPolicy, scaled_coordinator_policy
 from app.core.turn_budget import TurnBudget
 
 if TYPE_CHECKING:
@@ -49,12 +49,16 @@ class FinishedDraft:
     observations: tuple[Observation, ...]
     outcomes: tuple[ActionOutcome, ...]
     answer_mode: Literal["explanation", "direct"] | None
+    # Where the draft's text came from: the table's own head, which a painted
+    # table already shows, or prose written beside the evidence.
+    text_kind: Literal["narrative", "table_fallback"] = "narrative"
 
 
 @dataclass(frozen=True)
 class ClarifyRequested:
     question: str
     outcomes: tuple[ActionOutcome, ...]
+    choices: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -69,13 +73,17 @@ class BusinessQueryTerminal:
 def business_result_ends_turn(
     result: AskBusinessQueryResult, outcomes: Sequence[ActionOutcome]
 ) -> bool:
-    """A clarification always pauses the turn: the structured route mints the
-    ticket and choices from it. Any other non-answer is a tool result the model
-    reads beside the evidence it already has; it ends the turn only when there
-    is no such evidence."""
+    """A clarification with choices pauses the turn: the structured route mints
+    the ticket and the card from it. A denial ends the turn when the turn holds
+    no other evidence, and a switched-off capability always does. Every other
+    non-answer is a tool result the model reads and explains."""
     if result.disposition == "clarification_required":
-        return True
-    return not any(o.status == "succeeded" for o in outcomes)
+        # A card needs choices; without them the model reads the question
+        # (the result's failure advice) and answers with suggestions.
+        return bool(result.business_query is not None and result.business_query.choices)
+    if result.disposition == "denied":
+        return not any(o.status == "succeeded" for o in outcomes)
+    return result.raise_capability_unavailable
 
 
 @dataclass(frozen=True)
@@ -94,11 +102,14 @@ async def run_coordinator_turn(
     model: CoordinatorModel,
     tools: CoordinatorTools,
     budget: TurnBudget,
-    policy: CoordinatorPolicy = CoordinatorPolicy(),
+    policy: CoordinatorPolicy | None = None,
     lifecycle: ActionLifecycle | None = None,
 ) -> CoordinatorTerminal:
     """Executes a coordinator turn via the private LangGraph StateGraph."""
     from app.conversation.coordinator.graph import build_coordinator_graph
+
+    if policy is None:
+        policy = scaled_coordinator_policy()
 
     if lifecycle is None:
         lifecycle = ActionLifecycle(turn_id=context.turn_id)
@@ -115,6 +126,8 @@ async def run_coordinator_turn(
         "business_queries": 0,
         "document_searches": 0,
         "restores": 0,
+        "repairs_used": frozenset(),
+        "held_draft": None,
         "explained": False,
         "allowed_actions": frozenset(
             {"query_business", "search_documents", "explain_sources", "finish_answer", "clarify"}
@@ -139,4 +152,10 @@ async def run_coordinator_turn(
             observations=tuple(final_state.get("observations", ())),
             outcomes=lifecycle.outcomes,
         )
+    if (
+        isinstance(terminal, Stopped)
+        and terminal.reason != "cancelled"
+        and final_state.get("held_draft") is not None
+    ):
+        return final_state["held_draft"]
     return terminal

@@ -194,6 +194,10 @@ class _ClientRequest:
 
 def _build_openai_compat_client(req: _ClientRequest) -> BaseChatModel:
     openai_direct = req.spec.credential_source == "openai"
+    deepseek_direct = req.spec.credential_source == "deepseek_direct"
+    use_responses_api = (openai_direct and req.reasoning_effort is not None) or (
+        deepseek_direct and req.spec.structured_output_mode == "json_schema"
+    )
     return _wrap_openai_compat(
         req.spec,
         req.temperature,
@@ -202,9 +206,9 @@ def _build_openai_compat_client(req: _ClientRequest) -> BaseChatModel:
         deepseek_direct_controls=req.deepseek_direct_controls,
         request_timeout_s=req.request_timeout_s,
         max_retries=req.max_retries,
-        reasoning_effort=req.reasoning_effort if openai_direct else None,
+        reasoning_effort=req.reasoning_effort if (openai_direct or deepseek_direct) else None,
         verbosity=req.verbosity if openai_direct else None,
-        use_responses_api=openai_direct and req.reasoning_effort is not None,
+        use_responses_api=use_responses_api,
         reasoning_summary=openai_direct and req.reasoning_summary,
         resources=req.resources,
     )
@@ -252,6 +256,18 @@ _CLIENT_BUILDERS: dict[str, Callable[[_ClientRequest], BaseChatModel]] = {
     "azure": _build_azure_client,
     "openai": _build_legacy_openai_client,
 }
+
+
+def _scaled_ask_request_timeout(
+    purpose: ModelPurpose, request_timeout_s: float | None
+) -> float | None:
+    if purpose == ModelPurpose.eval:
+        return request_timeout_s
+    from app.core.ask_budget import scale_ask_seconds
+
+    if request_timeout_s is None:
+        request_timeout_s = settings.model_request_timeout_s
+    return scale_ask_seconds(request_timeout_s)
 
 
 def get_chat_model(
@@ -306,6 +322,8 @@ def get_chat_model(
             request_timeout_s = resolved_route.request_timeout_s
         if max_retries is None:
             max_retries = resolved_route.max_retries
+
+    request_timeout_s = _scaled_ask_request_timeout(purpose, request_timeout_s)
 
     if resolved_route is not None:
         target = load_production_catalog().target(resolved_route.target_id)
@@ -410,7 +428,12 @@ def get_embeddings(
 
         return offline_provider.get_embeddings()
 
-    if settings.chat_provider == "azure":
+    if settings.embedding_provider == "fastembed":
+        from app.providers import fastembed_provider
+
+        return fastembed_provider.get_embeddings()
+
+    if settings.embedding_provider == "azure":
         from app.providers import azure_provider
 
         return azure_provider.get_embeddings(

@@ -4,14 +4,13 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import secrets
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable
+from dataclasses import replace
 from typing import Any, Protocol
 
-from pydantic import ValidationError
-
 from app.auth import Principal
-from app.business_query.outcomes import BusinessQueryWireOutcome
 from app.business_query.ports import BusinessProgressSink
 from app.business_query.wire.module import PLANNER_TIMEOUT_CONTINUATION
 from app.config import settings
@@ -22,19 +21,27 @@ from app.core.errors import (
     QueueBufferExceededError,
     ServiceUnavailableError,
 )
+from app.models.ask_response import Answer
 from app.models.ask_v2_events import (
     CitationSetEvent,
     InteractionEvent,
     StreamErrorEvent,
     TextDeltaEvent,
+    TurnAcceptedEvent,
     TurnOutcomeEvent,
 )
 from app.models.ask_v2_request import AskV2Request
-from app.models.citations import CitationsPayload
-from app.models.tool_results import TurnResult, tool_result_fields
+from app.models.schemas import Question
+from app.models.tool_results import tool_result_fields
+from app.query_records.turn_content import TurnContent
 from app.resources import ProcessResources
 from app.services import ask_v2_frames
 from app.services.ask_deadline import Deadline, validate_client_deadline
+from app.services.ask_observation import (
+    DeferredTerminalWriter,
+    TerminalIdentity,
+    TerminalWriter,
+)
 from app.services.ask_result_projection import (
     as_envelope_mapping as _as_envelope_mapping,
 )
@@ -59,7 +66,7 @@ from app.services.ask_result_projection import (
 from app.services.ask_result_projection import (
     terminal_disposition as _terminal_disposition,
 )
-from app.services.ask_v2_details import stream_record_details, without_record_details
+from app.services.ask_v2_details import stream_record_details, terminal_form
 from app.services.ask_v2_frames import (
     KEEP_ALIVE_FRAME,
     SequenceOutcome,
@@ -76,10 +83,23 @@ from app.services.ask_v2_progress import (
     TurnSequence,
 )
 from app.services.ask_v2_reason_copy import copy_for_reason
+from app.services.ask_v2_result import (
+    ClarificationCard,
+    V2Reply,
+    V2Result,
+    is_clarification,
+)
 from app.services.business_query_publication import publish_committed_envelopes
 from app.services.byte_bounded_ask_queue import ByteBoundedAskQueue
+from app.services.evidence_snapshots import bind_turn_timeline
+from app.services.feedback_tokens import make_feedback_token
 from app.services.stream_transport import chunk_answer_tokens
-from app.telemetry.correlation import bind_thread_id, normalize_run_id
+from app.telemetry.correlation import (
+    bind_restore_ref,
+    bind_thread_id,
+    current_restore_ref,
+    normalize_run_id,
+)
 from app.telemetry.invocation_payload import (
     ExecutionIdentity,
     InvocationExpectation,
@@ -93,6 +113,10 @@ _normalize_run_id = normalize_run_id
 
 _DISCONNECT_POLL_INTERVAL_S: float = 0.1
 
+# The attempts a cancelled client's stream schedules in the background. The
+# generator's return wipes its locals; the set keeps the write alive.
+_DETACHED_WRITES: set[asyncio.Task[None]] = set()
+
 
 class _V2ServiceLike(Protocol):
     """Structural shape of the v2 service this module drives.
@@ -104,7 +128,12 @@ class _V2ServiceLike(Protocol):
     """
 
     async def _reserve_execution_if_configured(
-        self, *, correlation_id: str, question: str
+        self,
+        *,
+        correlation_id: str,
+        question: str,
+        thread_id: str | None = None,
+        principal: Principal | None = None,
     ) -> None: ...
 
     async def ask(
@@ -117,7 +146,8 @@ class _V2ServiceLike(Protocol):
         progress: BusinessProgressSink | None = None,
         readiness_already_checked: bool = False,
         expiry_event: asyncio.Event | None = None,
-    ) -> dict[str, Any]: ...
+        terminal: TerminalWriter | None = None,
+    ) -> V2Reply: ...
 
 
 async def _watch_disconnect(disconnected: Callable[[], Awaitable[bool]]) -> None:
@@ -151,25 +181,6 @@ def _emit_stream_error(
     queue.put_nowait(err_ev)
 
 
-def _wire_outcome(res: dict[str, Any]) -> BusinessQueryWireOutcome | None:
-    """The typed Business Query outcome for this turn, if it produced one.
-
-    The operation handlers dump the typed answer before this layer sees it, so
-    the outcome arrives as a mapping and is re-validated here rather than
-    forwarded as a foreign shape.
-    """
-    business_query = res.get("business_query")
-    if not isinstance(business_query, dict):
-        return None
-    try:
-        return BusinessQueryWireOutcome.model_validate(business_query)
-    except ValidationError:
-        # An outcome that does not validate is not evidence. Dropping it costs
-        # the trust drawer; forwarding it would show an unverified seal.
-        logger.warning("v2 terminal outcome dropped: business query wire outcome invalid")
-        return None
-
-
 # Stable wire code per unavailable-dependency outcome. An unlisted subclass
 # reports as a capability gap, which is the honest generic reading of "this
 # deployment cannot do that right now".
@@ -185,55 +196,34 @@ _UNAVAILABLE_CODES = {
 }
 
 
-def _persisted_thread_id(res: dict[str, Any], request_thread_id: str | None) -> str | None:
-    persisted = res.get("thread_id")
-    if isinstance(persisted, str) and persisted:
-        return persisted
-    return request_thread_id
-
-
 async def _emit_clarification_card(
     *,
-    res: dict[str, Any],
+    res: V2Result,
     request: AskV2Request,
+    principal: Principal,
     seq: TurnSequence,
     queue: ByteBoundedAskQueue,
     sink: AskV2ProgressSink | NullProgressSink,
     deadline: Deadline,
-    wire: BusinessQueryWireOutcome | None = None,
-) -> None:
-    """Emit clarification interaction card and terminal outcome."""
-    choices_raw = None
-    prompt_text = None
-    allow_free_text = True
-    continuation_kind = None
-
-    if wire is not None:
-        choices_raw = wire.choices
-        prompt_text = wire.prompt
-        if wire.allow_free_text is not None:
-            allow_free_text = wire.allow_free_text
-        continuation_kind = wire.continuation
+) -> str | None:
+    """Emit the clarification card and terminal outcome; return the question shown."""
+    if isinstance(res, ClarificationCard):
+        choices_raw, prompt_text = res.choices, res.prompt
+        allow_free_text, continuation_kind = res.allow_free_text, res.continuation
+        continuation_ref, turn_result = res.continuation_ref, None
     else:
-        bq = res.get("business_query")
-        if isinstance(bq, dict):
-            choices_raw = bq.get("choices")
-            prompt_text = bq.get("prompt")
-            if "allow_free_text" in bq:
-                allow_free_text = bq["allow_free_text"]
-            continuation_kind = bq.get("continuation")
-
-    if not choices_raw:
-        choices_raw = res.get("choices")
-    if not prompt_text:
-        prompt_text = res.get("prompt") or "Please select an option"
-    if not continuation_kind:
-        continuation_kind = res.get("continuation")
+        # An answer whose own query asked back carries no ticket, so it cannot
+        # paint a card; the missing ticket below ends it as an internal error.
+        wire = res.business_query
+        choices_raw = list(wire.choices) if wire is not None else []
+        continuation_kind = wire.continuation if wire is not None else None
+        prompt_text, allow_free_text = None, True
+        continuation_ref, turn_result = None, res.turn_result
+    prompt_text = prompt_text or "Please select an option"
 
     options = _normalize_interaction_options(choices_raw)
 
     correlation_id = normalize_run_id(request.run_id)
-    continuation_ref = res.get("continuation_ref")
     if not continuation_ref:
         _emit_stream_error(
             queue,
@@ -244,7 +234,7 @@ async def _emit_clarification_card(
             retryable=True,
             sink=sink,
         )
-        return
+        return None
 
     deadline.check_not_expired()
     await require_terminal_evidence(
@@ -270,14 +260,7 @@ async def _emit_clarification_card(
     duration_ms = (
         sink.fail() if continuation_kind == PLANNER_TIMEOUT_CONTINUATION else sink.finish()
     )
-    turn_result = res.get("turn_result")
-    if not isinstance(turn_result, TurnResult):
-        turn_result = None
-    tf = (
-        tool_result_fields(turn_result, restore_ref=res.get("restore_ref"))
-        if turn_result is not None
-        else {}
-    )
+    tf = tool_result_fields(turn_result, restore_ref=None) if turn_result is not None else {}
     outcome = TurnOutcomeEvent(
         protocol_version="2",
         run_id=request.run_id,
@@ -289,11 +272,14 @@ async def _emit_clarification_card(
         duration_ms=duration_ms,
         answer_query_id=None,
         evidence_digest=None,
-        query_record_ref=res.get("query_record_ref"),
+        query_record_ref=None,
+        unanswered_part=None,
         **tf,
+        feedback_token=make_feedback_token(request.run_id, principal),
     )
     queue.put_nowait(outcome)
     seq.take()
+    return prompt_text
 
 
 async def _produce_v2_stream_events(
@@ -304,6 +290,8 @@ async def _produce_v2_stream_events(
     queue: ByteBoundedAskQueue,
     service: _V2ServiceLike,
     expiry_event: asyncio.Event | None = None,
+    *,
+    restore_ref: str | None = None,
 ) -> None:
     """Background producer: drives execution and enqueues typed v2 events."""
     seq = TurnSequence()
@@ -311,7 +299,54 @@ async def _produce_v2_stream_events(
     # Query-record writes run inside this producer task; bind the client
     # thread id here so the record stamps the conversation it belongs to.
     bind_thread_id(request.thread_id)
+    # The answer path publishes its snapshot under the reference the stream
+    # already announced; context vars are task-local, so the generator's
+    # stack never carries it. A producer driven without one mints it once,
+    # so the frame and the bound reference are the same value.
+    restore_ref = restore_ref or secrets.token_urlsafe(32)
+    bind_restore_ref(restore_ref)
+    # The deferred terminal writer commits the ledger row after the last frame, exists
+    # before the first frame, and is seeded with the identity so a cancel still writes it.
+    started_at = time.monotonic()
+    correlation_id = normalize_run_id(request.run_id)
+    identity = TerminalIdentity(
+        body=Question(
+            question=request.question or " ",
+            thread_id=request.thread_id,
+            page_context=request.page_context,
+            record_context=request.record_context,
+            operation="new_question",
+            run_id=correlation_id,
+            idempotency_key=request.idempotency_key,
+            response_policy=request.response_policy or "allow_partial",
+        ),
+        principal=principal,
+        started_at=started_at,
+        correlation_id=correlation_id,
+    )
+    # What the person saw. The writer reads it, with the steps shown so far, when
+    # it commits: after the last frame, on a stop, or on a failure.
+    content = TurnContent(operation=request.operation)
+
+    def shown_turn() -> TurnContent:
+        return replace(content, timeline=sink.timeline())
+
+    writer = DeferredTerminalWriter(identity, read_turn_content=shown_turn)
     try:
+        # The first frame carries the attempt identity, before the first
+        # interruptible moment: a turn interrupted at any later point keeps
+        # its reference so the restore readback cannot see a second one.
+        accepted = TurnAcceptedEvent(
+            protocol_version="2",
+            run_id=request.run_id,
+            sequence=seq.peek(),
+            event_type="turn_accepted",
+            thread_id=request.thread_id,
+            restore_ref=restore_ref,
+        )
+        queue.put_nowait(accepted)
+        seq.take()
+
         # With activity events off the sink still measures the turn, so the
         # receipt on the terminal event does not depend on the flag.
         sink = (
@@ -319,12 +354,14 @@ async def _produce_v2_stream_events(
             if settings.ask_activity_events_enabled
             else NullProgressSink(queue, request.run_id, seq)
         )
+        # The snapshot written inside the answer path keeps what this sink showed.
+        bind_turn_timeline(sink.timeline)
 
         # Check deadline before stage execution
         deadline.check_not_expired()
 
         # Execute operation
-        res = await service.ask(
+        reply = await service.ask(
             request,
             principal,
             resources=resources,
@@ -332,6 +369,7 @@ async def _produce_v2_stream_events(
             progress=sink,
             readiness_already_checked=True,
             expiry_event=expiry_event,
+            terminal=writer,
         )
 
         if getattr(sink, "disclosure_violation", False):
@@ -349,27 +387,25 @@ async def _produce_v2_stream_events(
             )
             return
 
-        # Check if clarification is required
-        bq_val = res.get("business_query")
-        is_clarification = res.get("outcome") == "clarification_required" or (
-            isinstance(bq_val, dict) and bq_val.get("outcome") == "clarification_required"
-        )
-
-        if is_clarification:
-            await _emit_clarification_card(
+        res = reply.result
+        # The isinstance term lets the type checker narrow res to Answer below.
+        if isinstance(res, ClarificationCard) or is_clarification(res):
+            asked = await _emit_clarification_card(
                 res=res,
                 request=request,
+                principal=principal,
                 seq=seq,
                 queue=queue,
                 sink=sink,
                 deadline=deadline,
             )
+            exchange_id = res.exchange_id if isinstance(res, Answer) else None
+            content = replace(content, exchange_id=exchange_id, answer_text=asked)
             return
 
-        # Validate wire outcome once at the top of the terminal path
-        wire = _wire_outcome(res)
-        envelopes = _result_envelopes(res, wire=wire)
-        aqid: str | None = res.get("aqid") or res.get("answer_query_id")
+        wire = res.business_query
+        envelopes = _result_envelopes(res)
+        aqid: str | None = None
 
         await publish_committed_envelopes(envelopes, sink, deadline)
         if getattr(sink, "disclosure_violation", False):
@@ -402,21 +438,37 @@ async def _produce_v2_stream_events(
                 stream_record_details(queue, seq, request.run_id, envelope)
 
         # Stream text delta events progressively
-        turn_result = res.get("turn_result")
-        if not isinstance(turn_result, TurnResult):
-            turn_result = None
-        outcome_type = _terminal_disposition(res, wire=wire, turn_result=turn_result)
+        turn_result = res.turn_result
+        outcome_type = _terminal_disposition(res)
         reason_code, reason_message = _refusal_reason(res, outcome_type)
         first_envelope = _as_envelope_mapping(envelopes[0]) if envelopes else None
         answer_text = (
             reason_message
-            or res.get("answer")
+            or res.answer
             or (first_envelope.get("answer_text") if first_envelope else None)
-            or res.get("answer_text")
             or ""
         )
-        content_kind = _content_kind(table_streamed=table_streamed)
+        content_kind = _content_kind(table_streamed=table_streamed, producer_kind=res.text_kind)
         sink.finish_thought()
+
+        # The citation set precedes the answer text so a [N] marker can
+        # resolve while the answer streams. It rides the v2 projection only:
+        # a legacy turn keeps its sources on the terminal payload.
+        sources = res.sources
+        citations = res.citations
+        if turn_result is not None and (sources or citations):
+            queue.put_nowait(
+                CitationSetEvent(
+                    protocol_version="2",
+                    run_id=request.run_id,
+                    sequence=seq.peek(),
+                    event_type="citation_set",
+                    sources=list(sources),
+                    citations=citations,
+                )
+            )
+            seq.take()
+
         if answer_text:
             chunks = chunk_answer_tokens(answer_text, max_frames=30)
             for chunk in chunks:
@@ -434,51 +486,31 @@ async def _produce_v2_stream_events(
         # Check deadline and execute terminal evidence barrier
         deadline.check_not_expired()
 
-        if res.get("evidence_digest"):
-            evidence_digest = res["evidence_digest"]
+        if reply.evidence_digest:
+            evidence_digest = reply.evidence_digest
         else:
             correlation_id = normalize_run_id(request.run_id)
             is_fixed = (
-                request.operation == "result_page"
-                or res.get("model") == FIXED_RESPONSE_MODEL_SENTINEL
-                or res.get("outcome") == "clarification_required"
-                or res.get("model") is None
+                request.operation == "result_page" or res.model == FIXED_RESPONSE_MODEL_SENTINEL
             )
             receipt = await require_terminal_evidence(
                 ExecutionIdentity(correlation_id=correlation_id),
                 InvocationExpectation(min_invocations=0 if is_fixed else 1),
                 deadline=deadline,
             )
-            evidence_digest = receipt.evidence_digest or res.get("digest")
+            evidence_digest = receipt.evidence_digest
 
         # A step the turn cut off must not seal as completed: a timed-out
         # planner showing a green check reads as finished work.
         duration_ms = sink.fail() if reason_code == "timeout" else sink.finish()
         follow_ups = _follow_up_actions(res, outcome_type)
 
-        # The citation set is part of the version 1 projection: legacy turns
-        # keep their sources on the terminal payload only (spec §8).
-        sources = res.get("sources") or []
-        citations = res.get("citations")
-        if turn_result is not None and (sources or citations):
-            queue.put_nowait(
-                CitationSetEvent(
-                    protocol_version="2",
-                    run_id=request.run_id,
-                    sequence=seq.peek(),
-                    event_type="citation_set",
-                    sources=list(sources),
-                    citations=(
-                        citations
-                        if isinstance(citations, CitationsPayload)
-                        else CitationsPayload(parsed=False)
-                    ),
-                )
-            )
-            seq.take()
-
         tf = (
-            tool_result_fields(turn_result, restore_ref=res.get("restore_ref"))
+            tool_result_fields(
+                turn_result,
+                # One reference on the wire: the attempt the first frame named.
+                restore_ref=current_restore_ref(),
+            )
             if turn_result is not None
             else {}
         )
@@ -492,23 +524,33 @@ async def _produce_v2_stream_events(
             # or a partial result and carries no trust regardless of what the
             # producing layer put in the result body.
             trusted=(
-                turn_result.trusted
-                if turn_result is not None
-                else (bool(res.get("trusted", True)) and outcome_type == "answered")
+                turn_result.trusted if turn_result is not None else outcome_type == "answered"
             ),
-            thread_id=_persisted_thread_id(res, request.thread_id),
+            thread_id=res.thread_id or request.thread_id,
             duration_ms=duration_ms,
             follow_ups=follow_ups,
             explanation=_explanation(res),
             answer_query_id=aqid,
             evidence_digest=evidence_digest,
-            query_record_ref=res.get("query_record_ref"),
+            query_record_ref=None,
             reason_code=reason_code,
             message=reason_message,
-            business_query=None if wire is None else without_record_details(wire),
-            answer_mode=res.get("answer_mode"),
-            source_exchange_ids=list(res.get("source_exchange_ids") or []),
+            business_query=None if wire is None else terminal_form(wire),
+            answer_mode=res.answer_mode,
+            source_exchange_ids=list(res.source_exchange_ids),
+            budget=res.budget,
+            unanswered_part=res.unanswered_part,
+            ui_links=res.ui_links or [],
             **tf,
+            feedback_token=make_feedback_token(request.run_id, principal),
+        )
+        content = replace(
+            content,
+            exchange_id=res.exchange_id,
+            answer_text=answer_text or None,
+            turn_result=turn_result,
+            follow_ups=tuple(follow_ups),
+            unanswered_part=res.unanswered_part,
         )
         queue.put_nowait(outcome)
         seq.take()
@@ -530,6 +572,12 @@ async def _produce_v2_stream_events(
         )
     except ServiceUnavailableError as exc:
         code = _UNAVAILABLE_CODES.get(type(exc).__name__, "capability_unavailable")
+        logger.warning(
+            "Ask AI v2 unavailable: code=%s error=%s run_id=%s",
+            code,
+            type(exc).__name__,
+            request.run_id,
+        )
         _emit_stream_error(
             queue,
             seq,
@@ -551,6 +599,7 @@ async def _produce_v2_stream_events(
         )
     except QueueBufferExceededError as exc:
         logger.warning("Ask AI v2 stream buffer exceeded: %s", exc)
+        writer.commit(run_outcome="error", stable_error_code="buffer_exceeded")
         _emit_stream_error(
             queue,
             seq,
@@ -582,7 +631,15 @@ async def _produce_v2_stream_events(
             retryable=True,
             sink=sink,
         )
+    except asyncio.CancelledError:
+        # A cancel before the attempt recorded anything is a stop; a recorded
+        # terminal (a budget timeout, an error) keeps its own outcome.
+        writer.commit(fallback_outcome="stopped")
+        raise
     finally:
+        # Every run commits exactly once: the idempotent commit here covers
+        # the answered, clarification and error paths already handled above.
+        writer.commit()
         queue.close()
 
 
@@ -600,10 +657,12 @@ async def stream_ask_v2_events(
     from app.services.ask_v2_turn_bound import (
         KEEP_ALIVE_INTERVAL_SECONDS,
         cancel_and_join,
+        new_exchange_id,
         new_expiry_event,
         persist_timeout_history,
         render_deadline_exceeded_frame,
         run_operation_with_budget,
+        schedule_stopped_terminal,
         schedule_timeout_query_record,
         wait_stream_cause,
     )
@@ -667,6 +726,8 @@ async def stream_ask_v2_events(
             lambda: service._reserve_execution_if_configured(
                 correlation_id=correlation_id,
                 question=request.question or "",
+                thread_id=request.thread_id,
+                principal=principal,
             ),
             deadline,
             signal,
@@ -679,6 +740,12 @@ async def stream_ask_v2_events(
     queue = ByteBoundedAskQueue()
     validator = V2EventSequenceValidator(initial_sequence=1)
 
+    # The generator owns the attempt identity, not the producer task: the
+    # first frame names it, and the detached stopped write reuses it when the
+    # client disconnects mid-turn.
+    restore_ref = secrets.token_urlsafe(32)
+    exchange_id = new_exchange_id()
+
     producer_task = asyncio.create_task(
         _produce_v2_stream_events(
             request=request,
@@ -688,6 +755,7 @@ async def stream_ask_v2_events(
             queue=queue,
             service=service,
             expiry_event=signal,
+            restore_ref=restore_ref,
         )
     )
     disconnect_task = asyncio.create_task(_watch_disconnect(disconnected))
@@ -757,6 +825,20 @@ async def stream_ask_v2_events(
                 break
     finally:
         await cancel_and_join(disconnect_task, get_task, producer_task)
+        if terminal_cause not in ("turn_outcome", "stream_error", "budget"):
+            # The attempt ended without a terminal frame: write the stopped
+            # terminal under the reference the first frame carried. Nothing awaits it.
+            stopped_write = schedule_stopped_terminal(
+                question=timeout_question,
+                principal=principal,
+                thread_id=request.thread_id,
+                run_id=correlation_id,
+                exchange_id=exchange_id,
+                restore_ref=restore_ref,
+            )
+            if stopped_write is not None:
+                _DETACHED_WRITES.add(stopped_write)
+                stopped_write.add_done_callback(_DETACHED_WRITES.discard)
 
 
 # Canonical Ask stream alias

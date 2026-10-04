@@ -15,13 +15,16 @@ from typing import TYPE_CHECKING, Any, Literal
 from opentelemetry import trace
 from opentelemetry.trace import Span
 from pydantic import ValidationError
+from sqlalchemy.exc import IntegrityError
 
 from app.auth import Principal
 from app.business_query.compile.pagination.plan_store import StoredPlan
-from app.business_query.outcomes import BusinessQueryWireOutcome
+from app.business_query.outcomes import BusinessQueryWireOutcome, UnifiedResultEnvelope
 from app.concurrency import llm_slot
 from app.conversation.evidence.contracts import (
     NarrativeDependencies,
+    RestoredStep,
+    RestoredThought,
     RestoredTurn,
     SnapshotBindings,
     SnapshotPayload,
@@ -32,9 +35,9 @@ from app.core.turn_budget import TurnBudget, await_with_budget
 
 if TYPE_CHECKING:
     from app.conversation.evidence.ports import EvidenceSnapshotStore
+from app.models.ask_response import Answer
 from app.models.ask_v2_events import (
     FollowUpAction,
-    FollowUpOffer,
     InteractionOption,
     TableColumn,
     TextContentKind,
@@ -85,6 +88,22 @@ def build_snapshot_bindings(
     )
 
 
+RunStatus = Literal["done", "clarification", "failed", "stopped"]
+
+
+def _run_status(outcome_type: str) -> RunStatus | None:
+    """Map turn outcome type to terminal run status for restored view."""
+    if outcome_type == "answered":
+        return "done"
+    if outcome_type == "clarification_required":
+        return "clarification"
+    if outcome_type == "cancelled":
+        # A turn the person stopped is stopped, complete on the server
+        # record, and never reads as a failure.
+        return "stopped"
+    return "failed"
+
+
 def build_snapshot_payload(
     *,
     thread_id: str,
@@ -99,8 +118,15 @@ def build_snapshot_payload(
     stored_plans: tuple[StoredPlan, ...] | list[StoredPlan] = (),
     document_provenance: tuple[DocumentProvenance, ...] | list[DocumentProvenance] = (),
     narrative_dependencies: NarrativeDependencies | None = None,
+    duration_ms: int | None = None,
+    run_status: RunStatus | None = None,
+    steps: tuple[RestoredStep, ...] = (),
+    thoughts: tuple[RestoredThought, ...] = (),
+    follow_ups: tuple[FollowUpAction, ...] = (),
+    unanswered_part: str | None = None,
 ) -> SnapshotPayload:
     """Build immutable snapshot payload retaining only authorized visible components."""
+    status = run_status if run_status is not None else _run_status(turn_result.outcome_type)
     restored_turn = RestoredTurn(
         thread_id=thread_id,
         run_id=run_id,
@@ -111,6 +137,12 @@ def build_snapshot_payload(
         business_query=business_query,
         presentation=presentation,
         turn_result=turn_result,
+        run_status=status,
+        duration_ms=duration_ms,
+        steps=steps,
+        thoughts=thoughts,
+        follow_ups=follow_ups,
+        unanswered_part=unanswered_part,
     )
     return SnapshotPayload(
         restored_turn=restored_turn,
@@ -120,18 +152,22 @@ def build_snapshot_payload(
     )
 
 
-async def publish_evidence_snapshot(
+async def publish_evidence_snapshot(  # noqa: PLR0913 - the publication seam's typed payload
     store: EvidenceSnapshotStore,
     bindings: SnapshotBindings,
     payload: SnapshotPayload,
     *,
+    restore_ref: str | None = None,
     budget: TurnBudget | None = None,
     timeout_seconds: float = 2.0,
 ) -> str | None:
     """Publish an evidence snapshot within remaining original turn budget.
 
     Returns the 43-character URL-safe restore_ref on success, or None on failure/timeout.
-    Storage failure or budget exhaustion yields restore_ref=null and leaves the live result intact.
+    A caller-minted reference is the snapshot table's primary key: a replayed insert
+    of a sealed reference is read as "already sealed" and never overwrites the row.
+    Storage failure or budget exhaustion yields restore_ref=null and leaves the live
+    result intact.
     """
     try:
         if budget is not None and budget.is_exhausted:
@@ -139,7 +175,18 @@ async def publish_evidence_snapshot(
             return None
 
         async def _do_put() -> str:
-            return await store.put(bindings, payload)
+            try:
+                if restore_ref is None:
+                    return await store.put(bindings, payload)
+                return await store.put(bindings, payload, restore_ref=restore_ref)
+            except IntegrityError:
+                if restore_ref is None:
+                    # A store-minted reference cannot collide by construction.
+                    raise
+                logger.warning(
+                    "snapshot already sealed; keeping the stored row: reference=%s", restore_ref
+                )
+                return restore_ref
 
         if budget is not None:
             return await await_with_budget(
@@ -187,12 +234,19 @@ def make_on_classified(correlation_id: str) -> Callable[[Span, QueryType], None]
 
 
 def option_detail(choice: Any) -> str | None:
-    """Preview text for a stall-card choice: rewrite, else value_prompt."""
-    if isinstance(choice, dict):
-        rewrite, value_prompt = choice.get("rewrite"), choice.get("value_prompt")
-    else:
+    """Preview text. An explicit detail key wins, including None on resolver radios."""
+    if isinstance(choice, dict) and "detail" in choice:
+        value = choice.get("detail")
+        return value if isinstance(value, str) and value.strip() else None
+    if not isinstance(choice, dict):
+        fields_set = getattr(choice, "model_fields_set", None)
+        if fields_set is not None and "detail" in fields_set:
+            value = getattr(choice, "detail", None)
+            return value if isinstance(value, str) and value.strip() else None
         rewrite = getattr(choice, "rewrite", None)
         value_prompt = getattr(choice, "value_prompt", None)
+    else:
+        rewrite, value_prompt = choice.get("rewrite"), choice.get("value_prompt")
     for candidate in (rewrite, value_prompt):
         if isinstance(candidate, str) and candidate.strip():
             return candidate
@@ -209,6 +263,7 @@ def normalize_interaction_options(choices_raw: Any) -> list[InteractionOption]:
                     id=str(c.get("id", str(i))),
                     label=str(c.get("label", str(c))),
                     detail=option_detail(c),
+                    href=c.get("href"),
                 )
             )
         elif hasattr(c, "id") and hasattr(c, "label"):
@@ -217,6 +272,7 @@ def normalize_interaction_options(choices_raw: Any) -> list[InteractionOption]:
                     id=str(getattr(c, "id")),
                     label=str(getattr(c, "label")),
                     detail=option_detail(c),
+                    href=getattr(c, "href", None),
                 )
             )
         else:
@@ -224,24 +280,19 @@ def normalize_interaction_options(choices_raw: Any) -> list[InteractionOption]:
     return options
 
 
-def content_kind(*, table_streamed: bool) -> TextContentKind:
-    """Text accompanying a table is fallback serialization; otherwise narrative."""
+def content_kind(
+    *, table_streamed: bool, producer_kind: TextContentKind | None = None
+) -> TextContentKind:
+    """The producer's own classing wins; otherwise text accompanying a table is
+    its fallback serialization and anything else is narrative."""
+    if producer_kind is not None:
+        return producer_kind
     return "table_fallback" if table_streamed else "narrative"
 
 
-def explanation_from_provenance(res: dict[str, Any]) -> QueryExplanation | None:
-    """The plan explanation the finish policy attached, if valid."""
-    provenance = res.get("sql_provenance")
-    if not isinstance(provenance, dict):
-        return None
-    raw = provenance.get("explanation")
-    if not isinstance(raw, dict):
-        return None
-    try:
-        return QueryExplanation.model_validate(raw)
-    except ValidationError:
-        logger.warning("v2 explanation failed validation and was dropped", exc_info=True)
-        return None
+def explanation_from_provenance(answer: Answer) -> QueryExplanation | None:
+    """The plan explanation the finish policy attached."""
+    return answer.sql_provenance.explanation if answer.sql_provenance is not None else None
 
 
 def as_envelope_mapping(envelope: Any) -> dict[str, Any] | None:
@@ -288,82 +339,66 @@ def total_row_count(envelope: Any) -> int | None:
     return total if isinstance(total, int) and not isinstance(total, bool) and total >= 0 else None
 
 
-def result_envelopes(
-    res: dict[str, Any],
-    *,
-    wire: BusinessQueryWireOutcome | None = None,
-) -> list[Any]:
+def result_envelopes(answer: Answer) -> list[UnifiedResultEnvelope]:
     """Envelopes in ordinal order."""
-    business_query = res.get("business_query")
-    if not isinstance(business_query, dict):
-        rows = res.get("rows")
-        return [{"rows": rows}] if isinstance(rows, list) and rows else []
-    if wire is not None:
-        if wire.envelopes:
-            return list(wire.envelopes)
-        if wire.envelope is not None:
-            return [wire.envelope]
+    wire = answer.business_query
+    if wire is None:
         return []
-    raw = business_query.get("envelopes")
-    if isinstance(raw, list) and raw:
-        return raw
-    envelope = business_query.get("envelope")
-    if isinstance(envelope, dict):
-        return [envelope]
-    if "rows" in business_query:
-        return [business_query]
-    return []
+    if wire.envelopes:
+        return list(wire.envelopes)
+    return [wire.envelope] if wire.envelope is not None else []
 
 
-def follow_up_actions(res: dict[str, Any], outcome_type: str) -> list[FollowUpAction]:
-    """Only an answered turn may carry an offer, and only a valid one."""
-    raw = res.get("follow_up_offer")
-    if outcome_type != "answered" or not isinstance(raw, dict):
+def coordinator_wrote(text_kind: TextContentKind | None, text: str | None) -> bool:
+    """True when the answer text is a finished coordinator draft: that producer
+    alone sets text_kind, and its words and offer stay on a failed turn."""
+    return text_kind is not None and bool(text)
+
+
+def offers_follow_ups(outcome_type: str, *, coordinator_wrote_text: bool) -> bool:
+    """An answered turn may carry an offer; so may a failed turn the coordinator explained."""
+    return outcome_type == "answered" or coordinator_wrote_text
+
+
+def follow_up_actions(answer: Answer, outcome_type: str) -> list[FollowUpAction]:
+    """The follow-ups the terminal frame shows for this result."""
+    wrote = coordinator_wrote(answer.text_kind, answer.answer)
+    if answer.follow_up_offer is None or not offers_follow_ups(
+        outcome_type, coordinator_wrote_text=wrote
+    ):
         return []
-    try:
-        return FollowUpOffer.model_validate(raw).actions
-    except ValidationError as exc:
-        logger.warning("v2 follow-up offer dropped: %d validation errors", exc.error_count())
-        return []
+    return list(answer.follow_up_offer.actions)
 
 
-def refusal_reason(res: dict[str, Any], outcome_type: str) -> tuple[str | None, str | None]:
-    """Reason code and copy for a terminal turn, or (None, None) if answered."""
+def refusal_reason(answer: Answer, outcome_type: str) -> tuple[str | None, str | None]:
+    """Reason code and copy for a terminal turn, or (None, None) if answered.
+
+    The copy is None when the coordinator wrote the text: the code still
+    reaches the wire, the words stay the coordinator's.
+    """
     if outcome_type == "answered":
         return None, None
-    business_query = res.get("business_query")
-    if not isinstance(business_query, dict):
+    wrote = coordinator_wrote(answer.text_kind, answer.answer)
+    if answer.reason_code is not None:
+        return answer.reason_code, None if wrote else copy_for_reason(
+            answer.reason_code, answer.answer
+        )
+    wire = answer.business_query
+    if wire is None or wire.reason_code is None:
         return None, None
-    reason_code = business_query.get("reason_code")
-    if reason_code is None:
-        return None, None
-    return reason_code, copy_for_reason(reason_code, business_query.get("message"))
+    return wire.reason_code, None if wrote else copy_for_reason(wire.reason_code, wire.message)
 
 
-def terminal_disposition(
-    res: dict[str, Any],
-    *,
-    wire: BusinessQueryWireOutcome | None = None,
-    turn_result: TurnResult | None = None,
-) -> str:
+def terminal_disposition(answer: Answer) -> str:
     """The disposition to report for this turn.
 
     When TurnResult is present, it is the ONLY v2 disposition source (ADR 0076).
     """
-    tr = turn_result if turn_result is not None else res.get("turn_result")
-    if isinstance(tr, TurnResult):
-        return tr.outcome_type
-    if wire is not None and wire.outcome:
-        return str(wire.outcome)
-    business_query = res.get("business_query")
-    if isinstance(business_query, dict) and business_query.get("outcome"):
-        return str(business_query["outcome"])
-    outcome = res.get("disposition") or res.get("outcome")
-    if outcome:
-        return str(outcome)
-    if res.get("answer") or res.get("answer_text"):
-        return "answered"
-    return "incomplete"
+    if answer.turn_result is not None:
+        return answer.turn_result.outcome_type
+    if answer.business_query is not None and answer.business_query.outcome:
+        return str(answer.business_query.outcome)
+    return "answered" if answer.answer else "incomplete"
 
 
 @dataclass(frozen=True)

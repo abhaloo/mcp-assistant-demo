@@ -8,13 +8,14 @@ PYTHON CONCEPT: pydantic-settings
 - Validates types at startup — crashes early if config is wrong
 """
 
+import json
 from datetime import date
 from pathlib import Path
 from typing import ClassVar, Literal
 from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import AliasChoices, BaseModel, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
 from app.crypto.event_keyring import EventEncryptionKeyring
@@ -154,7 +155,7 @@ class Settings(_RedactedRepr, BaseSettings):
     llm_max_concurrency: int = Field(default=8, ge=1)
 
     # Retriever backend selection — factory dispatches on this.
-    retriever_kind: Literal["chroma", "azure_search"] = "chroma"
+    retriever_kind: Literal["chroma", "azure_search", "lancedb"] = "lancedb"
 
     # Parser backend selection — parser_factory dispatches on this.
     # "pypdf" = naive text baseline (current behaviour); "unstructured" = hosted
@@ -165,6 +166,8 @@ class Settings(_RedactedRepr, BaseSettings):
 
     # ChromaDB
     chroma_persist_dir: str = "./data/chroma"
+    # LanceDB (default document store when retriever_kind == "lancedb")
+    lancedb_persist_dir: str = "./data/lancedb"
     collection_name: str = "mcp_documents"
 
     # Azure AI Search (only required when retriever_kind == "azure_search")
@@ -174,10 +177,14 @@ class Settings(_RedactedRepr, BaseSettings):
     chat_provider: Literal["openai", "azure"] = "openai"
     # Embedding backend — independent of chat_provider. "offline" is the cloud E2E
     # document-rag seam: deterministic vectors with no provider credentials or spend.
-    embedding_provider: Literal["openai", "azure", "offline"] = Field(
+    embedding_provider: Literal["openai", "azure", "offline", "fastembed"] = Field(
         default="openai",
-        validation_alias="RAG_EMBEDDING_PROVIDER",
+        validation_alias=AliasChoices("RAG_EMBEDDING_PROVIDER", "embedding_provider"),
     )
+    # "openai" = embed with openai_api_key/openai_base_url
+    embedding_credential_source: Literal["model_api_key", "openai"] = "model_api_key"
+    fastembed_model: str = "BAAI/bge-small-en-v1.5"
+    fastembed_cache_dir: str = "./data/fastembed"
     # Requests a usage chunk on the streamed response (langchain-openai's
     # `stream_usage` -> `stream_options={"include_usage": true}`). Default on: both
     # OpenAI-compatible gateways and Azure (api-version >= 2024-09-01-preview, this
@@ -249,10 +256,16 @@ class Settings(_RedactedRepr, BaseSettings):
     ask_document_fault: Literal["none", "stage_timeout"] = "none"
     ask_tool_layer_enabled: bool = False
     conversation_coordinator_enabled: bool = False
+    ask_account_budget_enabled: bool = False
     allow_ask_clock_override: bool = False
-    ask_max_deadline_ms: int = 25_000
-    ask_planner_step_ceiling_seconds: float | None = 18.0
+    ask_max_deadline_ms: int = 600_000
+    ask_planner_step_ceiling_seconds: float | None = 120.0
     ask_turn_unbounded: bool = False
+    # Stable prompt prefix for provider prompt caching. Measured before default changes.
+    planner_card_in_system_message: bool = False
+    # Scales every Ask-turn time cap at consumption. Base literals stay 25 s / 18 s.
+    # Does not require ALLOW_ASK_CLOCK_OVERRIDE. Token and health-probe budgets stay put.
+    ask_budget_multiplier: float = Field(default=1.0, gt=0)
     # SHA-256 of the accepted document-tool profile; enablement needs the file to match.
     ask_tool_layer_profile_sha256: str = ""
     corpus_dir: str = "data/corpus/company"
@@ -265,7 +278,7 @@ class Settings(_RedactedRepr, BaseSettings):
     chunk_overlap: int = 100  # Overlap between chunks (preserves context at boundaries)
     excel_rows_per_chunk: int = 20  # data rows per Excel chunk (header repeats in each)
     top_k: int = 3  # Number of chunks to retrieve per query
-    md_header_chunking: bool = False  # markdown-header-aware chunking with section metadata
+    md_header_chunking: bool = True  # markdown-header-aware chunking with section metadata
 
     # Local cross-encoder rerank-as-FILTER (Chroma path; Azure path uses semantic ranker instead).
     rerank_enabled: bool = False
@@ -367,6 +380,7 @@ class Settings(_RedactedRepr, BaseSettings):
     business_query_cube_url: str | None = None
     business_query_cube_api_secret: str | None = None
     business_query_cube_timeout_seconds: float = Field(default=10.0, gt=0)
+    business_query_cube_agreed_shapes_path: str | None = None
     # Width of the adapter thread pool. Deliberately small and separate from asyncio's
     # shared default executor (min(32, cpu+4) workers, process-wide): a wait_for timeout
     # does not cancel the underlying thread, so repeated timeouts during a slow-database
@@ -376,6 +390,8 @@ class Settings(_RedactedRepr, BaseSettings):
     # Business Query Ask wiring gate. disabled = Phase 0 structured 503 containment;
     # shadow = run Module + record, still 503; enabled = map Module outcomes to Ask.
     business_query_mode: Literal["disabled", "shadow", "enabled"] = "disabled"
+    # Stored-plan lifetime matches the conversation window (spec §4.2).
+    business_query_stored_plan_ttl_seconds: int = 14400
     # R3 typed-query rollout controls.  Exact-match legacy filtering remains
     # available while the explicit comparison-clause grammar is off; range
     # operators and bounded analytics require their separate canary gates.
@@ -435,7 +451,7 @@ class Settings(_RedactedRepr, BaseSettings):
     conversation_ttl_seconds: int = 1800  # sliding session expiry (30 min)
     conversation_absolute_ttl_seconds: int = 14400  # max thread lifetime (4 h), creation-based
     conversation_max_turns: int = (
-        6  # max prior turns fed to condense/prompt (short: lost-in-the-middle)
+        40  # Stored turns match the panel's 40 kept messages; the prompt prunes by size.
     )
     conversation_history_max_chars: int = 8000  # hard cap on assembled history text
 
@@ -464,11 +480,33 @@ class Settings(_RedactedRepr, BaseSettings):
         "extra": "ignore",
     }
 
-    @field_validator("business_query_cube_url", "business_query_cube_api_secret", mode="before")
+    @field_validator(
+        "business_query_cube_url",
+        "business_query_cube_api_secret",
+        "business_query_cube_agreed_shapes_path",
+        mode="before",
+    )
     @classmethod
     def _empty_environment_value_is_unset(cls, value: object) -> object:
         """Compose renders an unset variable as an empty string; treat it as absent."""
         return None if value == "" else value
+
+    @field_validator("business_query_cube_agreed_shapes_path")
+    @classmethod
+    def _validate_cube_agreed_shapes_path(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        path = Path(value)
+        if not path.is_file():
+            raise ValueError(f"cube agreed shapes file not found: {value}")
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            raise ValueError(
+                f"cube agreed shapes file does not contain valid JSON: {value}"
+            ) from exc
+        assert isinstance(payload, dict)
+        return value
 
     @model_validator(mode="after")
     def _validate_cube_pair(self) -> "Settings":
@@ -504,6 +542,17 @@ class Settings(_RedactedRepr, BaseSettings):
                 missing.append("unstructured_api_key/url (parser_kind=unstructured)")
             if self.corpus_source == "azure_blob" and not self.corpus_blob_account_url:
                 missing.append("corpus_blob_account_url (corpus_source=azure_blob)")
+            if self.embedding_provider == "fastembed":
+                try:
+                    import fastembed  # noqa: F401
+                except ImportError:
+                    missing.append("fastembed extra (embedding_provider=fastembed)")
+            if (
+                self.embedding_provider == "openai"
+                and self.embedding_credential_source == "openai"
+                and not self.openai_api_key
+            ):
+                missing.append("openai_api_key (embedding_credential_source=openai)")
         if self.conversation_enabled and not self.redis_url:
             missing.append("redis_url (conversation_enabled=true)")
         if (
@@ -524,8 +573,8 @@ class Settings(_RedactedRepr, BaseSettings):
             missing.append(
                 "redis_url must use TLS (rediss://) when conversation_enabled in production"
             )
-        default_deadline_ms = 25_000
-        default_planner_ceiling = 18.0
+        default_deadline_ms = 600_000
+        default_planner_ceiling = 120.0
         clocks_non_default = (
             self.ask_max_deadline_ms != default_deadline_ms
             or self.ask_planner_step_ceiling_seconds != default_planner_ceiling
@@ -583,14 +632,18 @@ class EffectiveRouteSettings(BaseModel):
     business_query_mode: str
     billing_database: str | None
     record_database: str | None
-    ask_max_deadline_ms: int = 25_000
-    ask_planner_step_ceiling_seconds: float | None = 18.0
+    ask_max_deadline_ms: int = 600_000
+    ask_planner_step_ceiling_seconds: float | None = 120.0
     ask_turn_unbounded: bool = False
+    ask_budget_multiplier: float = 1.0
     cube_configured: bool = False
 
 
 def effective_route_settings() -> EffectiveRouteSettings:
-    """Snapshot of the route flags the running process holds."""
+    """Snapshot of the route flags the running process holds, unscaled.
+
+    ``app.core.ask_budget.scaled_route_settings`` applies the Ask budget
+    multiplier for callers that report the clocks a turn actually gets."""
     planner_ceiling = (
         None if settings.ask_turn_unbounded else settings.ask_planner_step_ceiling_seconds
     )
@@ -605,5 +658,6 @@ def effective_route_settings() -> EffectiveRouteSettings:
         ask_max_deadline_ms=settings.ask_max_deadline_ms,
         ask_planner_step_ceiling_seconds=planner_ceiling,
         ask_turn_unbounded=settings.ask_turn_unbounded,
+        ask_budget_multiplier=settings.ask_budget_multiplier,
         cube_configured=settings.business_query_cube_url is not None,
     )

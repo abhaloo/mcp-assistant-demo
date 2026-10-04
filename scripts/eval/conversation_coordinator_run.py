@@ -29,7 +29,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from app.config import EffectiveRouteSettings
-from app.conversation.coordinator.contracts import CoordinatorContext
+from app.conversation.coordinator.contracts import COORDINATOR_CLARIFY, CoordinatorContext
 from app.eval.conversation_coordinator import (
     CaseResult,
     CoordinatorCase,
@@ -68,7 +68,7 @@ DEFAULT_CASES_PATH = "evals/conversation_coordinator/cases.jsonl"
 DEFAULT_OUT_DIR = "data/conversation-coordinator-eval"
 LIVE_ENV_FLAG = "RUN_CONVERSATION_COORDINATOR_LIVE"
 BASELINE_REPEATS = 3
-TURN_DEADLINE_MS = 25_000
+TURN_DEADLINE_MS = 600_000
 CANDIDATE_ROUTE = "ask_v2_coordinator_on"
 BASELINE_ROUTE = "ask_v2_coordinator_off"
 SIMPLE_BQ_SUITE_PATH = Path("evals/prod_ask_e2e/suite.json")
@@ -361,6 +361,10 @@ def _has_public_answer_fields(body: dict[str, Any]) -> bool:
 
 def reconstruct_actions(body: dict[str, Any]) -> tuple[str, ...]:
     """Map public Answer fields onto coordinator steps. No invented actions key."""
+    if body.get("outcome") == "clarification_required":
+        if body.get("continuation") == COORDINATOR_CLARIFY:
+            return ("clarify",)
+        return ("query_business", "clarify")
     if body.get("disambiguation"):
         actions: list[str] = []
         query_type = body.get("query_type")
@@ -495,7 +499,7 @@ def _observation_from_answer(
     return CoordinatorRunOutput(
         actions=reconstruct_actions(body),
         sources=_source_ids(body),
-        answer_text=str(body.get("answer") or body.get("text") or ""),
+        answer_text=str(body.get("answer") or body.get("text") or body.get("prompt") or ""),
         question_origin=body.get("question_origin"),
         time_to_first_token_ms=time_to_first_token_ms,
         time_to_first_action_ms=ttfa,

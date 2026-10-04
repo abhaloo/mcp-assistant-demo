@@ -12,12 +12,12 @@ import json
 import logging
 import threading
 import time
-from collections.abc import Callable, Coroutine
+from collections.abc import Callable, Coroutine, Iterable
 from contextvars import ContextVar
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Any
+from typing import Any, Protocol
 from uuid import UUID
 
 from langchain_core.callbacks.base import BaseCallbackHandler
@@ -33,8 +33,10 @@ from app.crypto.event_keyring import EventEncryptionKeyring
 from app.db.postgres import session_scope
 from app.pricing.pricer import price_tokens
 from app.providers.model_purpose import ModelPurpose
+from app.providers.reasoning import extract_reasoning_evidence
+from app.query_records.context import TerminalUsageCapture
 from app.telemetry.correlation import current_correlation_id
-from app.telemetry.helpers import token_usage_from_message
+from app.telemetry.helpers import cached_input_tokens_from_message, token_usage_from_message
 from app.telemetry.invocation_payload import (
     ExecutionIdentity,
     InvocationExpectation,
@@ -43,6 +45,7 @@ from app.telemetry.invocation_payload import (
     TerminalEvidenceReceipt,
     clear_recorded_evidence_for_tests,
     encrypt_invocation_payload,
+    evidence_records,
     extract_bounded_response_metadata,
     get_recorded_evidence,
     record_evidence_invocation,
@@ -162,6 +165,7 @@ class ModelInvocationRow(_LedgerBase):
     input_tokens: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     output_tokens: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     reasoning_tokens: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    cached_input_tokens: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     latency_ms: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     ttft_ms: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     estimated_usd: Mapped[Decimal | None] = mapped_column(Numeric(12, 6), nullable=True)
@@ -274,6 +278,31 @@ def extract_token_usage(response: LLMResult) -> tuple[int | None, int | None, in
     return None, None, None
 
 
+def extract_cached_input_tokens(response: LLMResult) -> int | None:
+    """Extract cached input tokens from an LLMResult message or output metadata."""
+    message = None
+    if response.generations and response.generations[0]:
+        gen = response.generations[0][0]
+        if isinstance(gen, ChatGeneration):
+            message = gen.message
+
+    if message is not None:
+        cached = cached_input_tokens_from_message(message)
+        if cached is not None:
+            return cached
+
+    llm_output = response.llm_output or {}
+    usage = llm_output.get("token_usage") or llm_output.get("usage")
+    if isinstance(usage, dict):
+
+        class _MessageAdapter:
+            response_metadata = {"token_usage": usage}
+
+        return cached_input_tokens_from_message(_MessageAdapter())
+
+    return None
+
+
 def _extract_response_text(response: LLMResult) -> tuple[str | None, str | None]:
     if not response.generations:
         return None, None
@@ -296,10 +325,8 @@ def _extract_response_text(response: LLMResult) -> tuple[str | None, str | None]
     tool_calls = getattr(message, "tool_calls", None)
     if (not text or not text.strip()) and tool_calls:
         text = json.dumps(tool_calls, default=str)
-    meta = getattr(message, "response_metadata", None) or {}
-    reasoning = meta.get("reasoning_evidence") or meta.get("reasoning_content")
-    if reasoning is not None and not isinstance(reasoning, str):
-        reasoning = json.dumps(reasoning, default=str)
+    # The ledger sees the provider reply before CapabilityChatModel strips reasoning from it.
+    reasoning = extract_reasoning_evidence(message, max_chars=None).get("reasoning_text")
     return text, reasoning if isinstance(reasoning, str) else None
 
 
@@ -319,6 +346,7 @@ class ModelInvocationRecord:
     latency_ms: int | None
     estimated_usd: Decimal | None
     cost_status: str | None
+    cached_input_tokens: int | None = None
     ttft_ms: int | None = None
     error_class: str | None = None
     pii_posture: str | None = None
@@ -493,6 +521,96 @@ async def query_durable_sql_executions(correlation_id: str) -> list[SqlExecution
     return list(result.scalars().all())
 
 
+class _PricedRow(Protocol):
+    """A ledger row that carries the tokens it counted and the price it was written with."""
+
+    input_tokens: int | None
+    output_tokens: int | None
+    estimated_usd: Decimal | None
+    cost_status: str | None
+
+
+def _turn_price(records: Iterable[_PricedRow]) -> tuple[Decimal | None, str]:
+    """The turn's spend is the sum of each ledger row's own price (each row was
+    priced under its own model when written) and the weakest row's status: a row
+    that counted tokens but has no price leaves the turn unknown, a partially
+    priced row leaves it partial, and a row that counted no tokens is skipped."""
+    total = Decimal("0")
+    priced_any = False
+    has_partial = False
+    for r in records:
+        if r.input_tokens is None and r.output_tokens is None:
+            # An errored call recorded no tokens: nothing to price, nothing to void.
+            continue
+        if r.estimated_usd is None:
+            return None, "unknown"
+        total += r.estimated_usd
+        priced_any = True
+        has_partial = has_partial or r.cost_status == "partial"
+    if not priced_any:
+        return None, "unknown"
+    return total, "partial" if has_partial else "complete"
+
+
+def _accumulate_record_tokens(r: Any) -> tuple[int, int, int, int, bool, bool]:
+    inp = getattr(r, "input_tokens", None)
+    outp = getattr(r, "output_tokens", None)
+    reasoning = getattr(r, "reasoning_tokens", None) or 0
+    cached = getattr(r, "cached_input_tokens", None)
+    has_tokens = inp is not None or outp is not None
+    has_cached = cached is not None
+    return (inp or 0), (outp or 0), reasoning, (cached or 0), has_tokens, has_cached
+
+
+# Lower rank wins. conversation and classify are omitted so they never name the turn.
+_TURN_MODEL_RANK: dict[str, int] = {
+    ModelPurpose.coordinator: 0,
+    ModelPurpose.rag_answer: 1,
+    ModelPurpose.sql_agent: 1,
+    ModelPurpose.record_reasoning: 2,
+}
+
+
+def _accumulate_turn_records(records: Iterable[Any]) -> TerminalUsageCapture:
+    usage = TerminalUsageCapture()
+    total_in = total_out = total_reasoning = total_cached = 0
+    has_tokens = has_cached = False
+    best_rank: int | None = None
+    for r in records:
+        inp, outp, reasoning, cached, tok_flag, cache_flag = _accumulate_record_tokens(r)
+        total_in += inp
+        total_out += outp
+        total_reasoning += reasoning
+        total_cached += cached
+        has_tokens = has_tokens or tok_flag
+        has_cached = has_cached or cache_flag
+        model = getattr(r, "model", None)
+        rank = _TURN_MODEL_RANK.get(getattr(r, "purpose", None) or "")
+        if model and rank is not None and (best_rank is None or rank < best_rank):
+            usage.model = model
+            usage.provider = getattr(r, "provider", None)
+            best_rank = rank
+    if has_tokens:
+        usage.input_tokens = total_in
+        usage.output_tokens = total_out
+        usage.reasoning_tokens = total_reasoning
+    if has_cached:
+        usage.cached_input_tokens = total_cached
+    usage.estimated_usd, usage.cost_status = _turn_price(records)
+    return usage
+
+
+async def aggregate_turn_usage(correlation_id: str | None) -> TerminalUsageCapture | None:
+    """Sum the turn's model invocations from the source the evidence barrier trusts:
+    the durable ledger once it is configured, otherwise the in-process cache."""
+    if not correlation_id:
+        return None
+    records = await evidence_records(correlation_id)
+    if not records:
+        return None
+    return _accumulate_turn_records(records)
+
+
 _ledger = InvocationLedger()
 
 
@@ -633,12 +751,14 @@ class InvocationLedgerCallbackHandler(BaseCallbackHandler):
         if started is not None:
             latency_ms = max(0, int((time.perf_counter() - started) * 1000))
         input_tokens, output_tokens, reasoning_tokens = extract_token_usage(response)
+        cached_input_tokens = extract_cached_input_tokens(response)
         response_content, reasoning_content = _extract_response_text(response)
         priced = price_tokens(
             model=self._model,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             reasoning_tokens=reasoning_tokens,
+            cached_input_tokens=cached_input_tokens,
         )
         effective_cid = self._correlation_id or current_correlation_id()
 
@@ -683,6 +803,7 @@ class InvocationLedgerCallbackHandler(BaseCallbackHandler):
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             reasoning_tokens=reasoning_tokens,
+            cached_input_tokens=cached_input_tokens,
             latency_ms=latency_ms,
             ttft_ms=ttft_ms,
             estimated_usd=priced.estimated_usd,
@@ -846,6 +967,7 @@ __all__ = [
     "SqlExecutionTiming",
     "TerminalEvidenceError",
     "TerminalEvidenceReceipt",
+    "aggregate_turn_usage",
     "attach_ledger_observer",
     "clear_recorded_evidence_for_tests",
     "extract_token_usage",

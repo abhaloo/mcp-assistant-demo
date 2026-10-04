@@ -1,4 +1,4 @@
-version: "2026-08-15"
+version: "2026-10-01"
 
 # Per-model input/output rates in USD per 1k tokens.
 # REGION CAVEAT: Azure OpenAI pricing varies by region. Verify these values
@@ -19,6 +19,11 @@ gpt-4o:
 gpt-4.1:
   input_per_1k: 0.002
   output_per_1k: 0.008
+gpt-6-luna:
+  input_per_1k: 0.0001
+  output_per_1k: 0.0005
+  reasoning_per_1k: 0.0005
+  cached_input_per_1k: 0.00001
 gpt-5.6-luna:
   input_per_1k: 0.0002
   output_per_1k: 0.0012
@@ -31,6 +36,7 @@ gpt-5-nano:
   output_per_1k: 0.0004
   # OpenAI bills reasoning tokens at the output rate (same per-1k as output_per_1k).
   reasoning_per_1k: 0.0004
+  cached_input_per_1k: 0.000005
 
 # Explicit Azure deployment-name -> price-key map.
 # The cost rollup checks this map FIRST, then falls back to a direct top-level
@@ -63,6 +69,12 @@ deepseek/deepseek-v4-flash-0731:
 deepseek-v4-flash:
   input_per_1k: 0.00014
   output_per_1k: 0.00028
+
+# Peak rates from api-docs.deepseek.com/quick_start/pricing, off-peak is half.
+deepseek-flash:
+  input_per_1k: 0.0003
+  output_per_1k: 0.0012
+  cached_input_per_1k: 0.000006
 
 # OpenRouter model slug -> prices.yaml key (identity map for experiment arm).
 openrouter_model_to_price_key:

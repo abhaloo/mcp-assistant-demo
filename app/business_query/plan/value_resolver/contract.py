@@ -14,6 +14,8 @@ ResolvableType = Literal["customer", "product"]
 
 RESOLVER_VERSION = "s1-resolver-v1"
 RESOLVER_CANDIDATE_CAP = 10
+CARD_PICK_MIN = 2
+CARD_PICK_CAP = 3
 
 
 def resolver_query_id_for(idempotency_key: str) -> str:

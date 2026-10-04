@@ -10,7 +10,12 @@ from typing import TYPE_CHECKING, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from app.business_query.plan.query_plan import BusinessQueryPlan, plan_fingerprint
+from app.business_query.plan.query_plan import (
+    TIME_DIMENSIONS_CONTEXT,
+    BusinessQueryPlan,
+    plan_fingerprint,
+    set_reference_ids,
+)
 
 if TYPE_CHECKING:
     from app.business_query.outcomes import ClarificationRequired
@@ -91,6 +96,13 @@ def dialogue_history_digest(
     return f"sha256:{hashlib.sha256(joined.encode()).hexdigest()}"
 
 
+def _assert_set_references_declared(plan: BusinessQueryPlan) -> None:
+    declared = {item.id for item in plan.derived_sets}
+    for ref in set_reference_ids(plan.filters):
+        if ref not in declared:
+            raise ValueError(f"unknown derived set id: '{ref}'")
+
+
 class PlannerClarificationChoice(BaseModel):
     model_config = ConfigDict(strict=True, extra="forbid")
 
@@ -107,7 +119,13 @@ class PlannerModelResponse(BaseModel):
     clarification_question: str | None = None
     clarification_choices: list[PlannerClarificationChoice] | None = None
     unsupported_reason: (
-        Literal["member_not_found", "grain_unexpressible", "period_dimension_missing"] | None
+        Literal[
+            "member_not_found",
+            "grain_unexpressible",
+            "period_dimension_missing",
+            "needs_prior_answer",
+        ]
+        | None
     ) = None
 
     @model_validator(mode="after")
@@ -123,6 +141,7 @@ class PlannerModelResponse(BaseModel):
         if self.action != "plan" and self.companion_plans is not None:
             raise ValueError("companion_plans is only valid when action='plan'")
         if self.action == "plan" and self.plan is not None:
+            _assert_set_references_declared(self.plan)
             for s in self.plan.derived_sets:
                 if s.plan.derived_sets:
                     raise ValueError("derived sets cannot be nested")
@@ -135,6 +154,7 @@ class PlannerModelResponse(BaseModel):
                 if len(fingerprints) != len(set(fingerprints)):
                     raise ValueError("companion_plans fingerprints must be unique in the set")
                 for companion in self.companion_plans:
+                    _assert_set_references_declared(companion)
                     for s in companion.derived_sets:
                         if s.plan.derived_sets:
                             raise ValueError("derived sets cannot be nested")
@@ -253,7 +273,14 @@ def _normalize_planner_payload(payload: dict) -> dict:
     return data
 
 
-def validate_model_payload(payload: dict) -> PlannerModelResponse:
-    """Validate a model tool-call payload in JSON mode."""
+def validate_model_payload(
+    payload: dict, *, time_dimensions: frozenset[str] = frozenset()
+) -> PlannerModelResponse:
+    """Validate a model tool-call payload in JSON mode.
+
+    ``time_dimensions`` names the card's time members, so a grouped plan by one of
+    them without a granularity fails here and reaches the repair round."""
     normalized = _normalize_planner_payload(payload)
-    return PlannerModelResponse.model_validate_json(json.dumps(normalized))
+    return PlannerModelResponse.model_validate_json(
+        json.dumps(normalized), context={TIME_DIMENSIONS_CONTEXT: time_dimensions}
+    )

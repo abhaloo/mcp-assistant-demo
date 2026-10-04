@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.business_query.authorize.scoping import ForcedPredicate
 from app.business_query.compile.pagination.plan_payload import DerivedPlanPayload
 from app.business_query.plan import BusinessQueryPlan, canonical_plan_payload
+from app.business_query.wire.request import BusinessQueryOwnerHint
 
 if TYPE_CHECKING:
     from app.query_records.model import BusinessQueryPlanRow
@@ -41,6 +42,10 @@ class StoredPlan(BaseModel):
     response_policy: Literal["allow_partial", "strict"] = "allow_partial"
     original_question: str | None = None
     derived_payload: DerivedPlanPayload | None = None
+    owner_hint: BusinessQueryOwnerHint | None = None
+    # Members the display projection appended to the plan; restored on page
+    # re-execution so page 2 seals the same display columns as page 1.
+    display_members_added: tuple[str, ...] = ()
 
     @model_validator(mode="after")
     def _validate_derived_payload_contract(self) -> StoredPlan:
@@ -103,9 +108,14 @@ class PostgresPlanStore:
     async def save_plan(self, stored: StoredPlan) -> StoredPlan:
         from app.query_records.model import BusinessQueryPlanRow
 
+        members_added = list(stored.display_members_added)
         if stored.derived_payload is not None:
+            plan_payload = dict(
+                json.loads(stored.derived_payload.model_dump_json()),
+                display_members_added=members_added,
+            )
             plan_payload = json.dumps(
-                stored.derived_payload.model_dump(mode="json"),
+                plan_payload,
                 sort_keys=True,
                 separators=(",", ":"),
             )
@@ -116,6 +126,7 @@ class PostgresPlanStore:
                     "forced": [item.model_dump(mode="json") for item in stored.forced],
                     "response_policy": stored.response_policy,
                     "original_question": stored.original_question,
+                    "display_members_added": members_added,
                 },
                 sort_keys=True,
                 separators=(",", ":"),
@@ -166,8 +177,12 @@ class PostgresPlanStore:
 
 def _stored_plan_from_row(row: BusinessQueryPlanRow) -> StoredPlan:
     decoded = json.loads(row.plan_payload)
-    if isinstance(decoded, dict) and decoded.get("format_version") == 2:
-        derived_payload = DerivedPlanPayload.model_validate_json(row.plan_payload)
+    # Written beside the payload (DerivedPlanPayload itself is closed to extras).
+    members_added = tuple(decoded.pop("display_members_added", ()) or ())
+    if isinstance(decoded, dict) and decoded.get("format_version") in (2, 3):
+        derived_payload = DerivedPlanPayload.model_validate_json(
+            json.dumps(decoded, sort_keys=True, separators=(",", ":"))
+        )
         plan = derived_payload.plan
         forced = derived_payload.forced
         response_policy = derived_payload.response_policy
@@ -206,4 +221,5 @@ def _stored_plan_from_row(row: BusinessQueryPlanRow) -> StoredPlan:
         response_policy=response_policy,
         original_question=original_question,
         derived_payload=derived_payload,
+        display_members_added=members_added,
     )

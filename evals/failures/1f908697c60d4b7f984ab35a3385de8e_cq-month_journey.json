@@ -1,0 +1,16 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "journey",
+  "case_id": "cq-month",
+  "role": "admin",
+  "mode": "journey",
+  "run_id": "1f908697c60d4b7f984ab35a3385de8e",
+  "question": "Which month of 2025 had our highest invoiced revenue in TZS, and list the invoices from that month.",
+  "reason": "outcome_type mismatch: expected answered, got unsupported (grain_unexpressible)",
+  "mismatches": [
+    "outcome_type"
+  ],
+  "outcome_type": "unsupported"
+}

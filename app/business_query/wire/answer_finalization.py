@@ -63,6 +63,18 @@ def finalize_answer_text(
         else:
             final_text = _truncate_at_word_boundary(text, max_answer_chars)
 
-    return present_result(
+    finalized = present_result(
         answered.model_copy(update={"answer_text": final_text}), scope=context or None
     )
+    return _present_companions(finalized, answered)
+
+
+def _present_companions(finalized: Answered, answered: Answered) -> Answered:
+    """Give every companion without a presentation one of its own."""
+    if not answered.companion_answered:
+        return finalized
+    companions = tuple(
+        companion if companion.presentation is not None else present_result(companion)
+        for companion in answered.companion_answered
+    )
+    return finalized.model_copy(update={"companion_answered": companions})

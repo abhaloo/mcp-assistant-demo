@@ -17,6 +17,8 @@ from app.business_query.compile.statement_builder import (
 from app.business_query.definitions import DimensionDefinition, MeasureDefinition
 from app.business_query.outcomes import PlanRefused
 from app.business_query.plan import BusinessQueryPlan
+from app.business_query.plan.derived_sets import ORDERED_MODES
+from app.business_query.plan.query_plan import time_group_for
 from app.business_query.ports import CompilerAdapter
 
 
@@ -55,10 +57,22 @@ def _key_carries_not_null_guard(
     )
 
 
+def time_group_clause(column: ColumnElement[Any], derived: ScopedDerivedSet) -> ColumnElement[bool]:
+    """Rows dated inside the periods the set selected: lower <= column < upper per period."""
+    resolved = derived.resolved
+    if resolved is None:
+        raise AssertionError(f"time-group set '{derived.id}' compiled before it was resolved")
+    if not resolved.periods:
+        return sa.false()
+    return sa.or_(*(sa.and_(column >= p.lower, column < p.upper) for p in resolved.periods))
+
+
 def compile_set_relation(
     adapter: CompilerAdapter,
     derived: ScopedDerivedSet,
 ) -> Select[Any]:
+    if time_group_for(derived.key, derived.scoped.plan) is not None:
+        raise AssertionError(f"time-group set '{derived.id}' compiled before it was resolved")
     scoped = derived.scoped
     plan = scoped.plan
     mode = derived.mode
@@ -85,11 +99,25 @@ def compile_set_relation(
         group_cols = [key_col] if pl.grain == "grouped" else []
         dim_exprs = {key: key_col}
 
+        # An order basis that is not projected still needs an expression: the basis
+        # of a pick over rows is a dimension of the key's resource.
+        order_exprs: dict[str, ColumnElement[Any]] = {}
+        for clause in pl.order:
+            if clause.member == key or clause.member in measure_labels:
+                continue
+            o_kind, o_def = adp._resolve_capability(clause.member)
+            if o_kind != "dimension" or not isinstance(o_def, DimensionDefinition):
+                raise PlanRefused("member_not_found")
+            order_exprs[clause.member] = adp._dimension_expr(
+                o_def, tables[o_def.owning_resource], clause.member, business_date=sc.business_date
+            )
+
         projection = Projection(
             select_cols=select_cols,
             group_cols=group_cols,
             measure_labels=measure_labels,
             dim_exprs=dim_exprs,
+            order_exprs=order_exprs,
         )
         null_predicate = key_col.is_not(None)
         return projection, null_predicate
@@ -101,26 +129,8 @@ def compile_set_relation(
     if mode == "complete":
         if plan.grain == "entity_rows":
             stmt = stmt.distinct()
-    elif mode == "ranked":
-        order_cols: list[ColumnElement[Any]] = []
-        for clause in plan.order:
-            if clause.member in projection.measure_labels:
-                expr = projection.measure_labels[clause.member]
-                order_cols.append(expr.desc() if clause.direction == "desc" else expr.asc())
-            elif clause.member in projection.dim_exprs:
-                expr = projection.dim_exprs[clause.member]
-                order_cols.append(expr.desc() if clause.direction == "desc" else expr.asc())
-            elif clause.member == key:
-                key_expr = projection.dim_exprs.get(key)
-                if key_expr is not None:
-                    col = key_expr.desc() if clause.direction == "desc" else key_expr.asc()
-                    order_cols.append(col)
-        key_expr = projection.dim_exprs.get(key)
-        key_ordered = any(clause.member == key for clause in plan.order)
-        if not key_ordered and key_expr is not None:
-            order_cols.append(key_expr.asc())
-        stmt = stmt.order_by(*order_cols)
-        stmt = stmt.limit(plan.limit)
+    elif mode in ORDERED_MODES:
+        stmt = apply_pick_order(stmt, projection, plan, key)
 
     if key not in stmt.selected_columns.keys():
         raise AssertionError(f"derived set key '{key}' missing from compiled selected columns")
@@ -130,3 +140,31 @@ def compile_set_relation(
             "(ADR 0073 non-NULL-key invariant)"
         )
     return stmt
+
+
+def apply_pick_order(
+    stmt: Select[Any], projection: Projection, plan: BusinessQueryPlan, key: str
+) -> Select[Any]:
+    """Order by the authored basis with NULLs last, then the key, then keep N.
+
+    The key clause is always last. When the plan orders by the key itself, its
+    authored direction is kept; otherwise the key ascending is the tiebreak. A
+    ranked set's second authored clause is that tiebreak written out."""
+    key_expr = projection.dim_exprs[key]
+    key_direction = next((clause.direction for clause in plan.order if clause.member == key), "asc")
+    order_cols: list[ColumnElement[Any]] = []
+    for clause in plan.order:
+        if clause.member == key:
+            continue
+        # SQLAlchemy clause objects refuse ``bool()``, so the lookup chain is explicit.
+        expr = projection.measure_labels.get(clause.member)
+        if expr is None:
+            expr = projection.dim_exprs.get(clause.member)
+        if expr is None:
+            expr = projection.order_exprs.get(clause.member)
+        if expr is None:
+            raise PlanRefused("member_not_found")
+        order_cols.append(sa.case((expr.is_(None), 1), else_=0).asc())
+        order_cols.append(expr.desc() if clause.direction == "desc" else expr.asc())
+    order_cols.append(key_expr.desc() if key_direction == "desc" else key_expr.asc())
+    return stmt.order_by(*order_cols).limit(plan.limit)

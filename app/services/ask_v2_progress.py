@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from app.business_query.ports import CommittedTable, ProgressStage
+from app.conversation.evidence.contracts import RestoredStep, RestoredThought, TurnTimeline
 from app.core.errors import QueueBufferExceededError
 from app.models.ask_v2_events import (
     ActivityEvent,
@@ -82,6 +83,13 @@ class _OpenThought:
     started: float
 
 
+@dataclass(slots=True)
+class _ShownThought:
+    started: float
+    text: str = ""
+    duration_ms: int | None = None
+
+
 class AskV2ProgressSink:
     """One open step at a time. A new stage closes the open one as completed.
 
@@ -115,6 +123,10 @@ class AskV2ProgressSink:
         # How often each (kind, ordinal) has opened; a repeat gets its own id so
         # a second decision is a new row, not the first one running again.
         self._step_rounds: dict[tuple[ActivityKind, int | None], int] = {}
+        # What the person saw, for the turn's snapshot: each step's last frame in
+        # the order first shown, and the thought text each step showed.
+        self._shown: dict[str, tuple[_ActiveStep, ActivityState, int]] = {}
+        self._notes: dict[str, _ShownThought] = {}
 
     @property
     def painted_ordinals(self) -> frozenset[int]:
@@ -183,6 +195,7 @@ class AskV2ProgressSink:
             if not self._enqueue(start_event):
                 return
             self._thought = _OpenThought(activity_id=host.activity_id, started=self._clock())
+            self._notes[host.activity_id] = _ShownThought(started=self._thought.started)
 
         delta_event = ThoughtDeltaEvent(
             protocol_version="2",
@@ -192,7 +205,8 @@ class AskV2ProgressSink:
             activity_id=self._thought.activity_id,
             delta=chunk,
         )
-        self._enqueue(delta_event)
+        if self._enqueue(delta_event):
+            self._notes[self._thought.activity_id].text += chunk
 
     def finish_thought(self) -> None:
         if self._thought is None:
@@ -207,6 +221,7 @@ class AskV2ProgressSink:
             activity_id=thought.activity_id,
             duration_ms=self._ms_since(thought.started),
         )
+        self._notes[thought.activity_id].duration_ms = done_event.duration_ms
         self._enqueue(done_event)
 
     def _enqueue(self, event: AskV2Event) -> bool:
@@ -218,6 +233,40 @@ class AskV2ProgressSink:
             return False
         self._sequence.take()
         return True
+
+    def timeline(self) -> TurnTimeline:
+        """The steps and thought rows shown so far, closed: a step or a thought
+        still open reads completed, with its time so far."""
+        return TurnTimeline(
+            steps=tuple(self._closed_step(*shown) for shown in self._shown.values()),
+            thoughts=tuple(
+                RestoredThought(
+                    activity_id=activity_id,
+                    text=note.text,
+                    duration_ms=(
+                        note.duration_ms
+                        if note.duration_ms is not None
+                        else self._ms_since(note.started)
+                    ),
+                )
+                for activity_id, note in self._notes.items()
+                if note.text
+            ),
+            duration_ms=self._ms_since(self._turn_started),
+        )
+
+    def _closed_step(
+        self, step: _ActiveStep, state: ActivityState, elapsed_ms: int
+    ) -> RestoredStep:
+        return RestoredStep(
+            activity_id=step.activity_id,
+            kind=step.kind,
+            state="failed" if state == "failed" else "completed",
+            elapsed_ms=self._ms_since(step.started) if step is self._open else elapsed_ms,
+            ordinal=step.ordinal,
+            of=step.of,
+            subject=step.subject,
+        )
 
     def fail(self) -> int:
         self.finish_thought()
@@ -276,6 +325,7 @@ class AskV2ProgressSink:
         if step.ordinal is not None and not self._authorized_seen:
             self.disclosure_violation = True
             return
+        self._shown[step.activity_id] = (step, state, elapsed_ms)
         tool_kind = "coordinator" if step.kind == "thinking" else "business_query"
         event = ActivityEvent(
             run_id=self._run_id,
@@ -377,6 +427,10 @@ class NullProgressSink:
 
     def finish_thought(self) -> None:
         return
+
+    def timeline(self) -> TurnTimeline:
+        """No step is shown with activity events off; the turn is still timed."""
+        return TurnTimeline(duration_ms=self.finish())
 
     def fail(self) -> int:
         return self.finish()

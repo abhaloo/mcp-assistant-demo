@@ -36,6 +36,7 @@ v2.1) and no v2-gated feature reads these fields yet — see task-A2-brief.md.
 
 from __future__ import annotations
 
+from decimal import Decimal, InvalidOperation
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -67,6 +68,25 @@ class ResourceGrant(BaseModel):
     field_sets: list[_NonEmptyStr]
 
 
+class AskBudgetClaim(BaseModel):
+    """Optional account-level monthly spend budget in USD."""
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    limit_usd: Decimal = Field(gt=0)
+    period: Literal["month"]
+
+    @field_validator("limit_usd", mode="before")
+    @classmethod
+    def _coerce_limit_usd(cls, value: object) -> object:
+        if isinstance(value, (str, int, float)) and not isinstance(value, bool):
+            try:
+                return Decimal(str(value))
+            except (InvalidOperation, ValueError) as err:
+                raise ValueError("limit_usd must be a valid decimal") from err
+        return value
+
+
 class RecordAccess(BaseModel):
     """Strictly validated v2 ``record_access`` claim.
 
@@ -86,6 +106,7 @@ class RecordAccess(BaseModel):
     document_tiers: list[_NonEmptyStr]
     scope_values: ScopeValues
     resources: dict[str, ResourceGrant]
+    ask_budget: AskBudgetClaim | None = None
 
     @field_validator("schema_version", mode="before")
     @classmethod

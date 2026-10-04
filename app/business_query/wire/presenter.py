@@ -44,19 +44,22 @@ from app.business_query.wire.cell_format import (
     group_row_label,
 )
 from app.business_query.wire.explainer import _format_filter
+from app.business_query.wire.request import MAX_ANSWER_CHARS
 from app.business_query.wire.result_presentation import (
     PLURAL_SUBJECTS,
     _facts,
     _subject,
     column_label,
 )
+from app.business_query.wire.row_identity_text import row_identity_sentence
+from app.business_query.wire.time_group_context import time_group_phrase
 
 serialize_result_envelope = serialize_unified_envelope
 
 
 logger = logging.getLogger(__name__)
 
-_MAX_RENDER_CHARS = 8_000
+_MAX_RENDER_CHARS = MAX_ANSWER_CHARS
 
 # Plain JSON schema dict, never a strict Pydantic class. One required string
 # field. Needs a top-level "title" -- an untitled dict fails
@@ -295,7 +298,17 @@ def _filter_literal_values(group: FilterGroup | None) -> set[float]:
     return values
 
 
-def _format_single_set(operator: str, derived_set: Any) -> str:
+def _within_sentence(inner_plan: BusinessQueryPlan, derived_map: dict[str, Any]) -> str:
+    """The sentence of the earlier set this plan filters by, if any."""
+    for leaf in iter_filter_leaves(inner_plan.filters):
+        if getattr(leaf, "operator", None) in ("in_set", "not_in_set") and leaf.values:
+            earlier = derived_map.get(str(leaf.values[0]))
+            if earlier is not None:
+                return "; within: " + _format_single_set(leaf.operator, earlier, derived_map)
+    return ""
+
+
+def _format_single_set(operator: str, derived_set: Any, derived_map: dict[str, Any]) -> str:
     is_negation = operator == "not_in_set"
     key = derived_set.key
     singular_label = column_label(key)
@@ -314,26 +327,33 @@ def _format_single_set(operator: str, derived_set: Any) -> str:
             currency_suffix = f" ({leaf.values[0]})"
             break
 
+    within = _within_sentence(inner_plan, derived_map)
+    prefix = "Excludes" if is_negation else "Limited to"
+    if (periods := time_group_phrase(derived_set)) is not None:
+        return f"{prefix} {periods} {column_label(inner_plan.measures[0])}{currency_suffix}{within}"
+
     if derived_set.mode == "ranked":
         limit = inner_plan.limit
         limit_str = f"the top {limit} " if limit is not None else "the top "
         measure_label = column_label(inner_plan.measures[0]) if inner_plan.measures else ""
-        if is_negation:
-            return f"Excludes {limit_str}{plural} by {measure_label}{currency_suffix}"
-        return f"Limited to {limit_str}{plural} by {measure_label}{currency_suffix}"
+        return f"{prefix} {limit_str}{plural} by {measure_label}{currency_suffix}{within}"
+
+    if derived_set.mode == "pick":
+        clause = inner_plan.order[0]
+        subject = singular if inner_plan.limit == 1 else plural
+        direction = "descending" if clause.direction == "desc" else "ascending"
+        member_label = column_label(clause.member)
+        first = f"the first {inner_plan.limit} {subject} by {member_label} {direction}"
+        return f"{prefix} {first}{currency_suffix}{within}"
 
     if inner_plan.measures:
         measure_label = column_label(inner_plan.measures[0])
-        if is_negation:
-            return f"Excludes {plural} with {measure_label}{currency_suffix}"
-        return f"Limited to {plural} with {measure_label}{currency_suffix}"
+        return f"{prefix} {plural} with {measure_label}{currency_suffix}{within}"
 
     inner_subject = _subject(inner_plan)
     inner_facts = _facts(inner_plan)
     condition = f"{', '.join(inner_facts)} {inner_subject}" if inner_facts else inner_subject
-    if is_negation:
-        return f"Excludes {plural} with {condition}"
-    return f"Limited to {plural} with {condition}"
+    return f"{prefix} {plural} with {condition}{within}"
 
 
 def _fallback_membership_contexts(
@@ -360,7 +380,8 @@ def _fallback_membership_contexts(
             if set_id in derived_map and set_id not in referenced:
                 referenced[set_id] = operator
     return [
-        _format_single_set(operator, derived_map[set_id]) for set_id, operator in referenced.items()
+        _format_single_set(operator, derived_map[set_id], derived_map)
+        for set_id, operator in referenced.items()
     ]
 
 
@@ -382,7 +403,7 @@ def format_set_context(plan: BusinessQueryPlan) -> str:
                 set_id = str(node.values[0]) if node.values else ""
                 derived = derived_map.get(set_id)
                 if derived:
-                    return _format_single_set(node.operator, derived)
+                    return _format_single_set(node.operator, derived, derived_map)
                 return None
             return _format_filter(node)
         # A FilterGroup may have BOTH branches populated at once (`all` AND
@@ -429,7 +450,7 @@ def format_set_context(plan: BusinessQueryPlan) -> str:
             set_id = str(node.values[0]) if node.values else ""
             derived = derived_map.get(set_id)
             if derived:
-                return [_format_single_set(node.operator, derived)]
+                return [_format_single_set(node.operator, derived, derived_map)]
             return []
         if hasattr(node, "any") and node.any:
             if _node_has_set(node):
@@ -470,7 +491,11 @@ def present_answered(plan: BusinessQueryPlan, answered: Answered) -> str:
     # Adapters must already bound rows; retain that invariant at this pure boundary.
     rows = answered.rows[: plan.limit]
     if not rows and not answered.record_details:
-        base = NO_MATCHING_ROWS
+        base = (
+            answered.answer_text
+            if answered.answer_text.startswith(NO_MATCHING_ROWS)
+            else NO_MATCHING_ROWS
+        )
     elif not rows and answered.record_details:
         base = _present_record_details(answered.record_details)
     elif plan.grain == "scalar":
@@ -482,6 +507,9 @@ def present_answered(plan: BusinessQueryPlan, answered: Answered) -> str:
 
     if answered.record_details and base != NO_MATCHING_ROWS:
         base = _present_record_details(answered.record_details, base_text=base)
+
+    if answered.row_identity is not None:
+        base = f"{row_identity_sentence(answered.row_identity)}\n\n{base}"
 
     context = format_set_context(plan)
     if context:

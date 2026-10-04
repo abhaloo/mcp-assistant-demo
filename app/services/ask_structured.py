@@ -22,6 +22,7 @@ from app.services.ask_outcome import (
 )
 from app.services.ask_prepare import PreparedTurn, bq_plan_question
 from app.services.business_query_finish import build_guarded_rag_attach, finish_bq_policy
+from app.services.terminal_usage import terminal_usage_from_bq
 
 
 async def structured_outcome(
@@ -113,4 +114,5 @@ async def structured_outcome(
         continuation_request_id=continuation_request_id,
         presentation=finish.presentation,
         turn_result=finish.bq.turn_result,
+        usage=terminal_usage_from_bq(finish.bq),
     )

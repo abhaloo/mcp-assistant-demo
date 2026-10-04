@@ -119,6 +119,45 @@ class OpenRouterChatOpenAI(ChatOpenAI):
         return payload
 
 
+def _resolve_extra_body(
+    spec: ModelSpec,
+    *,
+    use_responses_api: bool,
+    deepseek_direct_controls: DeepSeekDirectControls | None,
+    openrouter_controls: OpenRouterControls | None,
+    extra_body: dict | None,
+) -> dict | None:
+    result: dict | None = None
+    if spec.credential_source == "deepseek_direct":
+        ensure_reasoning_message_compat()
+        if not use_responses_api:
+            if deepseek_direct_controls is None:
+                raise ValueError(
+                    "deepseek_direct_controls required when credential_source=deepseek_direct"
+                )
+            result = build_deepseek_direct_extra(deepseek_direct_controls)
+    elif spec.credential_source == "openrouter":
+        ensure_reasoning_message_compat()
+        if openrouter_controls is None:
+            raise ValueError("openrouter_controls required when credential_source=openrouter")
+        controls_body = build_provider_extra(openrouter_controls)
+        if extra_body is None:
+            result = controls_body
+        else:
+            merged = dict(extra_body)
+            merged["provider"] = controls_body["provider"]
+            if "reasoning" in controls_body:
+                merged["reasoning"] = controls_body["reasoning"]
+            else:
+                merged.pop("reasoning", None)
+            result = merged
+    elif extra_body is not None:
+        result = extra_body
+    elif openrouter_controls is not None:
+        result = build_provider_extra(openrouter_controls)
+    return result
+
+
 def get_chat_model(
     spec: ModelSpec,
     *,
@@ -149,35 +188,13 @@ def get_chat_model(
     asks that path for a readable summary of the reasoning and streams the
     reply, because the summary reaches callbacks only while streaming.
     """
-    if spec.credential_source == "deepseek_direct":
-        ensure_reasoning_message_compat()
-        if deepseek_direct_controls is None:
-            raise ValueError(
-                "deepseek_direct_controls required when credential_source=deepseek_direct"
-            )
-        resolved_extra_body = build_deepseek_direct_extra(deepseek_direct_controls)
-    elif spec.credential_source == "openrouter":
-        ensure_reasoning_message_compat()
-        if openrouter_controls is None:
-            raise ValueError("openrouter_controls required when credential_source=openrouter")
-        controls_body = build_provider_extra(openrouter_controls)
-        if extra_body is None:
-            resolved_extra_body = controls_body
-        else:
-            # Controls always win for provider pin and frozen reasoning effort.
-            merged = dict(extra_body)
-            merged["provider"] = controls_body["provider"]
-            if "reasoning" in controls_body:
-                merged["reasoning"] = controls_body["reasoning"]
-            else:
-                merged.pop("reasoning", None)
-            resolved_extra_body = merged
-    elif extra_body is not None:
-        resolved_extra_body = extra_body
-    elif openrouter_controls is not None:
-        resolved_extra_body = build_provider_extra(openrouter_controls)
-    else:
-        resolved_extra_body = None
+    resolved_extra_body = _resolve_extra_body(
+        spec,
+        use_responses_api=use_responses_api,
+        deepseek_direct_controls=deepseek_direct_controls,
+        openrouter_controls=openrouter_controls,
+        extra_body=extra_body,
+    )
 
     model_cls = (
         OpenRouterChatOpenAI
@@ -199,8 +216,22 @@ def get_chat_model(
         "http_client": get_sync_http_client(resources),
         "http_async_client": get_async_http_client(resources),
     }
-    if spec.credential_source == "openai":
+    if spec.credential_source in ("openai", "deepseek_direct"):
         kwargs["stream_usage"] = settings.chat_stream_usage
+    if spec.credential_source == "deepseek_direct" and use_responses_api:
+        thinking_on = (
+            deepseek_direct_controls.thinking_enabled
+            if deepseek_direct_controls is not None
+            else True
+        )
+        effort = reasoning_effort or (
+            deepseek_direct_controls.reasoning_effort
+            if deepseek_direct_controls and deepseek_direct_controls.reasoning_effort
+            else "high"
+        )
+        kwargs["reasoning"] = {"effort": effort if thinking_on else "none"}
+        kwargs["use_responses_api"] = True
+    if spec.credential_source == "openai":
         if reasoning_effort is not None:
             assert_effort_supported(spec.model_id, reasoning_effort, provider="openai")
             if use_responses_api and reasoning_summary:

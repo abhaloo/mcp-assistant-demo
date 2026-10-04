@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any
 import sqlalchemy as sa
 
 from app.business_query.plan.value_resolver.contract import (
+    CARD_PICK_CAP,
     RESOLVER_CANDIDATE_CAP,
     ResolverLookup,
     ResolverResult,
@@ -26,7 +27,29 @@ from app.business_query.plan.value_resolver.matching import (
     lookup_tokens,
     token_match,
 )
+from app.business_query.plan.value_resolver.plan_binding import lookup_identity
 from app.models.schemas import DisambiguationCandidate
+
+
+def _exact_canonical(row: tuple[Any, ...], identity_member: str | None) -> str:
+    if identity_member is not None:
+        return str(row[0])
+    return str(row[1]) if len(row) > 1 else str(row[0])
+
+
+def _named_picks(
+    values: list[tuple[Any, ...]], value_type: str
+) -> tuple[DisambiguationCandidate, ...]:
+    return tuple(
+        DisambiguationCandidate(
+            id=str(row[0])[:32],
+            resource_type=value_type,
+            label=str(row[1])[:128],
+            suggested_query=f"records for {str(row[1])[:128]}"[:200],
+        )
+        for row in values[:CARD_PICK_CAP]
+    )
+
 
 if TYPE_CHECKING:
     from app.business_query.authorize.scoping import ScopedPlan
@@ -89,7 +112,7 @@ class SqlValueResolver:
             raise ValueError("lookup scope unavailable")
 
         column = dimension.sql_expression.strip()
-        id_col_name = binding.primary_key
+        id_col_name, identity_member = lookup_identity(lookup, bundle)
 
         cols_needed = {column, id_col_name, *(f.column for f in forced)}
 
@@ -118,6 +141,7 @@ class SqlValueResolver:
                 sa.select(*cols)
                 .where(*name_conditions, *scope_predicates)
                 .distinct()
+                .order_by(name_column.asc())
                 .limit(RESOLVER_CANDIDATE_CAP + 1)
             )
             started = time.perf_counter()
@@ -154,42 +178,19 @@ class SqlValueResolver:
                 disposition="none", value_type=lookup.value_type, member=lookup.member
             )
         if len(values) == 1:
-            canonical = str(values[0][1]) if len(values[0]) > 1 else str(values[0][0])
             return ResolverResult(
                 disposition="exact",
                 value_type=lookup.value_type,
                 member=lookup.member,
-                canonical_values=(canonical,),
+                canonical_values=(_exact_canonical(values[0], identity_member),),
                 match_count=1,
             )
-
-        match_count = min(len(values), RESOLVER_CANDIDATE_CAP)
-        disambig_candidates: list[DisambiguationCandidate] = []
-        if 2 <= len(values) <= 5:
-            res_type = lookup.value_type
-            for row in values:
-                cand_id = str(row[0])[:32]
-                cand_label = str(row[1])[:128]
-                suggested_q = (
-                    f"Show invoices for {cand_label} (ID: {cand_id})"
-                    if cand_id != cand_label
-                    else f"Show invoices for {cand_label}"
-                )[:200]
-                disambig_candidates.append(
-                    DisambiguationCandidate(
-                        id=cand_id,
-                        resource_type=res_type,
-                        label=cand_label,
-                        suggested_query=suggested_q,
-                    )
-                )
-
         return ResolverResult(
             disposition="ambiguous",
             value_type=lookup.value_type,
             member=lookup.member,
-            match_count=match_count,
-            candidates=tuple(disambig_candidates),
+            match_count=min(len(values), RESOLVER_CANDIDATE_CAP),
+            candidates=_named_picks(values, lookup.value_type),
         )
 
     def _record_sql(

@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
-from app.auth.record_access import ResourceGrant, ScopeValues
+from app.auth.record_access import AskBudgetClaim, ResourceGrant, ScopeValues
 
 
 class Principal(BaseModel):
@@ -36,6 +36,7 @@ class Principal(BaseModel):
     scope_values: ScopeValues | None = None
     resources: dict[str, ResourceGrant] | None = None
     document_tiers: list[str] | None = None
+    ask_budget: AskBudgetClaim | None = None
 
     # Trusted record-context digest claim -- additive and optional. None
     # unless the JWT carries a strictly-shaped record_context_digest claim.

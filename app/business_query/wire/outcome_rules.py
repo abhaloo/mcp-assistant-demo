@@ -5,7 +5,7 @@ from __future__ import annotations
 from hashlib import sha256
 from typing import get_args
 
-from app.business_query.authorize.capability import visible_members
+from app.business_query.authorize.capability import time_dimension_members, visible_members
 from app.business_query.authorize.preconditions import check_native_currency_for_measure
 from app.business_query.definitions import DefinitionBundle
 from app.business_query.outcomes import (
@@ -14,9 +14,14 @@ from app.business_query.outcomes import (
     Denied,
     Incomplete,
     PlanRefused,
+    RefusalDetail,
     Unsupported,
 )
-from app.business_query.plan import BusinessQueryPlan, guaranteed_filter_members
+from app.business_query.plan import (
+    BusinessQueryPlan,
+    guaranteed_filter_members,
+    raw_time_dimension,
+)
 from app.business_query.wire.request import BusinessQueryRequest
 from app.business_query.wire.trace import QueryTrace
 
@@ -52,11 +57,28 @@ def clarification_exchange(request: BusinessQueryRequest) -> tuple[str, str] | N
     return (request.clarification_prompt, reply)
 
 
+def question_with_reading(question: str, reading: str | None) -> str:
+    """Append the coordinator's reading, as a suggestion, when it adds new information."""
+    if not reading:
+        return question
+    reading_clean = reading.strip()
+    if not reading_clean or reading_clean.casefold() == question.strip().casefold():
+        return question
+    return f"{question}\nSuggested reading: {reading_clean}"
+
+
 def plan_refused_to_outcome(exc: PlanRefused, trace: QueryTrace) -> BusinessQueryOutcome:
     code = exc.reason_code
     if code in _UNSUPPORTED_CODES:
-        trace.fail("execute", code, grain_check_site=exc.check_site)
-        return Unsupported(reason_code=code, message="plan cannot be executed safely")
+        trace.fail("execute", code, members=list(exc.members), grain_check_site=exc.check_site)
+        detail = (
+            RefusalDetail(rule=exc.check_site, members=list(exc.members))
+            if exc.check_site is not None or exc.members
+            else None
+        )
+        return Unsupported(
+            reason_code=code, message="plan cannot be executed safely", detail=detail
+        )
     assert code in _INCOMPLETE_ONLY_CODES
     return Incomplete(reason_code="adapter_invalid")
 
@@ -116,3 +138,22 @@ def native_currency_outcome(
             continuation=continuation,
         )
     return None
+
+
+def raw_time_grouping_outcome(
+    plan: BusinessQueryPlan, bundle: DefinitionBundle, trace: QueryTrace
+) -> Unsupported | None:
+    """Refuse a grouped plan that groups a time member by each raw timestamp.
+
+    The planner refuses this shape when its card marks the member. This check
+    covers every plan that reaches the module by another route."""
+    member = raw_time_dimension(plan, time_dimension_members(bundle))
+    if member is None:
+        return None
+    trace.fail(
+        "module",
+        "grain_unexpressible",
+        members=[member],
+        grain_check_site="time_dimension_without_granularity",
+    )
+    return Unsupported(reason_code="grain_unexpressible", message="plan cannot be executed safely")

@@ -33,6 +33,7 @@ class QueryRecordRow(Base):
         Index("ix_query_records_project_subject_digest", "project_id", "subject_digest"),
         Index("ix_query_records_project_retention_at", "project_id", "retention_at"),
         Index("ix_query_records_project_terminal_outcome", "project_id", "terminal_outcome"),
+        Index("ix_query_records_entity_created_at", "entity_id", "created_at"),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
@@ -79,6 +80,7 @@ class QueryRecordRow(Base):
     # User context — subject_digest stores the full 64-char HMAC hex (not truncated).
     subject_digest: Mapped[str | None] = mapped_column(String(64), nullable=True)
     entity_digest: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    entity_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     role_class: Mapped[str | None] = mapped_column(String(64), nullable=True)
     context_mode: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
@@ -147,6 +149,12 @@ class QueryRecordRow(Base):
     frozen_case_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     evaluation_result: Mapped[str | None] = mapped_column(String(32), nullable=True)
     evaluation_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Turn content: what the turn showed the person, kept raw with no expiry (ADR 0085).
+    exchange_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    operation: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    answer_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    turn_detail_json: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class BusinessQueryPlanRow(Base):
@@ -370,6 +378,7 @@ SORTABLE_COLUMNS: frozenset[str] = frozenset(
         "citation_mode",
         "subject_digest",
         "entity_digest",
+        "entity_id",
         "role_class",
         "context_mode",
         "requested_route",

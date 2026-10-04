@@ -1,0 +1,2 @@
+{"journey": "cq_month"}
+{"id": "cq-month", "question": "Which month of 2025 had our highest invoiced revenue in TZS, and list the invoices from that month.", "expected": {"terminal_in": ["unsupported", "answered"]}}

@@ -1,0 +1,18 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "browser",
+  "run_id": "ebae683fbf6f01db63062f1404585cff",
+  "case_id": "MX1",
+  "turn": 3,
+  "mode": "browser",
+  "role": "admin",
+  "question": "How do I send that first customer their statement?",
+  "outcome_type": "answered",
+  "mismatches": [
+    "needless_clarify"
+  ],
+  "reason": "Asks 'Do you mean the customer on the first invoice in the July 2025 unpaid list?' instead of the statement steps for Neptune Pwani Beach Resort & Spa (turn 2 row 1, E6358). The coordinator's History line for turn 2 holds only internal ids ('invoice.id: 3417, …; invoice.customer_id: 295, …'), not the invoice numbers or names the person saw.",
+  "evidence": "docs/superpowers/evidence/2026-09-25-failure-recovery/waveG/browser/sse/MX1-t3.sse; coordinator request_messages for this run"
+}

@@ -127,6 +127,41 @@ class ChromaConnectivityCheck:
         return await asyncio.to_thread(_ping)
 
 
+class LanceDBConnectivityCheck:
+    name = "lancedb"
+
+    async def run(self) -> bool:
+        from app.core.breakers import BreakerState, retriever_breaker
+
+        if retriever_breaker.state is BreakerState.OPEN:
+            return False
+
+        def _ping() -> bool:
+            from app.rag.retrieval.retriever_factory import get_indexer
+
+            get_indexer().ping()
+            return True
+
+        return await asyncio.to_thread(_ping)
+
+
+class FastEmbedConnectivityCheck:
+    name = "fastembed"
+
+    async def run(self) -> bool:
+        def _probe() -> bool:
+            from fastembed import TextEmbedding
+
+            TextEmbedding(
+                model_name=settings.fastembed_model,
+                cache_dir=settings.fastembed_cache_dir,
+                local_files_only=True,
+            )
+            return True
+
+        return await asyncio.wait_for(asyncio.to_thread(_probe), timeout=5.0)
+
+
 class PresidioCheck:
     name = "presidio"
 
@@ -475,6 +510,11 @@ _CHECK_REGISTRY: tuple[tuple[Callable[[Settings], bool], Callable[..., HealthChe
         AzureSearchConnectivityCheck,
     ),
     (lambda s: s.document_rag_enabled and s.retriever_kind == "chroma", ChromaConnectivityCheck),
+    (lambda s: s.document_rag_enabled and s.retriever_kind == "lancedb", LanceDBConnectivityCheck),
+    (
+        lambda s: s.document_rag_enabled and s.embedding_provider == "fastembed",
+        FastEmbedConnectivityCheck,
+    ),
     (lambda s: s.redaction_enabled, PresidioCheck),
     (lambda s: s.mcp_record_database_url is not None, RecordProjectionConnectivityCheck),
     (lambda s: s.business_query_mode != "disabled", QueryRecordSchemaCheck),

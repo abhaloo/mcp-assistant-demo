@@ -9,8 +9,8 @@ from sqlalchemy import text
 from app.db.postgres import get_async_engine
 
 # Minimum migration the app requires; a newer head is a healthy schema.
-QUERY_RECORD_MIN_ALEMBIC_REVISION = 10
-QUERY_RECORD_EXPECTED_ALEMBIC_HEAD = "010_query_record_thread_id"
+QUERY_RECORD_MIN_ALEMBIC_REVISION = 16
+QUERY_RECORD_EXPECTED_ALEMBIC_HEAD = "016_invocation_cached_input"
 
 
 def _revision_number(head: object) -> int:
@@ -35,7 +35,17 @@ QUERY_RECORD_REQUIRED_TABLES = frozenset(
 )
 QUERY_RECORD_REQUIRED_COLUMNS = {
     "query_records": frozenset(
-        {"correlation_id", "bq_trace_json", "plan_payload", "plan_expires_at", "thread_id"}
+        {
+            "correlation_id",
+            "bq_trace_json",
+            "plan_payload",
+            "plan_expires_at",
+            "thread_id",
+            "exchange_id",
+            "operation",
+            "answer_text",
+            "turn_detail_json",
+        }
     ),
     "business_query_plans": frozenset({"answer_query_id", "plan_payload", "plan_fingerprint"}),
     "business_query_execution_events": frozenset(
@@ -66,6 +76,7 @@ QUERY_RECORD_REQUIRED_COLUMNS = {
             "provider",
             "encrypted_payload",
             "payload_digest",
+            "cached_input_tokens",
         }
     ),
 }

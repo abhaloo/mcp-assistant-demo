@@ -1,0 +1,18 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "latency",
+  "run_id": "53499c15d6cb40f7a2bfa73e3d598da7",
+  "case_id": "DSLAT-deepseek-records-t3-rep2",
+  "turn": 3,
+  "mode": "wire",
+  "role": "admin",
+  "question": "Compare TZS invoiced revenue in Q2 2026 vs Q1 2026",
+  "outcome_type": "incomplete",
+  "mismatches": [
+    "planner_schema_invalid"
+  ],
+  "reason": "DeepSeek-V4.1-Flash planner (route deepseek-direct-plan-high, structured_output_mode json_object) returned a plan that failed schema validation (log: planner failure code=planner_schema_invalid site=response_validate); the one repair call also failed. The OpenAI planner (json_schema, enforced) answered the same question 3/3. Cause: no schema-constrained decoding on DeepSeek, so the period shape is guessed.",
+  "evidence": "docs/superpowers/evidence/2026-10-01-deepseek-latency/README.md; docs/superpowers/evidence/2026-10-01-deepseek-latency/deepseek.jsonl; docs/superpowers/evidence/2026-10-01-deepseek-latency/answers.md"
+}

@@ -1,0 +1,19 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "journey",
+  "run_id": "729872ded6354d0bab65f436e71fb645",
+  "case_id": "E5",
+  "mode": "journey",
+  "role": "admin",
+  "question": "who has the biggest order by invoice and what are their job details",
+  "outcome_type": "answered",
+  "mismatches": [
+    "invoice_missing",
+    "amount_missing",
+    "job_scope"
+  ],
+  "reason": "Names the customer (ZRA) but not invoice E3914, and says 'The invoice amount itself was not included in the returned details.' Lists all six of the customer's jobs, not the job on the invoice. D7: E3914, ZRA- ZANZIBAR REVENEW AUTHORITY, TZS 201,250,000.00 (oracle-e5-largest-invoice.tsv); job 18602 FINISHED",
+  "evidence": "docs/superpowers/evidence/2026-09-25-failure-recovery/waveH/recover_wide-1.json"
+}

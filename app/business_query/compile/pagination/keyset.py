@@ -56,7 +56,7 @@ def apply_keyset_to_plan(
         owning_resources = {
             dim.owning_resource for dim in bundle.dimensions if dim.name in plan.dimensions
         }
-        for resource in sorted(owning_resources):
+        for resource in sorted(owning_resources, key=lambda r: (r != plan.anchor, r)):
             pk_dim = _find_resource_primary_key(resource, bundle)
             if pk_dim:
                 if pk_dim not in updated_dimensions:

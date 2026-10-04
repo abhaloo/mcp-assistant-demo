@@ -18,6 +18,8 @@ What this proves and what it does not:
 
 from __future__ import annotations
 
+import time
+import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -83,13 +85,27 @@ def _chunks_for(text: str) -> list[MagicMock]:
     return chunks
 
 
+def _ask_body(case: ProdAskCase) -> dict:
+    """Canonical v2 request (app/models/ask_v2_request.py); one run per call."""
+    return {
+        "operation": "new_question",
+        "run_id": f"stub-{case.id}-{uuid.uuid4().hex[:8]}",
+        "thread_id": f"stub-thread-{case.id}",
+        "question": case.question,
+        "idempotency_key": f"stub-{case.id}-{uuid.uuid4().hex}",
+        "deadline_at_ms": int(time.time() * 1000) + 10_000,
+    }
+
+
 def run_stub_json(client: TestClient, case: ProdAskCase) -> AskObservation:
     """Drive POST /api/ask over JSON with the fixture store and scripted text."""
     if case.stub is None:
         raise AskHarnessError(f"{case.id}: no stub spec")
     capture = RetrievalCapture()
 
-    async def fake_retrieve(turn_input, access_tiers, config) -> list[Document]:
+    async def fake_retrieve(  # noqa: PLR0913 - mirrors app.services.ask._retrieve_documents
+        turn_input, access_tiers, config, *, principal=None, turn_budget=None, resources=None
+    ) -> list[Document]:
         docs = _documents_for(case, list(access_tiers))
         capture.granted_tiers = list(access_tiers)
         capture.served_ids = _document_ids(docs)
@@ -136,7 +152,7 @@ def run_stub_json(client: TestClient, case: ProdAskCase) -> AskObservation:
     ):
         response = client.post(
             "/api/ask",
-            json={"question": case.question},
+            json=_ask_body(case),
             headers={"Authorization": f"Bearer {mint_token(case)}"},
         )
     if response.status_code != 200:
@@ -159,7 +175,9 @@ def run_stub_sse(client: TestClient, case: ProdAskCase) -> AskObservation:
         raise AskHarnessError(f"{case.id}: no stub spec")
     capture = RetrievalCapture()
 
-    async def fake_retrieve(turn_input, access_tiers, config) -> list[Document]:
+    async def fake_retrieve(  # noqa: PLR0913 - mirrors app.services.ask._retrieve_documents
+        turn_input, access_tiers, config, *, principal=None, turn_budget=None, resources=None
+    ) -> list[Document]:
         docs = _documents_for(case, list(access_tiers))
         capture.granted_tiers = list(access_tiers)
         capture.served_ids = _document_ids(docs)
@@ -206,7 +224,7 @@ def run_stub_sse(client: TestClient, case: ProdAskCase) -> AskObservation:
     ):
         response = client.post(
             "/api/ask",
-            json={"question": case.question},
+            json=_ask_body(case),
             headers={
                 "Authorization": f"Bearer {mint_token(case)}",
                 "Accept": "text/event-stream",

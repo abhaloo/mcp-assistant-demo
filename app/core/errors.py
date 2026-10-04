@@ -1,5 +1,7 @@
 """Shared exceptions for service and conversation layers."""
 
+from __future__ import annotations
+
 
 class ServiceUnavailableError(Exception):
     """Raised when a dependency is unreachable (mapped to HTTP 503)."""

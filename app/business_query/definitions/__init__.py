@@ -14,6 +14,7 @@ from app.business_query.definitions.member_resolution import (
     MemberDefinition,
     definition_for,
     measure_for_member,
+    primary_key_dimension,
     resolve_member,
 )
 from app.business_query.definitions.schema import (
@@ -70,6 +71,7 @@ __all__ = [
     "load_bundle",
     "load_bundle_index",
     "measure_for_member",
+    "primary_key_dimension",
     "resolve_member",
     "verify_bundles_startup",
 ]

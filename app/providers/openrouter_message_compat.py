@@ -8,17 +8,20 @@ them on the wire; tool-loop replay and our smoke oracle need them on
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, TypeVar
 
-from langchain_core.messages import AIMessage, BaseMessage
+from langchain_core.messages import AIMessage, AIMessageChunk, BaseMessage, BaseMessageChunk
 from langchain_openai.chat_models import base as lc_openai_base
 
 REASONING_KEYS = ("reasoning_content", "reasoning", "reasoning_details")
 _REASONING_KEYS = REASONING_KEYS
+_STREAMED_TEXT_KEYS = ("reasoning_content", "reasoning")
+_Message = TypeVar("_Message", bound=AIMessage)
 
 _patched = False
 _orig_dict_to_message = lc_openai_base._convert_dict_to_message
 _orig_message_to_dict = lc_openai_base._convert_message_to_dict
+_orig_delta_to_message_chunk = lc_openai_base._convert_delta_to_message_chunk
 
 
 def _convert_dict_to_message_with_reasoning(_dict: Any) -> BaseMessage:
@@ -30,6 +33,24 @@ def _convert_dict_to_message_with_reasoning(_dict: Any) -> BaseMessage:
         return msg
     merged = {**(msg.additional_kwargs or {}), **extras}
     return msg.model_copy(update={"additional_kwargs": merged})
+
+
+def _convert_delta_to_message_chunk_with_reasoning(
+    _dict: Any,
+    default_class: type[BaseMessageChunk],
+) -> BaseMessageChunk:
+    """Keep streamed reasoning text; adding the chunks together joins the pieces.
+
+    Only string fields are kept. Adding ``reasoning_details`` lists together
+    would join their repeated string fields (for example ``format``) into one value.
+    """
+    chunk = _orig_delta_to_message_chunk(_dict, default_class)
+    if not isinstance(chunk, AIMessageChunk):
+        return chunk
+    text_fields = {
+        key: _dict[key] for key in _STREAMED_TEXT_KEYS if isinstance(_dict.get(key), str)
+    }
+    return merge_reasoning_onto_message(chunk, text_fields)
 
 
 def _convert_message_to_dict_with_reasoning(
@@ -52,6 +73,7 @@ def ensure_reasoning_message_compat() -> None:
         return
     lc_openai_base._convert_dict_to_message = _convert_dict_to_message_with_reasoning
     lc_openai_base._convert_message_to_dict = _convert_message_to_dict_with_reasoning
+    lc_openai_base._convert_delta_to_message_chunk = _convert_delta_to_message_chunk_with_reasoning
     _patched = True
 
 
@@ -66,7 +88,7 @@ def reasoning_fields_from_message(message: AIMessage) -> dict[str, Any]:
     return {key: kwargs[key] for key in REASONING_KEYS if kwargs.get(key) is not None}
 
 
-def merge_reasoning_onto_message(message: AIMessage, raw_message: Any) -> AIMessage:
+def merge_reasoning_onto_message(message: _Message, raw_message: Any) -> _Message:
     """Copy provider reasoning fields from a raw API message dict onto ``AIMessage``."""
     if not isinstance(raw_message, dict):
         return message

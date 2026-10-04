@@ -11,7 +11,6 @@ from app.core.turn_budget import TurnBudget
 from app.models.schemas import Question
 from app.models.tool_results import tool_result_fields
 from app.providers.model_purpose import ModelPurpose
-from app.query_records.bq_usage import fill_terminal_usage_from_bq
 from app.query_records.context import TerminalUsageCapture
 from app.resources import ProcessResources
 from app.services.ask_frames import AskFrame, DataFrame, Disconnected
@@ -26,6 +25,7 @@ from app.services.stream_transport import (
     sse_producer_errors,
     sse_sources_from_answer_sources,
 )
+from app.services.terminal_usage import fill_terminal_usage
 from app.telemetry.metrics import record_request
 
 if TYPE_CHECKING:
@@ -51,8 +51,8 @@ async def produce_bq_stream(
         raise TypeError("stage_accumulator is required")
 
     async with sse_producer_errors(terminal, query_type=query_type, role=principal.role) as box:
-        if usage is not None and answered.bq is not None:
-            fill_terminal_usage_from_bq(usage, answered.bq)
+        if usage is not None:
+            fill_terminal_usage(usage, bq=answered.bq, turn_usage=answered.usage)
         answer_text = answered.answer_text
         sources = [to_json_source(src) for src in answered.sources]
         citations = answered.citations

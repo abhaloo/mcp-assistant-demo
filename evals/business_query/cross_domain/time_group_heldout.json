@@ -1,0 +1,57 @@
+{
+  "suite": "time_group_heldout",
+  "version": "1.0",
+  "cases": [
+    {
+      "id": "tg-01",
+      "question": "Which quarter of 2025 had the most invoices, and list them.",
+      "outcome_class": "supported",
+      "granularity": "quarter",
+      "measure": "invoices_count",
+      "limit": 1
+    },
+    {
+      "id": "tg-02",
+      "question": "Which week of March 2026 had the lowest invoiced revenue in TZS, and show its invoices.",
+      "outcome_class": "supported",
+      "granularity": "week",
+      "measure": "invoiced_revenue",
+      "limit": 1
+    },
+    {
+      "id": "tg-03",
+      "question": "Show the invoices from our two best months of 2025 by invoiced revenue in TZS.",
+      "outcome_class": "supported",
+      "granularity": "month",
+      "measure": "invoiced_revenue",
+      "limit": 2
+    },
+    {
+      "id": "tg-04",
+      "question": "Which month of 2025 had the highest invoiced revenue in TZS, and list the invoices from that month.",
+      "outcome_class": "supported",
+      "paraphrase": "List every invoice from 2025's top revenue month (TZS).",
+      "granularity": "month",
+      "measure": "invoiced_revenue",
+      "limit": 1
+    },
+    {
+      "id": "tg-05",
+      "question": "For each customer, show the invoices from their best month.",
+      "outcome_class": "unsupported",
+      "reason": "per_group_best_period_unsupported"
+    },
+    {
+      "id": "tg-06",
+      "question": "Show jobs created in the month our invoices peaked.",
+      "outcome_class": "unsupported",
+      "reason": "cross_resource_time_key"
+    },
+    {
+      "id": "tg-07",
+      "question": "Which month had the highest revenue, and how did each salesperson do in it?",
+      "outcome_class": "record",
+      "reason": "per-group breakdown of the top period: supported only if the planner grounds it as one grouped plan; record what happens"
+    }
+  ]
+}

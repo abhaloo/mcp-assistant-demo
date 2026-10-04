@@ -1,0 +1,17 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "journey",
+  "run_id": "ee129f0404fd4a088ca751ef8ff9549f",
+  "case_id": "E5",
+  "mode": "journey",
+  "role": "admin",
+  "question": "who has the biggest order by invoice and what are their job details",
+  "outcome_type": "answered",
+  "mismatches": [
+    "amount_missing"
+  ],
+  "reason": "Names E3914 and ZRA and offers job 18602 as the first chip, but never states TZS 201,250,000.00; the painted row has no amount column. D7: E3914, ZRA- ZANZIBAR REVENEW AUTHORITY, TZS 201,250,000.00 (oracle-e5-largest-invoice.tsv); job 18602 FINISHED",
+  "evidence": "docs/superpowers/evidence/2026-09-25-failure-recovery/waveH/recover_wide-2.json"
+}

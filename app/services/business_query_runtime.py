@@ -261,11 +261,6 @@ def with_turn_result(
     inner = _unwrap(result)
     execution = ToolTurnExecution(bq=result, document=None, refusal=None)
     reduced = replace(inner, turn_result=reduce_tool_turn(_BQ_ONLY_TURN, execution))
-    # ``replace`` rebuilds from init fields only; the retained receipts are
-    # attached after construction and must follow the result.
-    retained = getattr(inner, "retained_members", None)
-    if retained:
-        object.__setattr__(reduced, "retained_members", retained)
     if isinstance(result, CommittedBqResult):
         return CommittedBqResult(result=reduced, answer_queries=result.answer_queries)
     return reduced

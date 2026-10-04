@@ -14,8 +14,10 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from app.business_query.compile.pagination.plan_store import StoredPlan
 from app.business_query.outcomes import BusinessQueryWireOutcome
+from app.models.ask_v2_events import ActivityKind, FollowUpAction, TableColumn
 from app.models.citations import CitationsPayload, Source
 from app.models.result_presentation import ResultPresentation
+from app.models.schemas import RecordLink
 from app.models.tool_results import TurnResult
 from app.rag.retrieval.document_contracts import DocumentProvenance
 
@@ -66,6 +68,60 @@ class RestoreRequest(BaseModel):
         return refs
 
 
+class RestoredTable(BaseModel):
+    """One committed table for the restored turn, computed at restore time.
+
+    Same shape the live stream painted: the shareable table id, wire columns,
+    and the table's own rows. Not part of the sealed snapshot."""
+
+    model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
+
+    table_id: str
+    columns: list[TableColumn]
+    rows: list[dict]
+    returned_row_count: int
+    total_row_count: int | None = None
+    presentation: ResultPresentation | None = None
+
+
+class RestoredStep(BaseModel):
+    """One step the stream showed, closed, as its last frame reported it."""
+
+    model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
+
+    activity_id: str
+    kind: ActivityKind
+    state: Literal["completed", "failed"]
+    elapsed_ms: int = Field(ge=0)
+    ordinal: int | None = None
+    of: int | None = None
+    subject: str | None = None
+
+
+class RestoredThought(BaseModel):
+    """The thought text one step showed, closed, with its time."""
+
+    model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
+
+    activity_id: str
+    text: str
+    duration_ms: int = Field(ge=0)
+
+
+class TurnTimeline(BaseModel):
+    """The steps, the thought rows and the time of one turn, read when its
+    snapshot is written."""
+
+    model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
+
+    steps: tuple[RestoredStep, ...] = ()
+    thoughts: tuple[RestoredThought, ...] = ()
+    duration_ms: int | None = None
+
+
+NO_TIMELINE = TurnTimeline()
+
+
 class RestoredTurn(BaseModel):
     """Server-retained turn contents authorized for display."""
 
@@ -80,6 +136,19 @@ class RestoredTurn(BaseModel):
     business_query: BusinessQueryWireOutcome | None = None
     presentation: ResultPresentation | None = None
     turn_result: TurnResult
+    run_status: Literal["done", "clarification", "failed", "stopped"] | None = None
+    duration_ms: int | None = None
+    # Sealed with the answer: the steps and thought rows the stream showed.
+    steps: tuple[RestoredStep, ...] = ()
+    thoughts: tuple[RestoredThought, ...] = ()
+    # Sealed with the answer: the next questions and the part left undone that the
+    # terminal turn_outcome frame offered, under the same names and item shape.
+    follow_ups: tuple[FollowUpAction, ...] = ()
+    unanswered_part: str | None = None
+    # Computed at restore for the restoring viewer; never sealed, so the
+    # snapshot size bound is untouched.
+    tables: tuple[RestoredTable, ...] = ()
+    record_links: tuple[RecordLink, ...] = ()
 
     def __repr__(self) -> str:
         # Safe repr: IDs only, no raw text or row data

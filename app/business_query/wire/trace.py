@@ -174,6 +174,8 @@ class QueryTrace:
     tokens_reasoning: int | None = None
     capture_planner_payload: bool = False
     planner_raw_payload: str | None = None
+    # Location and type of each planner reply validation error, never its values.
+    planner_validation_errors: list[dict[str, str]] = field(default_factory=list)
     failure_layer: str | None = None
     failure_detail: str | None = None
     missing_members: list[str] = field(default_factory=list)
@@ -317,9 +319,7 @@ class QueryTrace:
             value = getattr(self, item.name)
             if item.name == "missing_members":
                 value = list(value)
-            elif item.name == "plan" and value is not None:
-                value = copy.deepcopy(value)
-            elif item.name == "sub_queries":
+            elif item.name in ("plan", "sub_queries", "planner_validation_errors"):
                 value = copy.deepcopy(value)
             setattr(dest, item.name, value)
 
@@ -327,13 +327,14 @@ class QueryTrace:
         payload: dict[str, Any] = {}
         for item in fields(self):
             # Full-fidelity SQL (parent and per-ordinal) stays on the in-process
-            # object for the owned-Postgres ledger. Eval JSONL never receives it.
-            if item.name == "sql_statement_full":
+            # object for the owned-Postgres ledger. Returned reasoning is kept by
+            # the invocation ledger. Eval JSONL never receives either.
+            if item.name in ("sql_statement_full", "reasoning"):
                 continue
             value = getattr(self, item.name)
             if item.name == "missing_members":
                 value = list(value)
-            elif item.name == "plan" and value is not None:
+            elif item.name in ("plan", "planner_validation_errors"):
                 value = copy.deepcopy(value)
             elif item.name == "sub_queries":
                 value = [snap.as_dict() for snap in value]

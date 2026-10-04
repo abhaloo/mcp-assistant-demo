@@ -11,6 +11,7 @@ from opentelemetry.sdk.trace import ReadableSpan, Span, SpanProcessor
 
 _correlation_id: ContextVar[str | None] = ContextVar("correlation_id", default=None)
 _thread_id: ContextVar[str | None] = ContextVar("thread_id", default=None)
+_restore_ref: ContextVar[str | None] = ContextVar("restore_ref", default=None)
 
 
 def normalize_run_id(run_id: str) -> str:
@@ -47,6 +48,19 @@ def clear_thread_id() -> None:
 
 def current_thread_id() -> str | None:
     return _thread_id.get()
+
+
+def bind_restore_ref(restore_ref: str | None) -> None:
+    """Bind the attempt's snapshot reference for this task's context."""
+    _restore_ref.set(restore_ref or None)
+
+
+def clear_restore_ref() -> None:
+    _restore_ref.set(None)
+
+
+def current_restore_ref() -> str | None:
+    return _restore_ref.get()
 
 
 class CorrelationSpanProcessor(SpanProcessor):

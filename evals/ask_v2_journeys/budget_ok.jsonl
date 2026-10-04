@@ -1,0 +1,2 @@
+{"journey": "budget_ok", "ask_budget": {"limit_usd": "1000", "period": "month"}}
+{"id": "budget-ok", "question": "what are our latest invoices", "expected": {"outcome_type": "answered", "budget.used_usd_present": true, "budget.this_turn_usd_present": true}}

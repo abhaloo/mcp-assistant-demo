@@ -91,7 +91,9 @@ class OracleResult(BaseModel):
 class ScoringSpec(BaseModel):
     model_config = ConfigDict(strict=True, extra="forbid")
     id: str
-    compare_columns: list[str]
+    compare_columns: list[str] = Field(default_factory=list)
+    column_map: dict[str, str] = Field(default_factory=dict)
+    count_mode: Literal["all", "returned"] = "all"
     note: str | None = None
 
 
@@ -144,10 +146,22 @@ def _same_value(left: Any, right: Any) -> bool:
     return _text(left) == _text(right)
 
 
-def _row_in(needle: list[Any], haystack: list[list[Any]]) -> bool:
-    return any(
-        all(any(_same_value(cell, value) for cell in row) for value in needle) for row in haystack
-    )
+def _answer_key(keys: list[str], column: str, column_map: dict[str, str]) -> str | None:
+    """The answer key an oracle column lives in: the spec's map, the same name, or the
+    one key that equals it without its resource prefix. Two such keys are ambiguous."""
+    mapped = column_map.get(column)
+    if mapped is not None:
+        return mapped if mapped in keys else None
+    if column in keys:
+        return column
+    suffix = [k for k in keys if k.rsplit(".", 1)[-1] == column]
+    if len(suffix) > 1:
+        raise ValueError(f"ambiguous answer keys for oracle column {column!r}: {suffix}")
+    return suffix[0] if suffix else None
+
+
+def _row_matches(row: dict[str, Any], expected: list[Any], keys: list[str]) -> bool:
+    return all(_same_value(row.get(key), value) for key, value in zip(keys, expected, strict=True))
 
 
 def rows_agree(left: list[dict[str, Any]], right: list[dict[str, Any]]) -> bool:
@@ -175,29 +189,93 @@ def rows_agree(left: list[dict[str, Any]], right: list[dict[str, Any]]) -> bool:
     return True
 
 
+def _match_rows(
+    rows: list[dict[str, Any]],
+    oracle_rows: list[list[Any]],
+    resolved_keys: list[str],
+    total_row_count: int,
+) -> tuple[bool, str]:
+    if len(rows) < total_row_count:
+        unused_oracle = list(oracle_rows)
+        for answer in rows:
+            match = next(
+                (exp for exp in unused_oracle if _row_matches(answer, exp, resolved_keys)),
+                None,
+            )
+            if match is None:
+                return False, f"answer row {answer} not found in the oracle"
+            unused_oracle.remove(match)
+        return True, ""
+    unused = list(rows)
+    for expected in oracle_rows:
+        match = next((r for r in unused if _row_matches(r, expected, resolved_keys)), None)
+        if match is None:
+            return False, f"oracle row {expected} not found in {len(rows)} answer row(s)"
+        unused.remove(match)
+    return True, ""
+
+
 def values_match(
     rows: list[dict[str, Any]],
     total_row_count: int,
     oracle: OracleResult,
     spec: ScoringSpec | None = None,
 ) -> tuple[bool, str]:
-    if total_row_count != oracle.row_count:
-        return False, f"row_count {total_row_count} != oracle {oracle.row_count}"
-    keep = [oracle.columns.index(name) for name in spec.compare_columns] if spec else None
-    oracle_rows = [[row[i] for i in keep] if keep else list(row) for row in oracle.rows]
-    answer_rows = [list(row.values()) for row in rows]
-    if len(rows) < total_row_count:
-        # A NULL cell in a truncated answer may be a column the spec never
-        # compares, so only its non-NULL cells are checked against the oracle.
-        for answer in answer_rows:
-            present = [v for v in answer if v is not None]
-            if not _row_in(present, oracle_rows):
-                return False, f"answer row {present} not found in the oracle"
+    count = len(rows) if spec is not None and spec.count_mode == "returned" else total_row_count
+    if count != oracle.row_count:
+        return False, f"row_count {count} != oracle {oracle.row_count}"
+    if not rows:
         return True, ""
-    for expected in oracle_rows:
-        if not _row_in(expected, answer_rows):
-            return False, f"oracle row {expected} not found in {len(rows)} answer row(s)"
-    return True, ""
+    columns = spec.compare_columns if (spec and spec.compare_columns) else oracle.columns
+    keep = [oracle.columns.index(name) for name in columns]
+    oracle_rows = [[row[i] for i in keep] for row in oracle.rows]
+    column_map = spec.column_map if spec else {}
+    try:
+        keys = [_answer_key(list(rows[0]), c, column_map) for c in columns]
+    except ValueError as exc:
+        return False, str(exc)
+    missing = [c for c, k in zip(columns, keys, strict=True) if k is None]
+    if missing:
+        return False, f"answer has no column for {missing}"
+    resolved_keys = [k for k in keys if k is not None]
+    return _match_rows(rows, oracle_rows, resolved_keys, count)
+
+
+def column_agreement(
+    expected_rows: list[dict[str, Any]],
+    actual_rows: list[dict[str, Any]],
+    compared_columns: Sequence[str],
+) -> dict[str, bool]:
+    """Per-column agreement using the same value rules as values_match / rows_agree."""
+    return {
+        column: _column_values_agree(expected_rows, actual_rows, column)
+        for column in compared_columns
+    }
+
+
+def _column_values_agree(
+    expected_rows: list[dict[str, Any]],
+    actual_rows: list[dict[str, Any]],
+    column: str,
+) -> bool:
+    if len(expected_rows) != len(actual_rows):
+        return False
+    unused = list(actual_rows)
+    for expected in expected_rows:
+        if column not in expected:
+            return False
+        match = next(
+            (
+                candidate
+                for candidate in unused
+                if column in candidate and _same_value(expected[column], candidate[column])
+            ),
+            None,
+        )
+        if match is None:
+            return False
+        unused.remove(match)
+    return True
 
 
 def merge_companion_rows(

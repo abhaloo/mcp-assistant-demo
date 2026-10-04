@@ -7,7 +7,9 @@ from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app.business_query.outcomes import PlanRefused
-from app.business_query.plan import BusinessPeriod, CompareShift, RelativeRange
+from app.business_query.plan import ALL_TIME, BusinessPeriod, CompareShift, RelativeRange
+from app.business_query.plan.time_groups import TimeGranularity
+from app.policy.record_query import compile_half_open_business_period
 
 
 def business_today(tz: str, *, now: datetime | None = None) -> date:
@@ -79,6 +81,12 @@ def _relative_half_open(relative: RelativeRange, today: date) -> tuple[date, dat
 def period_bounds(
     period: BusinessPeriod, tz: str, *, business_date: date | None = None
 ) -> tuple[date, date]:
+    """Half-open [start, end) of a bounded period.
+
+    relative all_time has no bounds, so it refuses here: a date filter reads
+    ``time_filter_bounds``, and a comparison never accepts all_time."""
+    if period.relative == ALL_TIME:
+        raise PlanRefused("unsupported_relative_period")
     today = business_date or business_today(tz)
     if period.relative is not None:
         return _relative_half_open(period.relative, today)
@@ -91,6 +99,32 @@ def period_bounds(
     assert period.between is not None
     # User-facing explicit dates are inclusive; SQL remains half-open.
     return period.between[0], period.between[1] + timedelta(days=1)
+
+
+def time_filter_bounds(
+    period: BusinessPeriod, tz: str, *, business_date: date | None = None
+) -> tuple[date, date] | None:
+    """The half-open date filter a period sets, or None when it sets none (all_time)."""
+    if period.relative == ALL_TIME:
+        return None
+    return period_bounds(period, tz, business_date=business_date)
+
+
+# The relative range that is the calendar bucket holding a given day.
+_BUCKET_RANGE: dict[str, RelativeRange] = {
+    "day": "today",
+    "week": "this_week",
+    "month": "this_month",
+    "quarter": "this_quarter",
+    "year": "this_year",
+}
+
+
+def within_one_bucket(bounds: tuple[date, date], granularity: str) -> bool:
+    """True when the half-open range [start, end) lies inside one calendar bucket."""
+    start, end = bounds
+    _, bucket_end = _relative_half_open(_BUCKET_RANGE[granularity], start)
+    return end <= bucket_end
 
 
 _CALENDAR_STEP: dict[str, tuple[str, int]] = {
@@ -158,3 +192,18 @@ def comparison_bounds(
     if isinstance(compare_to, BusinessPeriod):
         return current, period_bounds(compare_to, tz, business_date=business_date)
     return current, shift_period(period, current, compare_to)
+
+
+def bucket_bounds(start: date, granularity: TimeGranularity) -> tuple[date, date]:
+    """Half-open [start, end) of the calendar bucket that begins on ``start``."""
+    return _relative_half_open(_BUCKET_RANGE[granularity], start)
+
+
+def business_datetime_bounds(
+    column_name: str, start: date, end: date, timezone: str
+) -> tuple[datetime, datetime]:
+    """The stored-column bounds of the business-date range [start, end)."""
+    lower, upper = compile_half_open_business_period(
+        column_name, start.isoformat(), end.isoformat(), timezone
+    )
+    return datetime.fromisoformat(str(lower.value)), datetime.fromisoformat(str(upper.value))

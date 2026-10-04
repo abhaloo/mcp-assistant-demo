@@ -1,0 +1,18 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "latency",
+  "run_id": "4f4850f9fff642789cd6f44836f8f935",
+  "case_id": "DSLAT-deepseek-docs-t3-rep1",
+  "turn": 3,
+  "mode": "wire",
+  "role": "admin",
+  "question": "What is the minimum reorder point for paper?",
+  "outcome_type": "unsupported",
+  "mismatches": [
+    "unsupported_document_answer"
+  ],
+  "reason": "The document answer was marked unsupported: the corpus has no single company-wide paper reorder point, so the model refused a number. Same question ended unsupported 1/3 on OpenAI and 2/3 on DeepSeek: the case is borderline on both providers, not a DeepSeek-only failure.",
+  "evidence": "docs/superpowers/evidence/2026-10-01-deepseek-latency/README.md; docs/superpowers/evidence/2026-10-01-deepseek-latency/deepseek.jsonl; docs/superpowers/evidence/2026-10-01-deepseek-latency/answers.md"
+}

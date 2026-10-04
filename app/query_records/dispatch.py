@@ -84,13 +84,16 @@ async def await_pending_writes() -> None:
             )
 
 
-async def reserve_query_record_execution(
+async def reserve_query_record_execution(  # noqa: PLR0913 - the row's owner stamps ride with its reservation
     *,
     correlation_id: str,
     project_id: str,
     environment: str,
     question: str,
     requested_route: str | None = None,
+    thread_id: str | None = None,
+    subject_digest: str | None = None,
+    entity_id: str | None = None,
 ) -> None:
     """Reserve execution row in Query Records before execution begins."""
     if not query_record_store_configured():
@@ -104,6 +107,9 @@ async def reserve_query_record_execution(
                 environment=environment,
                 question=question,
                 requested_route=requested_route,
+                thread_id=thread_id,
+                subject_digest=subject_digest,
+                entity_id=entity_id,
             )
     except Exception:
         logger.warning("reserve_execution failed (fail-open)", exc_info=True)

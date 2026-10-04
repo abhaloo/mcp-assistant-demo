@@ -1,0 +1,17 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "journey",
+  "case_id": "recover-wide",
+  "role": "admin",
+  "mode": "journey",
+  "run_id": "d07fc501b4e3400b97b685eb5f8fc051",
+  "question": "who has the biggest order by invoice and what are their job details",
+  "reason": "Missing invoice.invoice_number E3914 row and missing Ranked among Currency code: TZS applied filter",
+  "mismatches": [
+    "invoice.invoice_number",
+    "applied_filters"
+  ],
+  "outcome_type": "answered"
+}

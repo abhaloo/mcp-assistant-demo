@@ -17,8 +17,11 @@ the act of reaching into telemetry and Query Records to act on it.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Awaitable, Callable
-from typing import TypeVar
+from dataclasses import dataclass
+from decimal import Decimal
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar
 
 import langsmith as ls
 
@@ -30,6 +33,11 @@ from app.query_records.wiring import schedule_from_terminal
 from app.services.run_lifecycle import RunOutcome
 from app.telemetry.langsmith_capture import get_capture_client
 from app.telemetry.metrics import record_request
+
+if TYPE_CHECKING:
+    from app.query_records.turn_content import TurnContent
+
+logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 
@@ -59,6 +67,105 @@ def note_request_outcome(*, query_type: str | None, outcome: str) -> None:
     record_request(query_type=query_type, outcome=outcome)
 
 
+class TerminalWriter(Protocol):
+    """Writes one query-record terminal per Ask attempt.
+
+    ``record`` takes exactly ``note_query_record_terminal``'s keywords; the
+    orchestrator's ``finally`` is its only caller."""
+
+    def record(self, **kwargs: Any) -> None: ...
+
+
+class ImmediateTerminalWriter:
+    """Writes the terminal as soon as the attempt's ``finally`` resolves it."""
+
+    def record(self, **kwargs: Any) -> None:
+        note_query_record_terminal(**kwargs)
+
+
+@dataclass(frozen=True)
+class TerminalIdentity:
+    body: Question
+    principal: Principal
+    started_at: float
+    correlation_id: str
+
+
+class DeferredTerminalWriter:
+    """Captures the terminal so the last frame's writer can commit it later.
+
+    The v2 stream stores the attempt's terminal ``finally`` arguments and
+    commits them, with an error override when the stream itself fails,
+    after its last frame. ``read_turn_content`` reads what the turn showed at
+    commit time, so the terminal row keeps it (ADR 0085)."""
+
+    def __init__(
+        self,
+        identity: TerminalIdentity | None = None,
+        *,
+        read_turn_content: Callable[[], TurnContent] | None = None,
+    ) -> None:
+        self._identity = identity
+        self._read_turn_content = read_turn_content
+        self._kwargs: dict[str, Any] | None = None
+        self._committed = False
+
+    def record(self, **kwargs: Any) -> None:
+        if self._kwargs is not None:
+            raise RuntimeError("terminal already recorded")
+        self._kwargs = kwargs
+
+    def _turn_content(self) -> TurnContent | None:
+        """What the turn showed; None when there is no reader or it fails."""
+        if self._read_turn_content is None:
+            return None
+        try:
+            return self._read_turn_content()
+        except Exception as exc:  # noqa: BLE001 - the content is optional; the terminal is not
+            logger.warning("turn content not read: %s", type(exc).__name__)
+            return None
+
+    def commit(
+        self,
+        *,
+        run_outcome: RunOutcome | None = None,
+        stable_error_code: str | None = None,
+        fallback_outcome: RunOutcome | None = None,
+    ) -> None:
+        """Commits the captured terminal once. ``run_outcome`` is an override: it
+        replaces the recorded outcome when the stream, not the attempt, resolved
+        the failure. ``fallback_outcome`` fills an empty writer only: the attempt's
+        own recorded terminal always wins over it."""
+        if self._committed:
+            return
+        self._committed = True
+        turn_content = self._turn_content()
+        if self._kwargs is None:
+            if self._identity is not None:
+                outcome: RunOutcome = run_outcome or fallback_outcome or "error"
+                note_query_record_terminal(
+                    body=self._identity.body,
+                    principal=self._identity.principal,
+                    ctx=None,
+                    run_outcome=outcome,
+                    query_type=None,
+                    started_at=self._identity.started_at,
+                    correlation_id=self._identity.correlation_id,
+                    stable_error_code=stable_error_code,
+                    cancelled=True if outcome == "stopped" else None,
+                    turn_content=turn_content,
+                )
+                return
+            logger.warning("terminal commit without a recorded terminal run_id=%s", None)
+            return
+        kwargs = dict(self._kwargs)
+        if run_outcome is not None:
+            kwargs["run_outcome"] = run_outcome
+        if stable_error_code is not None:
+            kwargs["stable_error_code"] = stable_error_code
+        note_query_record_terminal(**kwargs, turn_content=turn_content)
+
+
 def note_query_record_terminal(
     *,
     body: Question,
@@ -71,8 +178,11 @@ def note_query_record_terminal(
     input_tokens: int | None = None,
     output_tokens: int | None = None,
     reasoning_tokens: int | None = None,
+    cached_tokens: int | None = None,
+    estimated_usd: Decimal | None = None,
     cost_status: str | None = None,
     model: str | None = None,
+    provider: str | None = None,
     correlation_id: str | None = None,
     resolver_query_id: str | None = None,
     resolver_disposition: str | None = None,
@@ -80,6 +190,7 @@ def note_query_record_terminal(
     stable_error_code: str | None = None,
     timeout: bool | None = None,
     cancelled: bool | None = None,
+    turn_content: TurnContent | None = None,
 ) -> None:
     """Query Record terminal scheduling: the one call per Ask attempt that
     turns a resolved terminal outcome into a scheduled Query Record write."""
@@ -94,8 +205,11 @@ def note_query_record_terminal(
         input_tokens=input_tokens,
         output_tokens=output_tokens,
         reasoning_tokens=reasoning_tokens,
+        cached_tokens=cached_tokens,
+        estimated_usd=estimated_usd,
         cost_status=cost_status,
         model=model,
+        provider=provider,
         correlation_id=correlation_id,
         resolver_query_id=resolver_query_id,
         resolver_disposition=resolver_disposition,
@@ -103,4 +217,5 @@ def note_query_record_terminal(
         stable_error_code=stable_error_code,
         timeout=timeout,
         cancelled=cancelled,
+        turn_content=turn_content,
     )

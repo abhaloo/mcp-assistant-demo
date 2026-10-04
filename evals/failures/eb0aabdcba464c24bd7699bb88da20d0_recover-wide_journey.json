@@ -1,0 +1,17 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "journey",
+  "case_id": "recover-wide",
+  "role": "admin",
+  "mode": "journey",
+  "run_id": "eb0aabdcba464c24bd7699bb88da20d0",
+  "question": "who has the biggest order by invoice and what are their job details",
+  "reason": "Clarification asked without business query; 0 tables painted; mismatches: tables, row_key_prefix_or_notice",
+  "mismatches": [
+    "tables",
+    "row_key_prefix_or_notice"
+  ],
+  "outcome_type": "answered"
+}

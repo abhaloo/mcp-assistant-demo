@@ -1,6 +1,6 @@
 {
   "suite_id": "prod-ask-e2e",
-  "suite_version": "1.17.0",
+  "suite_version": "1.24.0",
   "environment": {
     "app_url": "http://127.0.0.1:8158",
     "rag_api": "http://127.0.0.1:8358",
@@ -73,6 +73,27 @@
         "check": "Ask panel reachable",
         "how": "GET <rag_api>/healthz",
         "pass": "200."
+      },
+      {
+        "check": "Every type:number dimension in the served bundle is backed by a numeric column",
+        "how": "./.venv/Scripts/python.exe scripts/eval/catalog_type_audit.py <db>",
+        "pass": "Exit 0, no findings printed.",
+        "blocks": [
+          "xd-01",
+          "xd-02",
+          "xd-05",
+          "xd-06",
+          "xd-07"
+        ]
+      },
+      {
+        "check": "The served RAG bundle is the one Billing exported",
+        "how": "Compare app/business_query/bundle/index.json current with multicolor-billing-analytics-w2/database/ai-business-definitions/business-definitions.hash",
+        "pass": "Same sha256.",
+        "blocks": [
+          "xd-05",
+          "xd-07"
+        ]
       }
     ]
   },
@@ -127,7 +148,13 @@
     "page_context_chip": "[data-mcp-ask-ai-context]",
     "page_context_remove": "[aria-label='Stop using the current page']",
     "page_context_owner": "[data-mcp-page-context-owner]",
-    "terminal_state": "The turn is complete when streaming has stopped AND the action row ([data-copy], [data-regenerate]) is rendered on the message. Poll for that; never use a fixed sleep."
+    "terminal_state": "The turn is complete when streaming has stopped AND the action row ([data-copy], [data-regenerate]) is rendered on the message. Poll for that; never use a fixed sleep.",
+    "work_timeline": "details.mcp-ask-v2__work inside the message: summary holds .mcp-ask-v2__work-mark, .mcp-ask-v2__work-label (stage text) and the elapsed timer. Owned by work_timeline.js; the legacy .mcp-ask-ai__status-badge is removed when it mounts.",
+    "stop": "button.mcp-ask-ai__send--stop (the Send button becomes Stop while a run is active).",
+    "sse_tap": "Not a product element. The executor installs a window.fetch wrapper before the first send that copies every SSE frame of /api/ai/ask/v2 (and the legacy /ai-search/stream) into window.__sse as {t, wall, run, event, data}. The tap is evidence capture only; it changes nothing the product does.",
+    "result_table_cell_link": "article[aria-label='AI answer'] table a[href] - any column whose sealed href_template resolved (the resource's primary key, a declared link_key id, or a link_via look); the href is the bundle's record_route for that resource and exists only when the viewer holds one of its link_permissions. No route or no grant renders the cell as plain text, never a broken link.",
+    "clarification_card": ".mcp-ask-v2__card--clarification (host also carries data-mcp-ask-v2-card). Review M8: the older .mcp-ask-ai__interaction selectors have zero hits.",
+    "record_link_option": ".mcp-ask-v2__card--clarification a.mcp-ask-v2__option-link - one View link per option whose candidate is a record, a sibling of the option label (never inside it), target _blank; choosing the radio never navigates."
   },
   "cases": [
     {
@@ -215,7 +242,7 @@
       "persona": "print",
       "conversation": "isolated",
       "page_context": "detached",
-      "question": "What is the daily startup checklist for the Heidelberg Speedmaster press?"
+      "question": "How do I copy an existing job into another order?"
     },
     {
       "id": "rb-08",
@@ -226,7 +253,7 @@
       "persona": "tissue",
       "conversation": "isolated",
       "page_context": "detached",
-      "question": "What is the daily startup checklist for the Heidelberg Speedmaster press?"
+      "question": "How do I copy an existing job into another order?"
     },
     {
       "id": "rb-09",
@@ -238,7 +265,7 @@
       "persona": "tissue",
       "conversation": "isolated",
       "page_context": "detached",
-      "question": "What is the procedure for receiving stock from a supplier delivery?"
+      "question": "How do I record stock received from a supplier?"
     },
     {
       "id": "rb-10",
@@ -249,7 +276,7 @@
       "persona": "print",
       "conversation": "isolated",
       "page_context": "detached",
-      "question": "What is the procedure for receiving stock from a supplier delivery?"
+      "question": "How do I record stock received from a supplier?"
     },
     {
       "id": "rb-11",
@@ -260,7 +287,7 @@
       "persona": "print",
       "conversation": "isolated",
       "page_context": "detached",
-      "question": "What is our total monthly payroll cost and how many employees do we have?"
+      "question": "How do I use the Data Cleanup tool to connect an old job with its invoice?"
     },
     {
       "id": "rb-12",
@@ -272,7 +299,7 @@
       "persona": "store",
       "conversation": "isolated",
       "page_context": "detached",
-      "question": "What is our total monthly payroll cost and how many employees do we have?"
+      "question": "How do I use the Data Cleanup tool to connect an old job with its invoice?"
     },
     {
       "id": "ac-01",
@@ -536,7 +563,7 @@
       "persona": "print",
       "conversation": "isolated",
       "page_context": "detached",
-      "question": "Summarise the Heidelberg Speedmaster daily startup checklist as a numbered list."
+      "question": "Summarise the steps to copy an existing job into another order as a numbered list."
     },
     {
       "id": "pc-01",
@@ -753,7 +780,7 @@
     {
       "id": "dt-08",
       "covers": [
-        "dimension:customer_order.status"
+        "dimension:customer_order.computed_status"
       ],
       "dimensions": [
         "accuracy",
@@ -1329,7 +1356,7 @@
       "persona": "print",
       "conversation": "isolated",
       "page_context": "detached",
-      "question": "What does the printing department handbook say about safety?",
+      "question": "What does the jobs guide say about attaching artwork to a job?",
       "procedure": "Document-only answer, then a simpler explanation, then regenerate, then reload. Record whether BQ or fresh retrieval ran on explanation, regeneration, or restore."
     },
     {
@@ -1435,6 +1462,256 @@
       "page_context": "detached",
       "question": "How many jobs do we have?",
       "procedure": "Cover tool success, denial, error, timeout, cancel; duplicate, orphan, and wrong-turn results; and a crash-incomplete trace. Record action closure and UNPROVEN on missing completion."
+    },
+    {
+      "id": "st-01",
+      "dimensions": [
+        "uiux",
+        "stop"
+      ],
+      "persona": "sales",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "what are our latest invoices and their job details",
+      "procedure": "Open a new conversation. Submit the question. Within 2 s of submit, while the timeline header still shows planning, click Stop. Capture a screenshot pair of the timeline header at click and at 250 ms. Record the timer value and that no SSE frame arrives after turn_terminal."
+    },
+    {
+      "id": "st-02",
+      "dimensions": [
+        "uiux",
+        "stop"
+      ],
+      "persona": "sales",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "what are our latest invoices and their job details",
+      "procedure": "Open a new conversation. Submit the question. When the timeline header shows querying, click Stop. Capture a screenshot pair of the timeline header at click and at 250 ms. Record the frozen timer and that no SSE frame arrives after turn_terminal."
+    },
+    {
+      "id": "st-03",
+      "dimensions": [
+        "uiux",
+        "stop"
+      ],
+      "persona": "sales",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "What is the warehouse receiving policy?",
+      "procedure": "Open a new conversation. Submit the question. When the timeline header shows searching_documents, click Stop. Capture a screenshot pair of the timeline header at click and at 250 ms. Record the frozen timer and that no SSE frame arrives after turn_terminal."
+    },
+    {
+      "id": "st-04",
+      "dimensions": [
+        "uiux",
+        "stop"
+      ],
+      "persona": "sales",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "what are our latest invoices and their job details",
+      "procedure": "Open a new conversation. Submit the question. Click Stop during planning. Close the panel. Reopen it. Submit the same question. Record that the next run's status is submitted."
+    },
+    {
+      "id": "st-05",
+      "dimensions": [
+        "uiux",
+        "stop"
+      ],
+      "persona": "sales",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "what are our latest invoices and their job details",
+      "procedure": "Open a new conversation. Submit the question. Click Stop during planning. Immediately type and send How many jobs do we have? Record that this next run's status is submitted and the stopped turn has no late frame after turn_terminal."
+    },
+    {
+      "id": "xd-01",
+      "dimensions": [
+        "accuracy",
+        "richtext",
+        "uiux",
+        "routing"
+      ],
+      "persona": "admin",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "what are our latest invoices and what are their job details",
+      "procedure": "Install the SSE tap (executor brief) before opening the panel. New conversation. Send. Poll every 250 ms: work timeline label text, timer text, count of .mcp-ask-v2__work-label and .mcp-ask-ai__status-badge inside the message. At terminal: answer text, table innerHTML, column headers, every anchor in the table with href, and the run_id from the tap. Then wait 5 s and re-read the message innerHTML once more."
+    },
+    {
+      "id": "xd-02",
+      "dimensions": [
+        "followups",
+        "accuracy",
+        "latency"
+      ],
+      "persona": "admin",
+      "conversation": "reuse:xd-01",
+      "page_context": "detached",
+      "question": "can you include the customer names",
+      "procedure": "Same thread as xd-01. Send. Poll as in xd-01. At terminal capture answer text, table headers, first table row, run_id, and timing_ms.complete."
+    },
+    {
+      "id": "xd-03",
+      "dimensions": [
+        "followups",
+        "accuracy",
+        "helpfulness"
+      ],
+      "persona": "admin",
+      "conversation": "reuse:xd-01",
+      "page_context": "detached",
+      "question": "why did you only include 1 result? i want at least 10",
+      "procedure": "Same thread. Send. Poll as in xd-01. Capture answer text, whether a table rendered, its Invoice column values, run_id."
+    },
+    {
+      "id": "xd-04",
+      "dimensions": [
+        "followups",
+        "accuracy"
+      ],
+      "persona": "admin",
+      "conversation": "reuse:xd-01",
+      "page_context": "detached",
+      "question": "Expand the same list to at least 10 rows",
+      "procedure": "Same thread. Send. Poll as in xd-01. Capture answer text, table Invoice values, row count in the table, run_id."
+    },
+    {
+      "id": "xd-05",
+      "dimensions": [
+        "accuracy",
+        "routing"
+      ],
+      "persona": "admin",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "who are our 10 newest customers and what customer orders do they have",
+      "procedure": "New conversation. Send. Poll as in xd-01. Capture answer text, table headers, every row, run_id."
+    },
+    {
+      "id": "xd-06",
+      "dimensions": [
+        "accuracy",
+        "routing"
+      ],
+      "persona": "admin",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "list our 10 newest suppliers and their stock receipts",
+      "procedure": "New conversation. Send. Poll as in xd-01. Capture answer text, table headers, every row, run_id."
+    },
+    {
+      "id": "xd-07",
+      "dimensions": [
+        "accuracy"
+      ],
+      "persona": "admin",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "show our 4 most recent invoices and their jobs",
+      "procedure": "New conversation. Send. Poll as in xd-01. Capture answer text, table rows, run_id."
+    },
+    {
+      "id": "cm-01",
+      "dimensions": [
+        "accuracy",
+        "routing"
+      ],
+      "persona": "admin",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "what are our latest invoices and what are their job details",
+      "procedure": "Install the SSE tap (executor brief) before opening the panel. New conversation. Send. Poll as in xd-01. At terminal capture the answer text, the table rows, the run_id, the turn_accepted frame's restore_ref and the turn_outcome frame's budget object from the tap."
+    },
+    {
+      "id": "cm-02",
+      "dimensions": [
+        "accuracy",
+        "followups",
+        "uiux"
+      ],
+      "persona": "admin",
+      "conversation": "reuse:cm-01",
+      "page_context": "detached",
+      "question": "why does E7413 have no job",
+      "procedure": "Same thread as cm-01. Send. Poll as in xd-01. At terminal capture the answer text verbatim, the table rows, the run_id, and from the tap every text_delta frame's content_kind and the turn_outcome frame's budget object. If a card appears, capture it, click the option that names the invoice, and capture the reply's answer text verbatim."
+    },
+    {
+      "id": "lk-01",
+      "dimensions": [
+        "authorization",
+        "richtext",
+        "accuracy"
+      ],
+      "persona": "store",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "our latest invoices with their customer order numbers",
+      "procedure": "New conversation. Send. Poll to terminal. Capture every table anchor with its href and the cells of the painted columns by header label (LINKS helper, cells_by_column). Record the run_id from the tap."
+    },
+    {
+      "id": "lk-03",
+      "dimensions": [
+        "richtext",
+        "accuracy"
+      ],
+      "persona": "admin",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "what are our latest quotations and their totals",
+      "procedure": "New conversation. Send. Poll to terminal. Capture the table anchors and the Quotation column cells."
+    },
+    {
+      "id": "lk-04",
+      "dimensions": [
+        "richtext",
+        "accuracy"
+      ],
+      "persona": "admin",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "show our latest journal entries",
+      "procedure": "New conversation. Send. Poll to terminal. Capture every table anchor and the cells of the id and bill id columns."
+    },
+    {
+      "id": "lk-08",
+      "dimensions": [
+        "richtext",
+        "uiux"
+      ],
+      "persona": "admin",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "list our 10 newest suppliers and their stock receipts",
+      "procedure": "New conversation. Send xd-06's question. Poll to terminal. Capture page 1 (LINKS: th texts, Supplier and receipt anchors, receipt ids). Use the explicit next-results action on the message (the pagination control, not a new question). Poll to terminal. Capture page 2 the same way.",
+      "status": "not_run",
+      "not_run_reason": "The panel has no next-results control (pg-01 precedent, 1.7.3: the page affordance exists nowhere in the panel JS - statically proven, and Billing resources/js/mcp-ai-core.test.js asserts the panel never sends a result_page_cursor). Needs the pagination control to ship first (owner decision pending)."
+    },
+    {
+      "id": "lk-09",
+      "dimensions": [
+        "richtext",
+        "uiux",
+        "routing"
+      ],
+      "persona": "sales",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "show me the customer ACT Wazalendo Zanzibar",
+      "procedure": "New conversation. Send. Poll to terminal or until the clarification card renders. Capture the card (CARD helper: option labels, radios, every anchor with href, target, parent and previous-sibling classes). Record location.href, click the first option's radio, wait 1 s, record location.href again and re-capture the card. Do not submit the choice."
+    },
+    {
+      "id": "lk-10",
+      "dimensions": [
+        "richtext",
+        "citations"
+      ],
+      "persona": "admin",
+      "conversation": "isolated",
+      "page_context": "detached",
+      "question": "what does the credit policy say about customer AltraCare",
+      "status": "not_run",
+      "not_run_reason": "Embeddings are offline on analytics-w2 (run_environments.analytics-w2.known_conditions); kept so the first environment that mounts data/corpus runs it.",
+      "procedure": "New conversation. Send. Poll to terminal. Capture citation markers, citation cards, inline record links and every other anchor in the body."
     }
   ]
 }

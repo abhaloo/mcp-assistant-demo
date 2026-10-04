@@ -4,7 +4,6 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.config import settings
 from app.providers.model_purpose import ModelPurpose
 from app.providers.route_settings import resolve_model_route
 
@@ -43,8 +42,9 @@ def test_run_case_escalates_aging_question(_stub_sql_chain, monkeypatch):
         "gold_sql": "SELECT 1",
     }
     result = run_case(case)
-    assert _stub_sql_chain[-1]["chat_deployment"] == settings.azure_chat_escalation_deployment
-    assert result["chat_deployment"] == settings.azure_chat_escalation_deployment
+    expected = resolve_model_route(ModelPurpose.sql_agent, question=case["question"]).deployment
+    assert _stub_sql_chain[-1]["chat_deployment"] == expected
+    assert result["chat_deployment"] == expected
 
 
 def test_run_case_default_for_simple_question(_stub_sql_chain, monkeypatch):

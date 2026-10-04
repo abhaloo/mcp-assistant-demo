@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from datetime import date, datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
+from app.auth.principal import Principal
 from app.business_query.definitions import (
+    CapabilityEntry,
     DefinitionBundle,
     DimensionDefinition,
     MeasureDefinition,
@@ -21,6 +23,7 @@ from app.business_query.outcomes import (
 )
 from app.business_query.plan import BusinessQueryPlan
 from app.business_query.seal.events import ResultMember
+from app.rag.provenance.record_links import column_link_resource, record_href_template
 
 
 def measure_value_kind(measure: MeasureDefinition) -> str:
@@ -37,9 +40,21 @@ def measure_value_kind(measure: MeasureDefinition) -> str:
     return "decimal"
 
 
+_FORMAT_TO_KIND = {
+    "id": "integer",
+    "number": "decimal",
+    "currency": "currency",
+    "percent": "percent",
+    "date": "date",
+    "datetime": "datetime",
+}
+
+
 def dimension_value_kind(dimension: DimensionDefinition, sample: Any) -> str:
     if dimension.value_kind is not None:
         return dimension.value_kind
+    if dimension.format is not None:
+        return _FORMAT_TO_KIND[dimension.format]
     if dimension.type == "time":
         if isinstance(sample, datetime):
             return "datetime"
@@ -50,9 +65,8 @@ def dimension_value_kind(dimension: DimensionDefinition, sample: Any) -> str:
         return "datetime"
     if dimension.type == "boolean":
         return "boolean"
-    if dimension.type == "number" and dimension.is_primary_key:
-        return "integer"
     if dimension.type == "number":
+        # A number with no declaration keeps its value; only a declared id or a key is an integer.
         return "decimal"
     return "string"
 
@@ -128,6 +142,20 @@ def declared_result_members(
     return tuple(members)
 
 
+def _coerce(value: Any, kind: str) -> Any:
+    if value is not None and kind in DECIMAL_VALUE_KINDS:
+        return Decimal(str(value))
+    if value is not None and kind == "integer":
+        if isinstance(value, bool):
+            raise ValueError("boolean is not an integer result")
+        return int(value)
+    if value is not None and kind == "date" and not isinstance(value, date):
+        return date.fromisoformat(str(value))
+    if value is not None and kind == "datetime" and not isinstance(value, datetime):
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    return value
+
+
 def normalize_event_rows(
     rows: Sequence[dict[str, Any]], members: Sequence[ResultMember]
 ) -> tuple[dict[str, Any], ...]:
@@ -139,33 +167,94 @@ def normalize_event_rows(
             raise ValueError("executor row does not match declared result members")
         typed: dict[str, Any] = {}
         for name, value in row.items():
-            kind = by_name[name].value_kind
-            if value is not None and kind in DECIMAL_VALUE_KINDS:
-                value = Decimal(str(value))
-            elif value is not None and kind == "integer":
-                if isinstance(value, bool):
-                    raise ValueError("boolean is not an integer result")
-                value = int(value)
-            elif value is not None and kind == "date" and not isinstance(value, date):
-                value = date.fromisoformat(str(value))
-            elif value is not None and kind == "datetime" and not isinstance(value, datetime):
-                value = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+            member = by_name[name]
+            kind = member.value_kind
+            try:
+                value = _coerce(value, kind)
+            except (ValueError, TypeError, InvalidOperation) as exc:
+                raise ValueError(
+                    f"{member.name}: cannot represent {type(value).__name__} as {kind}"
+                ) from exc
             typed[name] = value
         normalized.append(typed)
     return tuple(normalized)
+
+
+def _declared_look_dimensions(
+    capabilities: dict[str, CapabilityEntry],
+    dimensions: dict[str, DimensionDefinition],
+    projected_members: set[str],
+) -> set[str]:
+    """Look members whose key is projected: a display column whoever projected them."""
+    looks: set[str] = set()
+    for name in projected_members:
+        capability = capabilities.get(name)
+        if capability is None or capability.kind != "dimension":
+            continue
+        look = dimensions[capability.resolves_to].display_of
+        if look is not None:
+            looks.add(look)
+    return looks
+
+
+def _href_template_for(
+    bundle: DefinitionBundle,
+    principal: Principal | None,
+    dimension: DimensionDefinition,
+    member_key: str,
+    sibling_key: str | None,
+) -> str | None:
+    """The sealed link template for one dimension column, or None.
+
+    A column with no resource, a viewer with no principal, or a companion
+    whose id member is absent from the row mints nothing."""
+    if principal is None:
+        return None
+    resource = column_link_resource(bundle, dimension.name)
+    if resource is None:
+        return None
+    if (
+        dimension.link_via
+        and not dimension.is_primary_key
+        and not (dimension.format == "id" and dimension.link_key)
+    ):
+        if sibling_key is None:
+            return None
+        return record_href_template(bundle, principal, resource, sibling_key)
+    return record_href_template(bundle, principal, resource, member_key)
 
 
 def result_columns(
     plan: BusinessQueryPlan,
     bundle: DefinitionBundle,
     members: Sequence[ResultMember],
+    *,
+    display_members_added: frozenset[str] = frozenset(),
+    principal: Principal | None = None,
 ) -> tuple[ResultColumn, ...]:
-    """Wire column types for sealed members. The bundle declares; nothing infers."""
+    """Wire column types for sealed members. The bundle declares; nothing infers.
+
+    A column whose resource the bundle gives a route to, and whose viewer holds
+    that route's link grant, carries the href template for its row key: the
+    column itself for a key or foreign key, the link companion for a look.
+    Members the display projection appended are display columns; a companion
+    never demotes the look it serves."""
     capabilities = {entry.name: entry for entry in bundle.capabilities}
     measures = {measure.name: measure for measure in bundle.measures}
     dimensions = {dimension.name: dimension for dimension in bundle.dimensions}
 
     comp_roles = _comparison_roles(plan)
+    projected_members = set(plan.dimensions)
+    projected_dimensions = {
+        capabilities[name].resolves_to
+        for name in projected_members
+        if capabilities.get(name) is not None and capabilities[name].kind == "dimension"
+    }
+    # A member the display projection appended is a servant column, never a
+    # look owner: subtracting it keeps the look it serves visible and linking.
+    look_dimensions = _declared_look_dimensions(
+        capabilities, dimensions, projected_members - display_members_added
+    )
 
     columns: list[ResultColumn] = []
     for member in members:
@@ -174,6 +263,10 @@ def result_columns(
         is_identifier = False
         is_count = False
         role: ResultColumnRole | None = None
+        label: str | None = None
+        link_key: str | None = None
+        display_key: str | None = None
+        href_template: str | None = None
 
         if member.name in comp_roles:
             base_m, role = comp_roles[member.name]
@@ -182,18 +275,38 @@ def result_columns(
             # count's change is a count, a currency's change carries its code.
             if role in {"previous", "delta"} and base_measure is not None:
                 is_count = base_measure.counts_rows()
-                if member.value_kind == "currency" and base_measure.currency_dimension is not None:
-                    currency_key = _sibling_key(
-                        members, capabilities, base_measure.currency_dimension
-                    )
+                currency_key = _currency_key(
+                    members, capabilities, member.value_kind, base_measure.currency_dimension
+                )
 
         if capability is not None and capability.kind == "measure":
             measure = measures[capability.resolves_to]
             is_count = measure.counts_rows()
-            if member.value_kind == "currency" and measure.currency_dimension is not None:
-                currency_key = _sibling_key(members, capabilities, measure.currency_dimension)
+            currency_key = _currency_key(
+                members, capabilities, member.value_kind, measure.currency_dimension
+            )
         elif capability is not None and capability.kind == "dimension":
-            is_identifier = dimensions[capability.resolves_to].is_primary_key
+            dimension = dimensions[capability.resolves_to]
+            is_identifier = dimension.is_primary_key or dimension.format == "id"
+            label = _bucket_label(plan, member.name) or dimension.label
+            link_key = dimension.link_key
+            # A key whose declared look is projected names that look as its display value.
+            if dimension.display_of in projected_dimensions:
+                display_key = _sibling_key(members, capabilities, dimension.display_of)
+            if capability.resolves_to in look_dimensions:
+                role = "display"
+            else:
+                href_template = _href_template_for(
+                    bundle,
+                    principal,
+                    dimension,
+                    member.name,
+                    _sibling_key(members, capabilities, dimension.link_via)
+                    if dimension.link_via
+                    else None,
+                )
+        if role is None and member.name in display_members_added:
+            role = "display"
         columns.append(
             ResultColumn(
                 key=member.name,
@@ -202,9 +315,33 @@ def result_columns(
                 is_identifier=is_identifier,
                 is_count=is_count,
                 role=role,
+                label=label,
+                link_key=link_key,
+                display_key=display_key,
+                href_template=href_template,
             )
         )
     return tuple(columns)
+
+
+def _bucket_label(plan: BusinessQueryPlan, name: str) -> str | None:
+    """A grouped plan's time dimension is a calendar bucket: the column says which."""
+    period = plan.period
+    if plan.grain != "grouped" or period is None or period.granularity is None:
+        return None
+    return period.granularity.capitalize() if period.time_dimension == name else None
+
+
+def _currency_key(
+    members: Sequence[ResultMember],
+    capabilities: dict[str, Any],
+    value_kind: str,
+    currency_dimension: str | None,
+) -> str | None:
+    """The currency column matching a member's currency value, if there is one."""
+    if value_kind != "currency" or currency_dimension is None:
+        return None
+    return _sibling_key(members, capabilities, currency_dimension)
 
 
 def _sibling_key(

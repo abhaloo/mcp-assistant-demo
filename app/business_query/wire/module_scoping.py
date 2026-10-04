@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 from collections.abc import Callable, Sequence
 from functools import partial
 from typing import Any
@@ -22,6 +23,12 @@ from app.business_query.authorize.scoping import (
     apply_owner_hint_scope,
     bind_scope_context,
 )
+from app.business_query.cube.transport import (
+    CubeBadResponse,
+    CubeCancelled,
+    CubeUnavailable,
+    accepts_cancel_token,
+)
 from app.business_query.definitions import (
     BundleSelectionError,
     BundleValidationError,
@@ -36,13 +43,16 @@ from app.business_query.outcomes import (
     Denied,
     Incomplete,
     PlanRefused,
+    RefusalDetail,
     Unsupported,
 )
 from app.business_query.plan import BusinessQueryPlan
 from app.business_query.plan.value_resolver import (
     AuthorizedValueResolver,
     bind_exact_filter,
+    clarification_choice_rewrite,
     find_resolver_lookups,
+    lookup_identity,
     resolver_query_id_for,
 )
 from app.business_query.ports import (
@@ -60,6 +70,7 @@ from app.business_query.seal.evidence import (
 from app.business_query.wire.outcome_rules import (
     native_currency_outcome,
     plan_refused_to_outcome,
+    raw_time_grouping_outcome,
     required_filters_present,
 )
 from app.business_query.wire.request import (
@@ -71,6 +82,7 @@ from app.business_query.wire.request import (
 from app.business_query.wire.trace import QueryTrace
 from app.core.errors import DeadlineExpiredError
 from app.core.turn_budget import TurnBudget
+from app.rag.provenance.record_links import record_href
 
 logger = logging.getLogger(__name__)
 
@@ -166,8 +178,19 @@ def validate_and_scope(
                 return Denied(message=DENY_MESSAGE, reason_code="policy_denied")
             if record_plan:
                 trace.record_plan(planned.model_dump(mode="json"))
-            trace.fail("planner", "member_not_found", members=list(visibility.unknown_members))
-            return Unsupported(reason_code="member_not_found", message=UNSUPPORTED_MESSAGE)
+            trace.fail(
+                "planner",
+                "member_not_found",
+                members=list(visibility.unknown_members),
+                grain_check_site="unknown_member",
+            )
+            return Unsupported(
+                reason_code="member_not_found",
+                message=UNSUPPORTED_MESSAGE,
+                detail=RefusalDetail(
+                    rule="unknown_member", members=list(visibility.unknown_members)
+                ),
+            )
 
     if record_plan:
         trace.record_plan(planned.model_dump(mode="json"))
@@ -180,9 +203,11 @@ def validate_and_scope(
             return Unsupported(
                 reason_code="grain_unexpressible", message="plan cannot be executed safely"
             )
-        currency_outcome = native_currency_outcome(node, request, bundle, trace)
-        if currency_outcome is not None:
-            return currency_outcome
+        refusal = native_currency_outcome(
+            node, request, bundle, trace
+        ) or raw_time_grouping_outcome(node, bundle, trace)
+        if refusal is not None:
+            return refusal
         if not required_filters_present(node, bundle):
             trace.fail("module", "grain_unexpressible", grain_check_site="required_filters_missing")
             return Unsupported(
@@ -293,6 +318,80 @@ async def execute_page_cursor(
     )
 
 
+def _handle_cube_unavailable(
+    adapter: ExecutionAdapter,
+    exc: CubeUnavailable,
+    trace: QueryTrace,
+    can_fallback: bool,
+) -> tuple[BusinessQueryOutcome | None, str | None]:
+    logger.warning(
+        "adapter unavailable correlation_id=%s adapter=%s error=%s",
+        trace.correlation_id,
+        type(adapter).__name__,
+        str(exc),
+    )
+    if can_fallback:
+        return None, None
+    return Incomplete(reason_code="unavailable"), None
+
+
+async def _execute_adapter(
+    coro: Any,
+    adapter: ExecutionAdapter,
+    trace: QueryTrace,
+    turn_budget: TurnBudget,
+    fallback_config: tuple[bool, float],
+) -> tuple[BusinessQueryOutcome | UnsealedAdapterAnswer | None, str | None]:
+    try:
+        result = await coro
+    except DeadlineExpiredError:
+        raise
+    except (TimeoutError, CubeCancelled) as exc:
+        # CubeTimeout is a TimeoutError: the adapter's own deadline fired.
+        reason = "cancelled" if isinstance(exc, CubeCancelled) else "timeout"
+        return Incomplete(reason_code=reason), None
+    except AdapterUnsupported as exc:
+        return None, str(exc) or None
+    except CubeUnavailable as exc:
+        fallback_enabled, min_remaining = fallback_config
+        can_fallback = fallback_enabled and turn_budget.remaining_seconds > min_remaining
+        return _handle_cube_unavailable(adapter, exc, trace, can_fallback)
+    except CubeBadResponse as exc:
+        logger.warning(
+            "adapter bad response correlation_id=%s error=%s",
+            trace.correlation_id,
+            str(exc),
+        )
+        return Incomplete(reason_code="adapter_invalid"), None
+    except PlanRefused as exc:
+        return plan_refused_to_outcome(exc, trace), None
+    except ScopeDenied:
+        return Denied(message=DENY_MESSAGE, reason_code="policy_denied"), None
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "adapter failed correlation_id=%s error=%s",
+            trace.correlation_id,
+            type(exc).__name__,
+            exc_info=True,
+        )
+        return Incomplete(reason_code="adapter_invalid"), None
+
+    if isinstance(result, (Answered, UnsealedAdapterAnswer, Denied, Incomplete, Unsupported)):
+        return result, None
+    return Incomplete(reason_code="adapter_invalid"), None
+
+
+def _invoke_adapter(
+    execute: Callable[..., Any],
+    scoped: ScopedPlan,
+    worker: QueryTrace,
+    cancel_token: threading.Event,
+) -> Any:
+    if accepts_cancel_token(execute):
+        return execute(scoped, trace=worker, cancel_token=cancel_token)
+    return execute(scoped, trace=worker)
+
+
 async def run_adapters(
     adapters: Sequence[ExecutionAdapter],
     scoped: ScopedPlan,
@@ -303,47 +402,103 @@ async def run_adapters(
     await_isolated_executor: Callable[
         [Callable[[QueryTrace], Callable[[], Any]], QueryTrace, TurnBudget], Any
     ],
+    fallback_on_unavailable: bool = True,
+    fallback_min_remaining_seconds: float = 3.0,
 ) -> BusinessQueryOutcome | UnsealedAdapterAnswer:
     last_unsupported_msg = "no adapter could execute this plan"
+    fallback_config = (fallback_on_unavailable, fallback_min_remaining_seconds)
     for adapter in adapters:
+        if turn_budget.cancel_token.is_set():
+            return Incomplete(reason_code="cancelled")
         if evidence_required and not isinstance(adapter, EvidenceExecutionAdapter):
             return Incomplete(reason_code="adapter_invalid")
-        try:
-            execute = adapter.execute_with_evidence if evidence_required else adapter.execute
-            result = await await_isolated_executor(
-                lambda worker, execute=execute, scoped=scoped: partial(
-                    execute, scoped, trace=worker
-                ),
-                trace,
-                turn_budget,
-            )
-        except TimeoutError:
-            return Incomplete(reason_code="timeout")
-        except DeadlineExpiredError:
-            raise
-        except AdapterUnsupported as exc:
-            last_unsupported_msg = str(exc) or last_unsupported_msg
-            continue
-        except PlanRefused as exc:
-            return plan_refused_to_outcome(exc, trace)
-        except ScopeDenied:
-            return Denied(message=DENY_MESSAGE, reason_code="policy_denied")
-        except Exception as exc:  # noqa: BLE001
-            logger.warning(
-                "adapter failed correlation_id=%s error=%s",
-                trace.correlation_id,
-                type(exc).__name__,
-                exc_info=True,
-            )
-            return Incomplete(reason_code="adapter_invalid")
-
-        if isinstance(result, (Answered, UnsealedAdapterAnswer, Denied, Incomplete, Unsupported)):
-            return result
-        return Incomplete(reason_code="adapter_invalid")
+        execute = adapter.execute_with_evidence if evidence_required else adapter.execute
+        coro = await_isolated_executor(
+            lambda worker, execute=execute, scoped=scoped: partial(
+                _invoke_adapter, execute, scoped, worker, turn_budget.cancel_token
+            ),
+            trace,
+            turn_budget,
+        )
+        outcome, unsupported_msg = await _execute_adapter(
+            coro,
+            adapter,
+            trace,
+            turn_budget,
+            fallback_config,
+        )
+        if outcome is not None:
+            return outcome
+        if unsupported_msg is not None:
+            last_unsupported_msg = unsupported_msg
 
     return Unsupported(
         reason_code="capability_disabled",
         message=last_unsupported_msg,
+    )
+
+
+def _clarification_for_ambiguous(  # noqa: PLR0913
+    result: Any,
+    lookup: Any,
+    question: str,
+    resolver_query_id: str,
+    bundle: DefinitionBundle,
+    principal: Principal,
+) -> ClarificationRequired:
+    from app.business_query.plan.value_resolver.contract import CARD_PICK_CAP, CARD_PICK_MIN
+    from app.models.schemas import DisambiguationPayload
+
+    disambiguation = None
+    choices: list[dict[str, str | None]] = []
+    candidates = result.candidates
+    if candidates and CARD_PICK_MIN <= len(candidates) <= CARD_PICK_CAP:
+        disambiguation = DisambiguationPayload(
+            term=lookup.raw_value,
+            candidates=list(candidates),
+        )
+        choices = [
+            {
+                "id": cand.id,
+                "label": cand.label,
+                "rewrite": clarification_choice_rewrite(question, lookup.raw_value, cand.label),
+                "detail": None,
+                "href": (
+                    record_href(bundle, principal, cand.resource_type, int(cand.id))
+                    if cand.id.isdigit()
+                    else None
+                ),
+            }
+            for cand in candidates
+        ]
+    return ClarificationRequired(
+        question="that name matches more than one allowed value — which one did you mean?",
+        continuation="resolver-ambiguous",
+        resolver_query_id=resolver_query_id,
+        disambiguation=disambiguation,
+        choices=choices,
+        allow_free_text=True,
+    )
+
+
+def _bind_resolved_identity(
+    planned: BusinessQueryPlan,
+    lookup: Any,
+    result: Any,
+    bundle: DefinitionBundle,
+) -> BusinessQueryPlan:
+    _sql_col, identity_member = lookup_identity(lookup, bundle)
+    canonical: str | int = result.canonical_values[0]
+    if identity_member is not None:
+        identity_dim = next(d for d in bundle.dimensions if d.name == identity_member)
+        if identity_dim.type == "number":
+            canonical = int(result.canonical_values[0])
+    return bind_exact_filter(
+        planned,
+        lookup.member,
+        canonical,
+        path=lookup.path,
+        bind_member=identity_member,
     )
 
 
@@ -446,19 +601,8 @@ async def resolve_values(
     trace.resolver_version = result.resolver_version
 
     if result.disposition == "ambiguous":
-        disambiguation = None
-        if result.candidates and 2 <= len(result.candidates) <= 5:
-            from app.models.schemas import DisambiguationPayload
-
-            disambiguation = DisambiguationPayload(
-                term=lookup.raw_value,
-                candidates=list(result.candidates),
-            )
-        return ClarificationRequired(
-            question="that name matches more than one allowed value — which one did you mean?",
-            continuation="resolver-ambiguous",
-            resolver_query_id=resolver_query_id,
-            disambiguation=disambiguation,
+        return _clarification_for_ambiguous(
+            result, lookup, request.question or "", resolver_query_id, bundle, request.principal
         )
     if result.disposition == "none":
         # The member resolved and was authorized; only its VALUE matched
@@ -470,9 +614,7 @@ async def resolve_values(
             resolver_query_id=resolver_query_id,
         )
 
-    rebound = bind_exact_filter(
-        planned, lookup.member, result.canonical_values[0], path=lookup.path
-    )
+    rebound = _bind_resolved_identity(planned, lookup, result, bundle)
     prepared = validate_and_scope(rebound, request, bundle, scope_fn, record_plan=True, trace=trace)
     if not isinstance(prepared, ScopedPlan):
         return prepared

@@ -22,14 +22,17 @@ from app.core.errors import CapabilityUnavailableError
 from app.core.turn_budget import UNBOUNDED_BUDGET, TurnBudget, await_with_budget
 from app.models.schemas import Answer, Question
 from app.models.tool_results import TurnResult, tool_result_fields
+from app.query_records.context import TerminalUsageCapture
 from app.query_records.wiring import monotonic_start, resolve_prompt_version
 from app.resources import ProcessResources
+from app.services.account_budget import budget_report_for
 from app.services.answer_finalize import bq_digest_for_persist, persist_and_enrich
 from app.services.ask import ProgressSink, _still_connected
 from app.services.ask import ask as interpret_ask
 from app.services.ask_answer_builder import make_answer
 from app.services.ask_observation import (
-    note_query_record_terminal,
+    ImmediateTerminalWriter,
+    TerminalWriter,
     note_request_outcome,
     with_root_tracing_context,
 )
@@ -72,6 +75,7 @@ from app.services.run_lifecycle import (
     operational_trace_inputs,
     operational_trace_outputs,
 )
+from app.services.terminal_usage import fill_terminal_usage
 from app.telemetry.correlation import bind_correlation_id, bind_thread_id, clear_correlation_id
 from app.telemetry.invocation_payload import (
     ExecutionIdentity,
@@ -173,16 +177,20 @@ class AskService:
         progress: ProgressSink | None = None,
         turn_budget: TurnBudget = UNBOUNDED_BUDGET,
         expiry_event: asyncio.Event | None = None,
+        terminal: TerminalWriter | None = None,
     ) -> Answer:
         """Thin wrapper: register the run, then let the seam wrapper gate the
         root LangSmith tracing context around one `_ask_traced` attempt --
-        see app.services.ask_observation.with_root_tracing_context."""
+        see app.services.ask_observation.with_root_tracing_context. The
+        ``terminal`` writer records the attempt's query-record terminal in
+        its ``finally``; ``None`` keeps today's immediate-write behaviour."""
         run_id = body.run_id or uuid.uuid4().hex
         bind_correlation_id(run_id)
         bind_thread_id(body.thread_id)
         task = asyncio.current_task()
         assert task is not None
         signal = expiry_event if expiry_event is not None else new_expiry_event()
+        writer = terminal if terminal is not None else ImmediateTerminalWriter()
         try:
             async with register_run(run_id, principal, task):
                 return await await_with_budget(
@@ -195,6 +203,7 @@ class AskService:
                             progress=progress,
                             turn_budget=turn_budget,
                             expiry_event=signal,
+                            terminal=writer,
                         )
                     ),
                     turn_budget,
@@ -220,14 +229,18 @@ class AskService:
         run_tree=None,
         turn_budget: TurnBudget = UNBOUNDED_BUDGET,
         expiry_event: asyncio.Event | None = None,
+        terminal: TerminalWriter | None = None,
     ) -> Answer:
         """One root per JSON attempt with an explicit terminal outcome."""
+        writer = terminal if terminal is not None else ImmediateTerminalWriter()
         started_at = monotonic_start()
         outcome: RunOutcome = "error"
         query_type: str | None = None
         answer: Answer | None = None
         bq_result: AskBusinessQueryResult | None = None
+        usage = TerminalUsageCapture()
         ctx: TurnContext | None = None
+        stable_error_code: str | None = None
         try:
             # Stamped before prepare_ask so classify's child span (which
             # re-stamps it via on_classified) can never precede the root.
@@ -251,6 +264,7 @@ class AskService:
                     raise AssertionError(f"cursor ask must return ResultPage, got {type(page)!r}")
                 query_type = "structured"
                 answer, bq_result = page.answer, page.bq
+                fill_terminal_usage(usage, bq=page.bq, turn_usage=None)
                 ctx = page.ctx
             else:
                 prepared = await prepare_ask(
@@ -273,7 +287,10 @@ class AskService:
                     lifecycle_run_id=lifecycle_run_id,
                     progress=progress,
                     turn_budget=turn_budget,
+                    usage=usage,
                 )
+            if answer is not None and answer.reason_code is not None:
+                stable_error_code = answer.reason_code
             if bq_result is not None and bq_result.raise_capability_unavailable:
                 raise CapabilityUnavailableError(CAPABILITY_UNAVAILABLE_MESSAGE)
             outcome = "completed"
@@ -299,7 +316,7 @@ class AskService:
             budget_timeout = (
                 outcome == "error" and expiry_event is not None and expiry_event.is_set()
             )
-            note_query_record_terminal(
+            writer.record(
                 body=(
                     body
                     if body.question is not None
@@ -312,13 +329,17 @@ class AskService:
                 started_at=started_at,
                 prompt_version=resolve_prompt_version(query_type),
                 correlation_id=lifecycle_run_id or body.run_id,
-                model=bq_result.model if bq_result is not None else None,
-                input_tokens=bq_result.input_tokens if bq_result is not None else None,
-                output_tokens=bq_result.output_tokens if bq_result is not None else None,
-                reasoning_tokens=bq_result.reasoning_tokens if bq_result is not None else None,
-                resolver_disposition=bq_result.disposition if bq_result is not None else None,
-                bq_trace_json=bq_result.bq_trace_json if bq_result is not None else None,
-                stable_error_code="timeout" if budget_timeout else None,
+                model=usage.model_for_record(),
+                provider=usage.provider_for_record(),
+                input_tokens=usage.input_tokens,
+                output_tokens=usage.output_tokens,
+                reasoning_tokens=usage.reasoning_tokens,
+                cached_tokens=usage.cached_input_tokens,
+                estimated_usd=usage.estimated_usd,
+                cost_status=usage.cost_status,
+                resolver_disposition=usage.resolver_disposition,
+                bq_trace_json=usage.bq_trace_json,
+                stable_error_code=stable_error_code or ("timeout" if budget_timeout else None),
                 timeout=True if budget_timeout else None,
                 cancelled=True if outcome == "stopped" else None,
             )
@@ -333,6 +354,7 @@ class AskService:
         lifecycle_run_id: str | None = None,
         progress: ProgressSink | None = None,
         turn_budget: TurnBudget,
+        usage: TerminalUsageCapture,
     ) -> tuple[Answer, AskBusinessQueryResult | None]:
         outcome = await interpret_ask(
             body,
@@ -350,6 +372,7 @@ class AskService:
             case Replayed(answer=answer):
                 return answer, None
             case Answered() as answered:
+                fill_terminal_usage(usage, bq=answered.bq, turn_usage=answered.usage)
                 trace.get_current_span().set_attribute("requested_route", answered.query_type)
                 follow_ups = (
                     None
@@ -375,7 +398,11 @@ class AskService:
                     presentation=answered.presentation,
                     follow_up_offer=answered.follow_up_offer,
                     answer_mode=answered.answer_mode,
+                    text_kind=answered.text_kind,
                     source_exchange_ids=answered.source_exchange_ids,
+                    budget=budget_report_for(prepared.turn.budget, usage),
+                    unanswered_part=answered.unanswered_part,
+                    ui_links=list(answered.ui_links),
                 )
                 answer = _with_turn_result(answer, answered.turn_result)
                 if answered.completion_status == "incomplete":
@@ -417,8 +444,10 @@ class AskService:
                     ),
                 )
                 answer = _with_turn_result(answer, unavailable.turn_result)
+                fill_terminal_usage(usage, bq=unavailable.bq, turn_usage=unavailable.usage)
                 return answer, unavailable.bq
             case FixedMessage() as fixed:
+                failed = fixed.bq if fixed.bq and fixed.bq.disposition != "answered" else None
                 message = fixed.message
                 query_type = fixed.query_type
                 stage_models = fixed.stage_models
@@ -436,8 +465,14 @@ class AskService:
                     continuation_token=continuation_token,
                     omitted_capabilities=list(omitted_capabilities),
                     banner=banner,
+                    reason_code=fixed.reason_code,
+                    budget=budget_report_for(fixed.budget, None),
+                    business_query=failed.business_query if failed else None,
                 )
-                answer = _with_turn_result(answer, fixed.turn_result)
+                answer = _with_turn_result(
+                    answer, fixed.turn_result or (failed.turn_result if failed else None)
+                )
+                fill_terminal_usage(usage, bq=fixed.bq, turn_usage=fixed.usage)
                 note_request_outcome(query_type=query_type, outcome="ok")
                 finalized = await _finalize_answer(
                     body=body,
@@ -445,7 +480,7 @@ class AskService:
                     ctx=ctx,
                     answer=answer,
                     lifecycle_run_id=lifecycle_run_id,
-                    model_invoked=False,
+                    model_invoked=fixed.usage is not None and fixed.usage.input_tokens is not None,
                     continuation_request_id=None,
                 )
                 return finalized, None

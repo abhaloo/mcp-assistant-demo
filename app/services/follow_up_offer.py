@@ -23,7 +23,11 @@ from langchain_core.utils.function_calling import convert_to_openai_tool
 from pydantic import ValidationError
 
 from app.auth import Principal
-from app.models.ask_v2_events import FollowUpOffer
+from app.conversation.coordinator.draft_checks import (
+    names_a_record_type,
+    not_a_next_question,
+)
+from app.models.ask_v2_events import FollowUpAction, FollowUpOffer
 from app.policy.manifest_loader import load_manifest
 from app.services.follow_up_suggestions import reachable_resources
 from app.telemetry.metrics import record_follow_up_suggestion_decision
@@ -31,6 +35,8 @@ from app.telemetry.metrics import record_follow_up_suggestion_decision
 logger = logging.getLogger(__name__)
 
 OFFER_FOLLOW_UP = "offer_follow_up"
+
+_MAX_OFFER_ACTIONS: int = 3
 
 _DESCRIPTION = (
     "Offer one to three optional next questions the reader could ask about the "
@@ -113,20 +119,17 @@ class FollowUpCapture:
         return out
 
 
-def _names_resource(prompt: str, resource_types: Sequence[str]) -> bool:
-    """Whether the prompt names one of these record types, as a whole word,
-    singular or plural."""
-    for resource_type in resource_types:
-        label = re.escape(resource_type.replace("_", " "))
-        if re.search(rf"\b(?:{label}|{label}s|{label}es)\b", prompt, re.IGNORECASE):
-            return True
-    return False
+def unreachable_record_types(principal: Principal) -> tuple[str, ...]:
+    """The declared record types this caller cannot read; none without a snapshot."""
+    scope = _offer_scope(principal)
+    if scope is None:
+        return ()
+    declared, reachable = scope
+    return tuple(sorted(set(declared) - set(reachable)))
 
 
-def accept_for_principal(
-    capture: FollowUpCapture, *, question: str, principal: Principal
-) -> FollowUpOffer | None:
-    """The accepted offer for this caller, or ``None``.
+def _offer_scope(principal: Principal) -> tuple[tuple[str, ...], Sequence[str]] | None:
+    """The declared and the reachable record types for this caller, or ``None``.
 
     Without a record-access snapshot there is no way to tell a reachable record
     type from an invisible one, so no offer is made; the same rule the
@@ -141,12 +144,57 @@ def accept_for_principal(
     except Exception:
         logger.warning("follow_up_offer rejected reason=manifest_unavailable")
         return None
+    return tuple(manifest.resources), reachable_resources(manifest, principal)
+
+
+def accept_for_principal(
+    capture: FollowUpCapture, *, question: str, principal: Principal
+) -> FollowUpOffer | None:
+    """The accepted offer for this caller, or ``None``."""
+    scope = _offer_scope(principal)
+    if scope is None:
+        return None
+    declared, reachable = scope
     return accept_follow_up_offer(
-        capture,
-        question=question,
-        declared_resources=tuple(manifest.resources),
-        reachable_resources=reachable_resources(manifest, principal),
+        capture, question=question, declared_resources=declared, reachable_resources=reachable
     )
+
+
+def accept_offer_for_principal(
+    actions: Sequence[FollowUpAction], *, question: str, principal: Principal
+) -> FollowUpOffer | None:
+    """An offer built by the caller, judged by the gate a model's tool call passes."""
+    started = time.perf_counter()
+    scope = _offer_scope(principal)
+    if scope is None:
+        return None
+    declared, reachable = scope
+    accepted: list[FollowUpAction] = []
+    seen: set[str] = set()
+
+    for action in actions:
+        if not_a_next_question(action.prompt):
+            logger.info("follow_up_offer rejected reason=not_a_question")
+            continue
+        key = normalize_prompt(action.prompt)
+        if key in seen:
+            logger.info("follow_up_offer rejected reason=duplicate_prompt")
+            continue
+        single = FollowUpOffer(actions=[action])
+        reason = offer_reject_reason(single, question, declared, reachable)
+        if reason is not None:
+            logger.info("follow_up_offer rejected reason=%s", reason)
+            continue
+        accepted.append(action)
+        seen.add(key)
+        if len(accepted) == _MAX_OFFER_ACTIONS:
+            break
+
+    mode = "offer_accepted" if accepted else "offer_none"
+    record_follow_up_suggestion_decision(mode=mode, seconds=time.perf_counter() - started)
+    if not accepted:
+        return None
+    return FollowUpOffer(actions=accepted)
 
 
 def accept_follow_up_offer(
@@ -191,6 +239,16 @@ def _reject_reason(
         offer = FollowUpOffer.model_validate(json.loads(calls[0]))
     except (ValueError, ValidationError):
         return "malformed"
+    return offer_reject_reason(offer, question, declared, reachable)
+
+
+def offer_reject_reason(
+    offer: FollowUpOffer,
+    question: str,
+    declared: Sequence[str],
+    reachable: Sequence[str],
+) -> str | None:
+    """Why this offer cannot be shown, or None."""
     current = normalize_prompt(question)
     unreachable = tuple(sorted(set(declared) - set(reachable)))
     seen_prompts: set[str] = set()
@@ -201,7 +259,7 @@ def _reject_reason(
             return "repeats_question"
         if _PAGINATION.search(action.prompt):
             return "pagination"
-        if _names_resource(action.prompt, unreachable):
+        if names_a_record_type(action.prompt, unreachable):
             return "unreachable_resource"
         if prompt in seen_prompts or action.id in seen_ids:
             return "duplicate_action"

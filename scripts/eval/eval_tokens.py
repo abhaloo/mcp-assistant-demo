@@ -16,6 +16,9 @@ from scripts.ops.loadtest_ask import mint_token
 
 DEFAULT_PROFILE = "finance"
 
+# The actions Billing grants on every record resource a "view" permission covers.
+_RECORD_ACTIONS: tuple[str, ...] = ("search", "read", "link")
+
 
 @dataclass(frozen=True)
 class EvalPrincipalProfile:
@@ -34,13 +37,47 @@ PROFILES: dict[str, EvalPrincipalProfile] = {
             "bill overdue",
             "view journal entries",
             "customer statement",
+            "view invoice",
         ),
+        resources=(("invoice", _RECORD_ACTIONS),),
     ),
+    "guest": EvalPrincipalProfile(role="guest", permissions=()),
     "operations": EvalPrincipalProfile(role="printing", permissions=("view job",)),
     "sales": EvalPrincipalProfile(
         role="sales", permissions=("view customer", "view customer order")
     ),
-    "admin": EvalPrincipalProfile(role="admin", permissions=()),
+    # Billing's admin holds every "view" permission the definition bundle
+    # requires; capability visibility has no admin bypass, so an admin with
+    # no permissions would see an empty capability card.
+    "admin": EvalPrincipalProfile(
+        role="admin",
+        permissions=(
+            "view customer",
+            "view customer order",
+            "view inventory",
+            "view invoice",
+            "view job",
+            "view journal entries",
+            "view payable quotation",
+            "view quotation",
+            "view supplier",
+        ),
+        resources=tuple(
+            (name, _RECORD_ACTIONS)
+            for name in (
+                "invoice",
+                "quotation",
+                "payable_quotation",
+                "credit_note",
+                "customer_order",
+                "job",
+                "customer",
+                "supplier",
+                "product",
+                "inventory",
+            )
+        ),
+    ),
 }
 
 
@@ -55,14 +92,20 @@ def eval_record_access(profile: EvalPrincipalProfile) -> dict[str, object]:
     )
 
 
-def mint_eval_token(profile_name: str) -> str:
-    """A fresh single-use token for ``profile_name``; unknown names raise."""
+def mint_eval_token(profile_name: str, *, ask_budget: dict[str, str] | None = None) -> str:
+    """A fresh single-use token for ``profile_name``; unknown names raise.
+
+    ``ask_budget`` rides inside the strict ``record_access`` claim the way
+    Billing's omission rule emits the key — absent entirely when None."""
     profile = PROFILES[profile_name]
+    record_access = eval_record_access(profile)
+    if ask_budget is not None:
+        record_access["ask_budget"] = dict(ask_budget)
     return mint_token(
         profile.role,
         list(profile.permissions),
         extra_claims={
             "tool_result_version": 1,
-            "record_access": eval_record_access(profile),
+            "record_access": record_access,
         },
     )

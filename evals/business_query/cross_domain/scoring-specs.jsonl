@@ -1,6 +1,14 @@
+{"id": "xd-06", "column_map": {"customer_name": "customer.name"}}
 {"id": "xd-10", "compare_columns": ["invoiced_revenue"], "note": "period labels differ between the oracle and compare_to presentation"}
 {"id": "xd-11", "compare_columns": ["invoices_count", "bill_outstanding"], "note": "bucket labels come from the bundle, not the oracle"}
-{"id": "xd-13", "compare_columns": ["work_number", "status"], "note": "the answer lists jobs; the invoice columns are the oracle's own check"}
-{"id": "xd-14", "compare_columns": ["work_number", "status"], "note": "the answer lists jobs; order_number is the oracle's own check"}
-{"id": "xd-20", "compare_columns": ["name"], "note": "kind is a synthetic tag; quantity is NULL on job rows"}
+{"id": "xd-13", "compare_columns": ["invoice_number", "work_number", "status"], "note": "the answer lists jobs; the invoice columns are the oracle's own check"}
+{"id": "xd-14", "compare_columns": ["order_number", "work_number", "status"], "note": "the answer lists jobs; order_number is the oracle's own check"}
+{"id": "xd-20", "compare_columns": ["name"], "column_map": {"name": "invoice_item.product_name"}, "note": "kind is a synthetic tag; quantity is NULL on job rows"}
 {"id": "xd-21", "compare_columns": ["jobs_count", "orders_count"], "note": "the ratio is computed by the reader from the two facts"}
+{"id": "xd-29", "column_map": {"order_status": "customer_order.computed_status"}}
+{"id": "xd-30", "column_map": {"job_id": "job.id"}}
+{"id": "xd-anchor-01", "compare_columns": ["invoice_number", "work_number", "status"], "note": "row_identity.anchor_count and anchors_without_children come from the engine path, not these columns"}
+{"id": "xd-anchor-02", "compare_columns": ["customer_name", "order_number"], "column_map": {"customer_name": "customer.name", "order_number": "customer_order.order_number"}, "note": "row_identity.anchor_count and anchors_without_children come from the engine path, not these columns"}
+{"id": "xd-anchor-03", "compare_columns": ["supplier_name", "receipt_id"], "column_map": {"supplier_name": "supplier.name", "receipt_id": "inventory.id"}, "note": "row_identity.anchor_count and anchors_without_children come from the engine path, not these columns"}
+{"id": "xd-anchor-04", "compare_columns": ["invoice_number", "work_number", "status"], "note": "selection smaller than limit; no gap sentence"}
+{"id": "rc-01", "compare_columns": ["invoice_number", "items_total"], "column_map": {"items_total": "invoice.items_total"}, "count_mode": "returned", "note": "set comparison; the engine adds no tie-break key"}

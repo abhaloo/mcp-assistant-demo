@@ -7,12 +7,13 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, Field, field_validator, model_serializer
 
 from app.business_query.outcomes import BusinessQueryWireOutcome
-from app.models.ask_v2_events import FollowUpOffer
+from app.models.ask_v2_events import FollowUpOffer, TextContentKind, TurnBudgetReport
 from app.models.citations import CitationsPayload, Source
 from app.models.client_directives import ClientAction, DisambiguationPayload
 from app.models.result_presentation import ResultPresentation
 from app.models.sql_provenance import SqlProvenance
 from app.models.tool_results import ComponentEvidence, ToolOmission, TurnResult
+from app.models.ui_link import UiLink
 from app.providers.stage_model_report import StageModelReport
 
 QueryType = Literal["semantic", "structured", "both"]
@@ -102,6 +103,14 @@ class Answer(BaseModel):
         default=None,
         description="Signed token to confirm continuation when capability is omitted",
     )
+    reason_code: str | None = Field(
+        default=None,
+        description="Refusal reason code when the request was refused.",
+    )
+    budget: TurnBudgetReport | None = Field(
+        default=None,
+        description="Turn spend report and account budget usage.",
+    )
     business_query: BusinessQueryWireOutcome | None = Field(
         default=None,
         exclude_if=lambda value: value is None,
@@ -149,6 +158,22 @@ class Answer(BaseModel):
         max_length=8,
         description="Referenced prior exchange ids for explanation answers",
     )
+    text_kind: TextContentKind | None = Field(
+        default=None,
+        description=(
+            "How the producer classed its text: 'table_fallback' when it is a table's "
+            "own head, 'narrative' for prose; omitted when the transport decides"
+        ),
+    )
+    unanswered_part: str | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description=(
+            "When the question asked for two things and only the first could be answered, "
+            "the second thing written as the person's next question."
+        ),
+    )
+    ui_links: list[UiLink] = Field(default_factory=list)
     # In-process handoff to the SSE projections; never serialized.
     turn_result: TurnResult | None = Field(default=None, exclude=True)
 
@@ -163,6 +188,8 @@ class Answer(BaseModel):
             data.pop("restore_ref", None)
         if data.get("answer_mode") is None:
             data.pop("answer_mode", None)
+        if data.get("text_kind") is None:
+            data.pop("text_kind", None)
         if not data.get("source_exchange_ids"):
             data.pop("source_exchange_ids", None)
         return data

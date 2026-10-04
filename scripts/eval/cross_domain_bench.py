@@ -23,8 +23,10 @@ from app.eval.business_query.cross_domain import (  # noqa: E402
     BENCH_DIR,
     EngineArmResult,
     assert_oracle_sql_unchanged,
+    column_agreement,
     format_diff,
     load_oracle_results,
+    load_plans,
     run_engine_arm,
 )
 
@@ -48,6 +50,7 @@ def build_parser() -> argparse.ArgumentParser:
     model.add_argument("--confirm-spend", action="store_true", default=False)
     diff = sub.add_parser("diff", help="join engine-arm jsonl files by id")
     diff.add_argument("runs", nargs="+")
+    diff.add_argument("--write-agreement", type=Path, default=None)
     return parser
 
 
@@ -113,6 +116,113 @@ def _arm_key(path: Path) -> str:
     return token
 
 
+_TIME_VALUE_KINDS = frozenset({"date", "datetime"})
+_MIN_CASES_FOR_TIME_SHAPE = 2
+
+
+def _member_is_time(bundle: object, member: str) -> bool:
+    from app.business_query.definitions import resolve_member
+
+    resolved = resolve_member(bundle, member)
+    definition = None
+    if resolved is not None:
+        _kind, definition = resolved
+    if definition is None:
+        definition = next(
+            (item for item in bundle.dimensions if item.name == member),
+            None,
+        )
+    if definition is None:
+        definition = next((item for item in bundle.measures if item.name == member), None)
+    if definition is None:
+        return False
+    if getattr(definition, "type", None) == "time":
+        return True
+    return getattr(definition, "value_kind", None) in _TIME_VALUE_KINDS
+
+
+def _requires_time_evidence(plan: object, bundle: object) -> bool:
+    if getattr(plan, "period", None) is not None:
+        return True
+    if any(_member_is_time(bundle, name) for name in plan.dimensions):
+        return True
+    return any(_member_is_time(bundle, clause.member) for clause in plan.order)
+
+
+def _compared_columns(expected_rows: list[dict], actual_rows: list[dict]) -> list[str]:
+    keys: set[str] = set()
+    for row in (*expected_rows, *actual_rows):
+        keys.update(row)
+    return sorted(keys)
+
+
+def write_agreement_artifact(
+    runs: dict[str, list[EngineArmResult]],
+    path: Path,
+    *,
+    plans: dict,
+    bundle: object,
+) -> None:
+    """Write one shape record per plan_shape_key seen on both cube and internal."""
+    from app.business_query.plan.plan_shape import plan_shape_key
+    from app.business_query.plan.query_plan import BusinessQueryPlan
+
+    by_id: dict[str, dict[str, EngineArmResult]] = {}
+    for name, rows in runs.items():
+        for row in rows:
+            by_id.setdefault(row.id, {})[name] = row
+    grouped: dict[str, list[dict]] = {}
+    for case_id, arms in by_id.items():
+        cube = arms.get("cube")
+        internal = arms.get("internal")
+        if (
+            cube is None
+            or internal is None
+            or cube.classification != "pass"
+            or internal.classification != "pass"
+        ):
+            continue
+        authored = plans.get(case_id)
+        if authored is None or authored.plan is None:
+            continue
+        plan = BusinessQueryPlan.model_validate(authored.plan)
+        key = plan_shape_key(plan)
+        columns = column_agreement(
+            internal.rows,
+            cube.rows,
+            _compared_columns(internal.rows, cube.rows),
+        )
+        grouped.setdefault(key, []).append(
+            {
+                "columns": columns,
+                "requires_time_evidence": _requires_time_evidence(plan, bundle),
+            }
+        )
+    shapes = []
+    for key, cases in sorted(grouped.items()):
+        column_names = sorted({name for case in cases for name in case["columns"]})
+        columns = {
+            name: all(case["columns"].get(name, False) for case in cases) for name in column_names
+        }
+        requires_time_evidence = any(case["requires_time_evidence"] for case in cases)
+        agreed = bool(columns) and all(columns.values())
+        if requires_time_evidence and len(cases) < _MIN_CASES_FOR_TIME_SHAPE:
+            agreed = False
+        time_columns_agreed = sum(
+            ok and _member_is_time(bundle, name) for name, ok in columns.items()
+        )
+        shapes.append(
+            {
+                "key": key,
+                "agreed": agreed,
+                "requires_time_evidence": requires_time_evidence,
+                "time_columns_agreed": time_columns_agreed,
+                "columns": columns,
+            }
+        )
+    path.write_text(json.dumps({"shapes": shapes}) + "\n", encoding="utf-8")
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     bench_dir = REPO_ROOT / BENCH_DIR
@@ -123,6 +233,15 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "diff":
         runs = {_arm_key(Path(p)): _load_run(Path(p)) for p in args.runs}
         print(format_diff(runs))
+        if args.write_agreement is not None:
+            from app.business_query.definitions import current_bundle
+
+            write_agreement_artifact(
+                runs,
+                args.write_agreement,
+                plans=load_plans(bench_dir),
+                bundle=current_bundle(),
+            )
         return 0
     from app.business_query.definitions import current_bundle
     from app.eval.business_query.harness import billing_engine

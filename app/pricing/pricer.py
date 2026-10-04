@@ -65,12 +65,13 @@ def _output_leg(
     return total, "complete"
 
 
-def price_tokens(
+def price_tokens(  # noqa: PLR0913 - price table lookup takes full token breakdown
     *,
     model: str | None,
     input_tokens: int | None,
     output_tokens: int | None,
     reasoning_tokens: int | None = None,
+    cached_input_tokens: int | None = None,
     prices_path: Path | None = None,
 ) -> PricedTokens:
     """Estimate USD from the frozen price table. Never returns a silent zero."""
@@ -93,7 +94,34 @@ def price_tokens(
         row["output_per_1k"],
         row.get("reasoning_per_1k"),
     )
-    total = _per_1k_cost(input_tokens, row["input_per_1k"]) + output_total
+    cached = min(max(cached_input_tokens or 0, 0), max(0, input_tokens))
+    cached_rate = row.get("cached_input_per_1k")
+    if cached_rate is not None and cached > 0:
+        uncached_tokens = max(0, input_tokens - cached)
+        input_total = _per_1k_cost(uncached_tokens, row["input_per_1k"]) + _per_1k_cost(
+            cached, cached_rate
+        )
+    else:
+        input_total = _per_1k_cost(input_tokens, row["input_per_1k"])
+    total = input_total + output_total
     if total <= Decimal("0"):
         return PricedTokens(None, "unknown", version)
     return PricedTokens(total.quantize(_USD_QUANT), status, version)
+
+
+def highest_rate_per_1k(prices_doc: dict[str, Any]) -> Decimal:
+    """Return the highest per-1k rate (input, output, or reasoning) across all model rows."""
+    price_rows = {
+        k: v
+        for k, v in prices_doc.items()
+        if not k.endswith("_to_price_key") and k != "version" and isinstance(v, dict)
+    }
+    rates: list[Decimal] = []
+    for row in price_rows.values():
+        for field in ("input_per_1k", "output_per_1k", "reasoning_per_1k"):
+            val = row.get(field)
+            if val is not None:
+                rates.append(Decimal(str(val)))
+    if not rates:
+        return Decimal("0")
+    return max(rates)

@@ -50,6 +50,22 @@ class ProviderContextCounter:
     def capacity_tokens(self) -> int:
         return self._profile.context_window_tokens
 
+    def _count_message_tokens(self, messages: Sequence[BaseMessage]) -> int:
+        if hasattr(self._chat_model.inner, "get_num_tokens_from_messages"):
+            try:
+                return self._chat_model.inner.get_num_tokens_from_messages(list(messages))
+            except NotImplementedError:
+                pass
+
+        total = 0
+        for m in messages:
+            c = m.content if isinstance(m.content, str) else json.dumps(m.content)
+            tool_calls = getattr(m, "tool_calls", None)
+            if tool_calls:
+                c += json.dumps(tool_calls)
+            total += 3 + self._chat_model.inner.get_num_tokens(c)
+        return total + 3
+
     def measure(
         self,
         messages: Sequence[BaseMessage],
@@ -70,14 +86,7 @@ class ProviderContextCounter:
 
         total_tokens = 0
         if messages:
-            if hasattr(self._chat_model.inner, "get_num_tokens_from_messages"):
-                total_tokens += self._chat_model.inner.get_num_tokens_from_messages(list(messages))
-            else:
-                for m in messages:
-                    c = m.content if isinstance(m.content, str) else json.dumps(m.content)
-                    total_tokens += 3 + self._chat_model.inner.get_num_tokens(c)
-                total_tokens += 3
-
+            total_tokens += self._count_message_tokens(messages)
             total_tokens += len(messages) * self._profile.framing_tokens_per_message
 
         for tool in tools:

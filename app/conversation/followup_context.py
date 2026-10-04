@@ -7,10 +7,14 @@ from pydantic import BaseModel, ConfigDict
 from app.auth import Principal
 from app.conversation.evidence.contracts import RestoredTurn, RestoreReference, RestoreRequest
 from app.conversation.evidence.ports import EvidenceRestoreService
-from app.conversation.followup_contracts import FollowupFocus, SourceCandidate, SourceSelection
+from app.conversation.followup_contracts import (
+    MAX_SOURCE_CANDIDATES,
+    FollowupFocus,
+    SourceCandidate,
+    SourceSelection,
+)
 from app.conversation.transcript_models import TranscriptTurn
 
-MAX_SOURCE_CANDIDATES = 8
 _MAX_QUESTION_CHARS = 160
 
 
@@ -27,6 +31,8 @@ def _grain(turn: TranscriptTurn) -> str:
 
 
 def source_candidates(history: Sequence[TranscriptTurn]) -> tuple[SourceCandidate, ...]:
+    """The earlier answers a new turn may restore. An answer that restored earlier
+    answers itself is left out: the restore refuses a dependency that has its own."""
     questions = {t.exchange_id: t.content for t in history if t.role == "user" and t.exchange_id}
     sources = [
         t
@@ -35,6 +41,7 @@ def source_candidates(history: Sequence[TranscriptTurn]) -> tuple[SourceCandidat
         and t.exchange_id in questions
         and t.restore_ref
         and t.answer_mode is None
+        and not t.source_exchange_ids
         and t.tool_result_version == 1
         and t.completeness != "none"
     ]

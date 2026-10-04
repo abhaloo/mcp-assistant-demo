@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
+import threading
 import time
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from app.core.errors import DeadlineExceededError, DeadlineExpiredError
 
 DEADLINE_CLOCK_SKEW_MS: int = 1_000
-MAX_DEADLINE_MS: int = 25_000
-MAX_FUTURE_SKEW_MS: int = 26_000
+MAX_DEADLINE_MS: int = 600_000
+MAX_FUTURE_SKEW_MS: int = 601_000
 UNBOUNDED_REMAINING_MS: int = 1_000_000_000
 
 
@@ -27,6 +28,9 @@ class Deadline:
     _monotonic_deadline_s: float
     _monotonic_clock: Callable[[], float] = time.monotonic
     _clock_fn: Callable[[], int] = _default_clock_ms
+    cancel_token: threading.Event = field(
+        default_factory=threading.Event, compare=False, repr=False
+    )
 
     @property
     def remaining_ms(self) -> int:
@@ -103,7 +107,9 @@ def validate_client_deadline(
         if effective_unbounded is None:
             effective_unbounded = settings.ask_turn_unbounded
         if effective_max_deadline_ms is None:
-            effective_max_deadline_ms = settings.ask_max_deadline_ms
+            from app.core.ask_budget import scale_ask_ms
+
+            effective_max_deadline_ms = scale_ask_ms(settings.ask_max_deadline_ms)
         if effective_max_future_skew_ms is None:
             effective_max_future_skew_ms = effective_max_deadline_ms + DEADLINE_CLOCK_SKEW_MS
 

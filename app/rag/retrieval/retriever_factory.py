@@ -44,7 +44,17 @@ def _build_store(
             request_timeout_s=request_timeout_s,
             max_retries=max_retries,
         )
-    raise ValueError(f"Unknown retriever_kind: {kind!r}. Expected 'chroma' or 'azure_search'.")
+    if kind == "lancedb":
+        from app.rag.retrieval.lancedb_retriever import LanceDBVectorStore
+
+        return LanceDBVectorStore(
+            collection_name=collection_name,
+            request_timeout_s=request_timeout_s,
+            max_retries=max_retries,
+        )
+    raise ValueError(
+        f"Unknown retriever_kind: {kind!r}. Expected 'chroma', 'azure_search', or 'lancedb'."
+    )
 
 
 @cache

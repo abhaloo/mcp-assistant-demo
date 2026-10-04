@@ -1,0 +1,18 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "latency",
+  "run_id": "ee231c88c0b945a8b027f1a7ffbb7fe1",
+  "case_id": "DSLAT6b-deepseek-records-t4-rep2",
+  "turn": 4,
+  "mode": "wire",
+  "role": "admin",
+  "question": "Which month had the highest invoiced revenue in TZS?",
+  "outcome_type": "incomplete",
+  "mismatches": [
+    "planner_schema_invalid"
+  ],
+  "reason": "DeepSeek planner in strict json_schema mode (schema hash sha256:35053d92..., depth 2): the reply failed PlannerModelResponse validation and the repair also failed (adapter_invalid). Strict mode is accepted but the wire schema is looser than the Pydantic model. At depth 1 all 3 invalid replies were repaired.",
+  "evidence": "docs/superpowers/evidence/2026-10-01-luna6-e2e/task6b/README.md; docs/superpowers/evidence/2026-10-01-luna6-e2e/task6b/check.json; docs/superpowers/evidence/2026-10-01-luna6-e2e/task6b/check-depth1.json"
+}

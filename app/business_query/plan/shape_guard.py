@@ -46,11 +46,14 @@ def wants_named_entity(question: str) -> bool:
 
 
 def _dimension_names_entity(dimension: str) -> bool:
-    return ".name" in dimension or dimension in _NAME_DIMENSIONS
+    field = dimension.rsplit(".", 1)[-1]
+    return field == "name" or field.endswith("_name") or dimension in _NAME_DIMENSIONS
 
 
 def plan_names_entity(plan: BusinessQueryPlan) -> bool:
-    """True when a non-scalar plan groups by a name-like entity dimension."""
+    """True when a non-scalar plan groups by a name-like entity dimension or has a derived set."""
     if plan.grain == "scalar":
         return False
+    if plan.derived_sets:
+        return True
     return any(_dimension_names_entity(dimension) for dimension in plan.dimensions)

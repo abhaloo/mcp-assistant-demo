@@ -14,6 +14,9 @@ _API_TOKEN_RE = re.compile(r"sk-live-[A-Za-z0-9]+")
 _CONNECTION_STRING_RE = re.compile(r"\w+://[^\s]+")
 _INVOICE_ID_RE = re.compile(r"INV-\d{4}-\d+")
 
+# Currency codes the deployment prices in; an unknown three-letter acronym is still redacted.
+_CURRENCY_CODES = frozenset({"TZS", "USD", "KES", "UGX", "EUR", "GBP"})
+
 
 def question_fingerprint(question: str) -> str:
     """Stable SHA-256 hex digest of the verbatim question."""
@@ -28,8 +31,11 @@ def redact_question(question: str) -> str:
     text = _CONNECTION_STRING_RE.sub("<redacted>", text)
     text = _INVOICE_ID_RE.sub("<redacted>", text)
     org_detection = detect_pii(text, id_context_filter=False, entities=["ORGANIZATION"])
-    if org_detection.findings:
-        text = get_anonymizer().anonymize(text=text, analyzer_results=org_detection.findings).text
+    org_findings = [
+        f for f in org_detection.findings if text[f.start : f.end] not in _CURRENCY_CODES
+    ]
+    if org_findings:
+        text = get_anonymizer().anonymize(text=text, analyzer_results=org_findings).text
     return text
 
 

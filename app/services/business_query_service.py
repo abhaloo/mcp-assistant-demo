@@ -19,6 +19,8 @@ from app.business_query.definitions import (
     bundle_for_manifest as bundle_for_manifest,
 )
 from app.business_query.plan.attempts import AttemptConflictError
+from app.business_query.plan.dialogue import DialogueTurn
+from app.business_query.plan.plan_patch import PlanPatch
 from app.business_query.wire.ask_result import AskBusinessQueryResult, CommittedBqResult
 from app.business_query.wire.module import (
     BusinessProgressSink,
@@ -156,8 +158,10 @@ def build_prepared_bq_operation(
     owner_hint: BusinessQueryOwnerHint | None = None,
     response_policy: Literal["allow_partial", "strict"] = "allow_partial",
     idempotency_key: str | None = None,
-    history: tuple[tuple[str, str], ...] = (),
+    history: tuple[DialogueTurn, ...] = (),
     turn_budget: TurnBudget = UNBOUNDED_BUDGET,
+    reading: str | None = None,
+    patch: PlanPatch | None = None,
 ) -> PreparedBqOperation:
     """One request-scoped BQ operation bound to the caller's authorities.
 
@@ -175,6 +179,8 @@ def build_prepared_bq_operation(
         owner_hint=owner_hint,
         response_policy=response_policy,
         history=history,
+        reading=reading,
+        patch=patch,
     )
     evidence = None
     if settings.query_record_database_url.strip():
@@ -239,8 +245,8 @@ async def compose_business_query_answer(
             progress=progress,
             turn_budget=turn_budget,
         )
-    except (CapabilityUnavailableError, BundleSelectionError):
-        return _denied_capability_result()
+    except (CapabilityUnavailableError, BundleSelectionError) as exc:
+        return _denied_capability_result(exc, correlation_id=correlation_id)
     except AttemptConflictError:
         return request_conflict_result(correlation_id=correlation_id)
     except BQ_COMPOSITION_ERRORS as exc:

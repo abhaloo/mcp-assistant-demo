@@ -6,7 +6,7 @@ from collections.abc import AsyncIterator, Iterator
 from typing import Any
 
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import BaseMessage, BaseMessageChunk
 from langchain_core.runnables import Runnable, RunnableConfig
 
 from app.providers.azure_reasoning import (
@@ -71,6 +71,10 @@ class CapabilityChatModel(Runnable):
             return result
         if preserve_reasoning_for_replay(result):
             return result
+        if isinstance(result, BaseMessageChunk):
+            # Callers add streamed chunks together, which would join each chunk's hash and
+            # count into wrong values. The invocation ledger keeps the reasoning of a stream.
+            return normalize_answer_content(result)
         evidence = extract_reasoning_evidence(result)
         normalized = normalize_answer_content(result)
         if not evidence:

@@ -18,6 +18,7 @@ dependencies = [
     "langsmith>=0.8,<0.9",     # explicit pin; was transitive via langchain
     # --- Vector store ---
     "chromadb>=0.5.0",
+    "lancedb>=0.17.0,<0.39",
     # --- Data validation & settings ---
     "pydantic>=2.0",
     "pydantic-settings>=2.0",
@@ -77,6 +78,9 @@ docling = [
 ]
 rerank = [
     "flashrank>=0.2",
+]
+fastembed = [
+    "fastembed>=0.4.0",
 ]
 dev = [
     "pytest>=8.0",

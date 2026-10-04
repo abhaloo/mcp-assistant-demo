@@ -52,6 +52,20 @@ Two fields are gone by the time the answer finishes:
 `phases` is the executor's main basis for `pipeline_observed`. Lose it and the grader
 cannot evaluate routing for any case.
 
+## Capture rules (from the 2026-10-03 run)
+
+1. Scope every DOM capture to the newest `article[aria-label='AI answer']` of the case's
+   thread. Never take the first match: one run captured turn 2's article as turn 1's, and
+   another took a receipt from the previous turn.
+2. Derive `pipeline_observed` from the wire, not from labels:
+   - `sql` when an `activity` frame has `tool_kind: business_query` or a `table_start` frame arrives;
+   - `documents` when a `citation_set` frame carries document citations;
+   - otherwise `uncertain`.
+   Record the basis.
+3. Before each case's first send, confirm the persona in the header matches the case's persona. Record it.
+4. Record every send, including one abandoned mid-run, with its time and outcome.
+5. `mb-01`: apply the 375 px viewport, then open the panel, then send. Never send while the panel is hidden.
+
 ## Screenshots — use an absolute path
 
 The browser tool resolves relative paths against **its own** working directory, not the

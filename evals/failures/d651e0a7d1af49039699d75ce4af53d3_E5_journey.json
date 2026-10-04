@@ -1,0 +1,17 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "run_id": "d651e0a7d1af49039699d75ce4af53d3",
+  "case_id": "E5",
+  "query_type": "journey",
+  "mode": "journey",
+  "role": "admin",
+  "question": "recover_wide.jsonl",
+  "outcome_type": "answered",
+  "mismatches": [
+    "invoice_identity_missing"
+  ],
+  "reason": "Job 18602 (FINISHED, Road Licence) and the customer are right, but the answer names neither invoice E3914 nor its amount TZS 201,250,000 ('The invoice amount itself isn't shown in this result'). Same-day base code also scored E5 2/3 (its miss named the wrong customer), so this is the existing E5 flake, not a regression.",
+  "evidence": "docs/superpowers/evidence/2026-10-02-cq1-composition/live/runs/e5-1.json; docs/superpowers/evidence/2026-10-02-cq1-composition/live/base-runs/e5-3.json"
+}

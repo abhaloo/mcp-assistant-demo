@@ -1,0 +1,2 @@
+{"journey": "consistency_e10"}
+{"id": "e10", "question": "what are our latest orders and their job details", "expected": {"outcome_type": "answered", "tables_min": 1}}

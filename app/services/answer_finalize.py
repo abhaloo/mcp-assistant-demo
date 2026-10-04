@@ -37,6 +37,7 @@ __all__ = [
     "generate_follow_up_suggestions",
     "generate_follow_up_suggestions_from_bq",
     "persist_and_enrich",
+    "stopped_digest_for_persist",
     "timeout_digest_for_persist",
 ]
 
@@ -74,6 +75,32 @@ def bq_digest_for_persist(
         if envelope is not None and envelope.presentation is not None
         else build_result_presentation(plan, scalar_value=raw_scalar)
     )
+    answer_query_id = envelope.answer_query_id if envelope is not None else None
+    # A paged turn's store key is the root answer id; the page receipt id alone
+    # is not the key a patch subject must name.
+    plan_answer_query_id = (
+        envelope.receipt.root_answer_query_id if envelope is not None else None
+    ) or answer_query_id
+    max_shown_members = 3
+    max_shown_values = 20
+    max_shown_chars = 64
+    shown: dict[str, list[str]] = {}
+    if envelope is not None:
+        # The columns the panel paints, in order, each with the value its cell
+        # shows: a key column shows its display member, a display column is not painted.
+        for col in envelope.columns:
+            if col.role == "display":
+                continue
+            member = col.display_key or col.key
+            vals = [
+                str(r[member])[:max_shown_chars]
+                for r in envelope.rows[:max_shown_values]
+                if r.get(member) is not None
+            ]
+            if vals:
+                shown[member] = vals
+                if len(shown) == max_shown_members:
+                    break
     return BqTurnDigest(
         outcome="answered",
         plan_fingerprint=plan_fingerprint(plan),
@@ -83,6 +110,15 @@ def bq_digest_for_persist(
         row_count=row_count,
         scalar_value=scalar_value,
         receipt_title=presentation.title,
+        summary=presentation.summary if presentation is not None else None,
+        shown=shown,
+        period=plan.period.model_dump(mode="json") if plan.period is not None else None,
+        facts=list(presentation.applied_filters) if presentation is not None else [],
+        anchor=getattr(plan, "anchor", None),
+        limit=getattr(plan, "limit", None),
+        set_ids=[d.id for d in getattr(plan, "derived_sets", ())],
+        answer_query_id=answer_query_id,
+        plan_answer_query_id=plan_answer_query_id,
     )
 
 
@@ -97,6 +133,28 @@ def timeout_digest_for_persist(question: str) -> BqTurnDigest:
         row_count=0,
         scalar_value=None,
         receipt_title=question[:120],
+        anchor=None,
+        limit=None,
+        set_ids=[],
+        answer_query_id=None,
+    )
+
+
+def stopped_digest_for_persist(question: str) -> BqTurnDigest:
+    """Build a transcript digest for a turn the person stopped (no SQL, no rows)."""
+    return BqTurnDigest(
+        outcome="stopped",
+        plan_fingerprint="",
+        grain="scalar",
+        measures=[],
+        dimensions=[],
+        row_count=0,
+        scalar_value=None,
+        receipt_title=question[:120],
+        anchor=None,
+        limit=None,
+        set_ids=[],
+        answer_query_id=None,
     )
 
 

@@ -4,8 +4,8 @@ A result envelope carries every authorized detail fact twice (flat, and under
 the record that owns it) and the terminal frame carries the envelope twice, so
 a turn with a few dozen details breaks the per-frame bound while its rows fit
 with room to spare. Details therefore stream ahead of the terminal frame in
-bounded batches, and the terminal envelope carries none. Each detail names its
-owner, so a consumer rebinds it to the record the envelope lists.
+bounded batches. Each detail names its owner, so a consumer rebinds it to
+the record the envelope lists.
 """
 
 from __future__ import annotations
@@ -72,21 +72,24 @@ def stream_record_details(
         seq.take()
 
 
-def without_record_details(wire: BusinessQueryWireOutcome) -> BusinessQueryWireOutcome:
-    """The terminal form of an outcome whose details were streamed.
+def terminal_form(wire: BusinessQueryWireOutcome) -> BusinessQueryWireOutcome:
+    """The terminal form of an outcome whose row and record facts streamed in
+    ``table_rows`` and ``record_details`` frames.
 
-    Every envelope keeps its rows, records and refs; none keeps a detail. The
-    singular envelope stays equal to the first of the list."""
+    Every envelope keeps its receipt, refs, counts, identity and columns; none
+    keeps ``rows``, ``records`` or record details. The singular envelope
+    stays equal to the first of the list."""
     if wire.envelope is None:
         return wire
-    envelopes = [_without_details(envelope) for envelope in wire.envelopes] or [
-        _without_details(wire.envelope)
+    envelopes = [_terminal_envelope(envelope) for envelope in wire.envelopes] or [
+        _terminal_envelope(wire.envelope)
     ]
     return wire.model_copy(update={"envelope": envelopes[0], "envelopes": envelopes})
 
 
-def _without_details(envelope: UnifiedResultEnvelope) -> UnifiedResultEnvelope:
-    records = tuple(
-        record.model_copy(update={"details": ()}) for record in (envelope.records or ())
+def _terminal_envelope(envelope: UnifiedResultEnvelope) -> UnifiedResultEnvelope:
+    """A receipt keeps no row fact: rows, and the record and aggregate results
+    the serializer derives from them, all stream in earlier frames."""
+    return envelope.model_copy(
+        update={"rows": [], "records": (), "record_details": [], "aggregates": ()}
     )
-    return envelope.model_copy(update={"records": records, "record_details": []})

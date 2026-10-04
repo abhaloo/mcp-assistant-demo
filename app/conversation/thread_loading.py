@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING
 from redis.exceptions import ConnectionError, RedisError
 
 from app.config import settings
+from app.conversation.durable_history import reseed_from_durable_history
+from app.conversation.history_composition import build_durable_history
 from app.conversation.policy import HistoryPolicy
 from app.conversation.transcript_models import TranscriptTurn
 from app.conversation.transcript_store import (
@@ -146,6 +148,12 @@ async def load_thread(
         raise ConversationStoreUnavailableError(f"conversation store unavailable: {exc}") from exc
     else:
         thread_id = _resolve_thread_id(body.thread_id)
+        source = build_durable_history() if not full_history and body.thread_id else None
+        if source is not None:
+            # Redis lost the thread the panel still shows: rebuild it from its rows.
+            full_history = await reseed_from_durable_history(
+                store, thread_id, principal, source=source
+            )
 
     operation = body.operation
     target = body.target_exchange_id

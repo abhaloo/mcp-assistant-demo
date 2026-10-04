@@ -1,0 +1,18 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "telemetry",
+  "run_id": "d2706d55102d4c3d9a85b885f81e07ed",
+  "case_id": "DSLAT6b-deepseek-docs-t4-rep3",
+  "turn": 4,
+  "mode": "wire",
+  "role": "admin",
+  "question": "What file formats does the system accept for print jobs, and how many invoices did we issue in July 2025?",
+  "outcome_type": "incomplete",
+  "mismatches": [
+    "outcome_mislabelled_success"
+  ],
+  "reason": "The person saw 'I could not put that answer together properly. Please ask the question again.' (incomplete / malformed_response), but query_records.terminal_outcome is 'success' with stable_error_code malformed_response. Dashboards that count success over-count answered turns.",
+  "evidence": "docs/superpowers/evidence/2026-10-01-luna6-e2e/task6b/README.md; docs/superpowers/evidence/2026-10-01-luna6-e2e/task6b/check.json; docs/superpowers/evidence/2026-10-01-luna6-e2e/task6b/deepseek6b.jsonl"
+}

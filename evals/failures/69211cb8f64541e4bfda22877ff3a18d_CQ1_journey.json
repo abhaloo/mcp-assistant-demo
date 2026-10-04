@@ -1,0 +1,17 @@
+{
+  "schema_version": 3,
+  "status": "candidate",
+  "source": "eval",
+  "query_type": "journey",
+  "run_id": "69211cb8f64541e4bfda22877ff3a18d",
+  "case_id": "CQ1",
+  "mode": "journey",
+  "role": "admin",
+  "question": "Which month of 2025 had our highest invoiced revenue in TZS, and list the invoices from that month.",
+  "outcome_type": "unsupported",
+  "mismatches": [
+    "refusal_missing_dependency"
+  ],
+  "reason": "Branch (a) refusal with the right chip, but the text 'those steps need to be asked separately' tells the person to split the question, not that the list needs the month. The refusal wording is free model text, so the dependency sentence appears 1 time in 3.",
+  "evidence": "docs/superpowers/evidence/2026-10-01-luna6-e2e/scripted/cq-2.json; docs/superpowers/evidence/2026-10-01-luna6-e2e/grades-luna6.json"
+}

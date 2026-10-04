@@ -24,7 +24,7 @@ MAX_TABLE_BUFFER_BYTES: int = 256 * 1024  # 256 KiB
 _CLOSED_SENTINEL = object()
 
 
-def _compute_frame_bytes(frame: Any) -> int:
+def frame_wire_bytes(frame: Any) -> int:
     """Compute the wire byte size of an event or string frame."""
     if frame is None:
         return 0
@@ -35,6 +35,10 @@ def _compute_frame_bytes(frame: Any) -> int:
     if isinstance(frame, AskV2EventBase) or hasattr(frame, "model_dump_json"):
         return len(frame.model_dump_json().encode("utf-8"))
     return len(str(frame).encode("utf-8"))
+
+
+# Private-era name kept for the queue's own accounting.
+_compute_frame_bytes = frame_wire_bytes
 
 
 class ByteBoundedAskQueue:
@@ -81,7 +85,7 @@ class ByteBoundedAskQueue:
         if self._closed:
             raise RuntimeError("Cannot put into closed queue")
 
-        frame_bytes = _compute_frame_bytes(frame)
+        frame_bytes = frame_wire_bytes(frame)
         is_terminal_error = isinstance(frame, StreamErrorEvent)
 
         if not is_terminal_error:

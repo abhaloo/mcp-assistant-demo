@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import threading
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -13,8 +14,10 @@ from app.auth import Principal
 from app.business_query.authorize.capability import allowed_filter_values_valid
 from app.business_query.authorize.forced_predicate import ForcedPredicate
 from app.business_query.authorize.scoping import ScopedPlan
-from app.business_query.compile.business_time import period_bounds
+from app.business_query.compile.business_time import time_filter_bounds
 from app.business_query.cube.model import CubeMemberMap, CubeModel
+from app.business_query.cube.shape_allowlist import AgreedShapes
+from app.business_query.cube.transport import CubeTransportError, accepts_cancel_token
 from app.business_query.definitions import (
     DefinitionBundle,
     measure_for_member,
@@ -35,6 +38,7 @@ from app.business_query.plan import (
     PlanFilter,
     iter_filter_leaves,
 )
+from app.business_query.plan.plan_shape import plan_shape_key
 from app.business_query.seal.evidence import (
     AdapterExecutionEvidence,
     declared_result_members,
@@ -88,6 +92,7 @@ class CubeAdapter:
         model_revision: str,
         expected_bundle_hash: str | None = None,
         database_identity: str | None = None,
+        agreed_shapes: AgreedShapes = frozenset(),
     ) -> None:
         self._transport = transport
         self._principal = principal
@@ -99,18 +104,40 @@ class CubeAdapter:
             expected_bundle_hash if expected_bundle_hash is not None else bundle.content_hash
         )
         self._database_identity = database_identity
+        self._agreed_shapes = agreed_shapes
 
-    def execute(self, scoped: ScopedPlan, *, trace: object | None = None) -> Answered | Incomplete:
+    def execute(
+        self,
+        scoped: ScopedPlan,
+        *,
+        trace: object | None = None,
+        cancel_token: threading.Event | None = None,
+    ) -> Answered | Incomplete:
+        if plan_shape_key(scoped.plan) not in self._agreed_shapes:
+            raise AdapterUnsupported("shape_not_agreed")
         return seal_adapter_result(
-            self._execute(scoped), scoped, principal=self._principal, bundle=self._bundle
+            self._execute(scoped, cancel_token=cancel_token),
+            scoped,
+            principal=self._principal,
+            bundle=self._bundle,
         )
 
     def execute_with_evidence(
-        self, scoped: ScopedPlan, *, trace: object | None = None
+        self,
+        scoped: ScopedPlan,
+        *,
+        trace: object | None = None,
+        cancel_token: threading.Event | None = None,
     ) -> UnsealedAdapterAnswer | Incomplete:
-        return self._execute(scoped)
+        if plan_shape_key(scoped.plan) not in self._agreed_shapes:
+            raise AdapterUnsupported("shape_not_agreed")
+        return self._execute(scoped, cancel_token=cancel_token)
 
-    def _execute(self, scoped: ScopedPlan) -> UnsealedAdapterAnswer | Incomplete:
+    def _execute(
+        self,
+        scoped: ScopedPlan,
+        cancel_token: threading.Event | None = None,
+    ) -> UnsealedAdapterAnswer | Incomplete:
         if self._bundle.content_hash != self._expected_bundle_hash:
             logger.warning("cube adapter incomplete: bundle content_hash mismatch")
             return Incomplete(reason_code="adapter_invalid")
@@ -144,21 +171,11 @@ class CubeAdapter:
 
         try:
             started_at = datetime.now(tz=UTC)
-            payload = {
-                "query": plan_to_cube_query(
-                    scoped.plan,
-                    members=self._members,
-                    business_date=scoped.business_date,
-                    business_timezone=self._bundle.business_timezone,
-                ),
-                "securityContext": principal_security_context(scoped.principal or self._principal),
-                "bundleHash": self._bundle.content_hash,
-                "modelRevision": self._model_revision,
-            }
-            department = _department_filters(scoped.forced, self._model, self._members)
-            if department:
-                payload["query"]["filters"] = [*payload["query"].get("filters", []), *department]
-            response = self._transport(payload)
+            payload = self._request_payload(scoped)
+            kwargs: dict[str, Any] = {}
+            if cancel_token is not None and accepts_cancel_token(self._transport):
+                kwargs["cancel_token"] = cancel_token
+            response = self._transport(payload, **kwargs)
             finished_at = datetime.now(tz=UTC)
         except (PlanRefused, AdapterUnsupported):
             # Both refusal shapes originate from plan_to_cube_query building
@@ -166,6 +183,8 @@ class CubeAdapter:
             # see _filter_node_to_cube) -- they must propagate, not fall into
             # the broad transport-error handler below and get silently
             # rewritten into Incomplete.
+            raise
+        except CubeTransportError:
             raise
         except Exception as exc:  # noqa: BLE001
             logger.warning("cube adapter incomplete: transport error %s", type(exc).__name__)
@@ -178,7 +197,27 @@ class CubeAdapter:
             started_at=started_at,
             finished_at=finished_at,
             database_identity=identity,
+            display_members_added=scoped.display_members_added,
         )
+
+    def _request_payload(self, scoped: ScopedPlan) -> dict[str, Any]:
+        """The Cube load request: the plan as a Cube query plus the forced department
+        filters, under the caller's security context."""
+        payload: dict[str, Any] = {
+            "query": plan_to_cube_query(
+                scoped.plan,
+                members=self._members,
+                business_date=scoped.business_date,
+                business_timezone=self._bundle.business_timezone,
+            ),
+            "securityContext": principal_security_context(scoped.principal or self._principal),
+            "bundleHash": self._bundle.content_hash,
+            "modelRevision": self._model_revision,
+        }
+        department = _department_filters(scoped.forced, self._model, self._members)
+        if department:
+            payload["query"]["filters"] = [*payload["query"].get("filters", []), *department]
+        return payload
 
     def _parse_response(
         self,
@@ -189,6 +228,7 @@ class CubeAdapter:
         started_at: datetime,
         finished_at: datetime,
         database_identity: str,
+        display_members_added: frozenset[str] = frozenset(),
     ) -> UnsealedAdapterAnswer | Incomplete:
         if not isinstance(response, dict):
             logger.warning("cube adapter incomplete: malformed response (not a dict)")
@@ -227,11 +267,25 @@ class CubeAdapter:
         )
         try:
             members = declared_result_members(plan, self._bundle, result_keys, rows)
-            columns = result_columns(plan, self._bundle, members)
-            event_rows = normalize_event_rows(rows, members)
+            columns = result_columns(
+                plan,
+                self._bundle,
+                members,
+                display_members_added=display_members_added,
+                principal=self._principal,
+            )
         except (TypeError, ValueError):
             logger.warning("cube adapter incomplete: result member contract mismatch")
             return Incomplete(reason_code="adapter_invalid")
+        try:
+            event_rows = normalize_event_rows(rows, members)
+        except ValueError as exc:
+            logger.warning(
+                "result member contract mismatch member=%s bundle=%s",
+                str(exc).split(":")[0],
+                self._bundle.content_hash,
+            )
+            return Incomplete(reason_code="data_contract_mismatch")
         canonical_query = json.dumps(
             payload["query"], sort_keys=True, separators=(",", ":"), ensure_ascii=False
         ).encode()
@@ -385,8 +439,10 @@ def _period_to_time_dimension(
     td: dict[str, Any] = {"dimension": members.to_view(period.time_dimension)}
     if period.granularity is not None:
         td["granularity"] = period.granularity
-    start, end = period_bounds(period, business_timezone, business_date=business_date)
-    td["dateRange"] = [start.isoformat(), (end - timedelta(days=1)).isoformat()]
+    bounds = time_filter_bounds(period, business_timezone, business_date=business_date)
+    if bounds is not None:
+        start, end = bounds
+        td["dateRange"] = [start.isoformat(), (end - timedelta(days=1)).isoformat()]
     return td
 
 

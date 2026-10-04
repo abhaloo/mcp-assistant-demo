@@ -20,6 +20,7 @@ from app.business_query.outcomes import Answered, BusinessQueryOutcome
 from app.business_query.wire.answer_finalization import finalize_answer_text
 from app.business_query.wire.comparison_presenter import present_for_plan
 from app.business_query.wire.presenter import render_rich, rendered_values_preserved
+from app.business_query.wire.request import MAX_ANSWER_CHARS
 from app.providers.factory import get_chat_model
 from app.providers.model_purpose import ModelPurpose
 from app.telemetry.invocation_ledger import extract_token_usage
@@ -35,7 +36,7 @@ _RENDER_WAIT_SECONDS = 30.0
 
 # Same D1 text budget as BusinessQueryRequest.max_answer_chars and
 # ResultPageExecutor's default (wire/request.py, compile/pagination/page_executor.py).
-_MAX_ANSWER_CHARS = 8_000
+_MAX_ANSWER_CHARS = MAX_ANSWER_CHARS
 
 
 class _RendererUsageCapture(BaseCallbackHandler):

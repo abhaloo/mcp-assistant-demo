@@ -10,6 +10,7 @@ from app.business_query.outcomes import RecordRef
 
 RECORD_REF_CUSTOMER_ID = "__bq_record_ref_customer_id"
 RECORD_REF_INVOICE_ID = "__bq_record_ref_invoice_id"
+RECORD_LABEL_PREFIX = "__bq_record_label_"
 RESERVED_SIDECAR_COLUMNS = frozenset(
     {"__bq_total_row_count", RECORD_REF_CUSTOMER_ID, RECORD_REF_INVOICE_ID}
 )
@@ -17,6 +18,13 @@ RESERVED_SIDECAR_COLUMNS = frozenset(
 
 def digest_json(value: Any) -> str:
     return hashlib.sha256(canonical_json_bytes(value)).hexdigest()
+
+
+def _clean_label(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text if text else None
 
 
 def split_record_refs(rows: list[dict[str, Any]]) -> tuple[RecordRef, ...]:
@@ -30,13 +38,23 @@ def split_record_refs(rows: list[dict[str, Any]]) -> tuple[RecordRef, ...]:
     """
     refs: list[RecordRef] = []
     for row_index, row in enumerate(rows):
+        label_keys = [k for k in list(row.keys()) if k.startswith(RECORD_LABEL_PREFIX)]
+        labels: dict[str, str | None] = {}
+        for key in label_keys:
+            value = row.pop(key, None)
+            resource = key.removeprefix(RECORD_LABEL_PREFIX)
+            labels[resource] = _clean_label(value)
+
         customer_id = row.pop(RECORD_REF_CUSTOMER_ID, None)
         if customer_id is not None:
+            cust_label = row.get("invoice.customer_name")
+            if cust_label is None:
+                cust_label = labels.get("customer")
             refs.append(
                 RecordRef(
                     resource="customer",
                     record_id=int(customer_id),
-                    label=row.get("invoice.customer_name"),
+                    label=cust_label,
                     row_index=row_index,
                 )
             )
@@ -46,7 +64,21 @@ def split_record_refs(rows: list[dict[str, Any]]) -> tuple[RecordRef, ...]:
                 RecordRef(
                     resource="invoice",
                     record_id=int(invoice_id),
+                    label=labels.get("invoice"),
                     row_index=row_index,
                 )
             )
+        sidecar_keys = [k for k in list(row.keys()) if k.startswith("__bq_record_ref_")]
+        for key in sorted(sidecar_keys):
+            value = row.pop(key, None)
+            if value is not None:
+                resource = key.removeprefix("__bq_record_ref_").removesuffix("_id")
+                refs.append(
+                    RecordRef(
+                        resource=resource,
+                        record_id=int(value),
+                        label=labels.get(resource),
+                        row_index=row_index,
+                    )
+                )
     return tuple(refs)

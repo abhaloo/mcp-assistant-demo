@@ -21,6 +21,7 @@ from app.business_query.plan import (
 )
 from app.business_query.wire.cell_format import format_percent
 from app.business_query.wire.explainer import SYSTEM_PREDICATE_MEMBERS, comparison_target
+from app.business_query.wire.row_identity_text import row_identity_sentence
 from app.models.result_presentation import SCOPE_MAX_CHARS, ResultPresentation
 
 logger = logging.getLogger(__name__)
@@ -130,13 +131,18 @@ def present_result(answered: Answered, *, scope: str | None = None) -> Answered:
     except Exception:
         logger.warning("result presentation failed (fail-open, omitted)", exc_info=True)
         return answered
+    if answered.row_identity is not None and presentation.summary is None:
+        presentation = presentation.model_copy(
+            update={"summary": row_identity_sentence(answered.row_identity)[:240]}
+        )
     return answered.model_copy(update={"presentation": presentation})
 
 
-def column_label(key: str) -> str:
-    """``job.created_at`` → ``Created``, ``invoice.customer_name`` → ``Customer name``,
-    ``job.id`` / ``job_id`` → ``Job``. The entity prefix is dropped unless it is all
-    that names the column."""
+def column_label(key: str, *, label: str | None = None) -> str:
+    """A declared label wins. Otherwise ``job.created_at`` → ``Created``,
+    ``invoice.customer_name`` → ``Customer name``, ``job.id`` / ``job_id`` → ``Job``."""
+    if label:
+        return label
     entity, _, bare = key.partition(".")
     if not bare:
         entity, bare = "", key
@@ -211,6 +217,9 @@ def _facts(plan: BusinessQueryPlan) -> list[str]:
         fact = _attribute_fact(predicate)
         if fact and fact not in facts:
             facts.append(fact)
+    for fact in [*_pick_facts(plan), _rank_fact(plan)]:
+        if fact and fact not in facts:
+            facts.append(fact)
     period = _period_fact(plan.period)
     if period:
         facts.append(period)
@@ -220,6 +229,38 @@ def _facts(plan: BusinessQueryPlan) -> list[str]:
     if not facts and _newest_first(plan):
         facts.append("newest first")
     return [_clip(f) for f in facts[:_MAX_FACTS]]
+
+
+def _pick_facts(plan: BusinessQueryPlan) -> list[str]:
+    facts: list[str] = []
+    for dset in plan.derived_sets:
+        if dset.mode != "pick":
+            continue
+        for leaf in _plan_filters(dset.plan):
+            fact = _fact_for(leaf)
+            if fact:
+                candidate = f"Ranked among {fact}"
+                if candidate not in facts:
+                    facts.append(candidate)
+        for predicate in dset.plan.attribute_predicates:
+            fact = _attribute_fact(predicate)
+            if fact:
+                candidate = f"Ranked among {fact}"
+                if candidate not in facts:
+                    facts.append(candidate)
+    return facts
+
+
+def _rank_fact(plan: BusinessQueryPlan) -> str | None:
+    """A row list ordered by a figure names the figure; a time order stays unnamed."""
+    if plan.grain != "entity_rows" or not plan.order:
+        return None
+    first = plan.order[0]
+    member = first.member.casefold()
+    if _last(member) in _TIME_SUFFIX or "created" in member:
+        return None
+    end = "highest" if first.direction == "desc" else "lowest"
+    return f"Ranked by {_humanize(first.member)}, {end} first"
 
 
 def _fact_for(leaf) -> str | None:
