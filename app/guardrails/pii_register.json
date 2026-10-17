@@ -1,0 +1,21 @@
+[
+  {"table": "customers", "column": "name",          "treatment": "pseudonymize", "entity_type": "PERSON",        "category": "identifier", "sensitivity": "medium", "subject": "customer", "origin": "register"},
+  {"table": "customers", "column": "tin_number",    "treatment": "redact",       "entity_type": "PII",          "category": "tax_id",     "sensitivity": "high",   "subject": "customer", "origin": "register"},
+  {"table": "customers", "column": "email",         "treatment": "redact",       "entity_type": "EMAIL_ADDRESS","category": "contact",    "sensitivity": "medium", "subject": "customer", "origin": "register"},
+  {"table": "customers", "column": "address",       "treatment": "redact",       "entity_type": "LOCATION",     "category": "contact",    "sensitivity": "medium", "subject": "customer", "origin": "register"},
+  {"table": "customers", "column": "phone",         "treatment": "redact",       "entity_type": "PHONE_NUMBER", "category": "contact",    "sensitivity": "medium", "subject": "customer", "origin": "register"},
+  {"table": "accounts",  "column": "account_number","treatment": "suppress",     "entity_type": "PII",          "category": "financial",  "sensitivity": "high",   "subject": "entity",   "origin": "register"},
+  {"table": "users",     "column": "email",         "treatment": "pseudonymize", "entity_type": "EMAIL_ADDRESS","category": "contact",    "sensitivity": "medium", "subject": "employee", "origin": "register"},
+  {"table": "users",     "column": "password",      "treatment": "suppress",     "entity_type": "PII",          "category": "secret",     "sensitivity": "high",   "subject": "employee", "origin": "register"},
+
+  {"table": "customers", "column": "business_name", "treatment": "pseudonymize", "entity_type": "PII",          "category": "identifier", "sensitivity": "medium", "subject": "customer", "origin": "legacy"},
+  {"table": "customers", "column": "zrb_number",    "treatment": "redact",       "entity_type": "PII",          "category": "tax_id",     "sensitivity": "high",   "subject": "customer", "origin": "legacy"},
+  {"table": "entities",  "column": "tin",           "treatment": "redact",       "entity_type": "PII",          "category": "tax_id",     "sensitivity": "high",   "subject": "entity",   "origin": "legacy"},
+  {"table": "entities",  "column": "vrn",           "treatment": "redact",       "entity_type": "PII",          "category": "tax_id",     "sensitivity": "high",   "subject": "entity",   "origin": "legacy"},
+  {"table": "entities",  "column": "phone",         "treatment": "pseudonymize", "entity_type": "PHONE_NUMBER", "category": "contact",    "sensitivity": "medium", "subject": "entity",   "origin": "legacy"},
+  {"table": "users",     "column": "name",          "treatment": "pseudonymize", "entity_type": "PERSON",        "category": "identifier", "sensitivity": "medium", "subject": "employee", "origin": "legacy"},
+  {"table": "users",     "column": "phone",         "treatment": "pseudonymize", "entity_type": "PHONE_NUMBER", "category": "contact",    "sensitivity": "medium", "subject": "employee", "origin": "legacy"},
+  {"table": "suppliers", "column": "name",          "treatment": "pseudonymize", "entity_type": "PERSON",        "category": "identifier", "sensitivity": "medium", "subject": "supplier", "origin": "legacy"},
+  {"table": "suppliers", "column": "phone",         "treatment": "pseudonymize", "entity_type": "PHONE_NUMBER", "category": "contact",    "sensitivity": "medium", "subject": "supplier", "origin": "legacy"},
+  {"table": "suppliers", "column": "address",       "treatment": "pseudonymize", "entity_type": "LOCATION",     "category": "contact",    "sensitivity": "medium", "subject": "supplier", "origin": "legacy"}
+]

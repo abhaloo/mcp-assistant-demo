@@ -1,0 +1,376 @@
+/*
+ * MCP Ask AI v2 — work timeline, interaction cards, and streaming table (tokens only).
+ * Owns every class under .mcp-ask-v2__*.
+ */
+
+/* Work block: one collapsible list of the steps a turn took. Quiet on purpose —
+   muted text on a thin rule, no surfaces, so the answer stays the loudest thing. */
+.mcp-ask-v2__work { margin: 0 0 0.75rem; font-size: var(--mcp-text-ui-sm); color: var(--mcp-muted); }
+/* An open step list runs straight into the receipt title; give it its own air. */
+.mcp-ask-v2__work[open] { margin-bottom: 1.25rem; }
+.mcp-ask-v2__work-summary { display: flex; align-items: center; gap: 0.45rem; cursor: pointer; list-style: none; font-weight: 600; color: var(--mcp-text-soft); }
+.mcp-ask-v2__work-summary::-webkit-details-marker { display: none; }
+.mcp-ask-v2__work-mark { display: inline-flex; width: 1.25rem; height: 1.25rem; align-items: center; justify-content: center; }
+.mcp-ask-v2__logo { width: 1.25rem; height: 1.25rem; border-radius: 999px; }
+.mcp-ask-v2__mark-static { width: 0.6rem; height: 0.6rem; border-radius: 999px; background: var(--mcp-navy-700); }
+.mcp-ask-v2__work-label { min-width: 0; font-variant-numeric: tabular-nums; }
+.mcp-ask-v2__work-caret { margin-left: auto; width: 0.4rem; height: 0.4rem; border-right: 2px solid var(--mcp-faint); border-bottom: 2px solid var(--mcp-faint); transform: rotate(-45deg); transition: transform 0.12s ease; }
+.mcp-ask-v2__work[open] > .mcp-ask-v2__work-summary .mcp-ask-v2__work-caret { transform: rotate(45deg); }
+.mcp-ask-v2__work-summary .mcp-ask-v2__icon--completed { color: var(--mcp-success-dot); }
+.mcp-ask-v2__work-summary .mcp-ask-v2__icon--declined { color: var(--mcp-muted); }
+.mcp-ask-v2__work-summary .mcp-ask-v2__icon--failed,
+.mcp-ask-v2__work-summary .mcp-ask-v2__icon--stopped { color: var(--mcp-danger-dot); }
+.mcp-ask-v2__work-summary .mcp-ask-v2__icon--clarification { color: var(--mcp-info-dot); }
+/* The block is the only running-progress surface while this module owns the turn. */
+.mcp-ask-ai__msg--v2-work .mcp-ask-ai__status-badge { display: none; }
+.mcp-ask-v2__steps {
+    margin: 0.75rem 0 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.mcp-ask-v2__step {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+.mcp-ask-v2__step--enter {
+    animation: mcp-ask-v2-item-enter 0.18s ease-out;
+}
+/* Screen readers keep the step's state; the eye reads the pill and the caption. */
+.mcp-ask-v2__sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+.mcp-ask-v2__work-summary { font-family: var(--mcp-font); font-size: var(--mcp-text-ui); font-weight: 500; color: var(--mcp-muted); }
+.mcp-ask-v2__pill {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    max-width: 100%;
+    min-width: 0;
+    padding: 6px 12px;
+    border: 1px solid var(--mcp-border);
+    border-radius: var(--mcp-radius);
+    background: var(--mcp-surface);
+    font-family: var(--mcp-font);
+    font-size: var(--mcp-text-ui-sm);
+    white-space: nowrap;
+}
+.mcp-ask-v2__pill-verb,
+.mcp-ask-v2__pill-ordinal,
+.mcp-ask-v2__pill-note { flex: none; }
+.mcp-ask-v2__pill-verb { font-weight: 600; color: var(--mcp-text-mid); }
+/* The subject is the one part that may be cut: a block that can shrink truncates; a flex row does not. */
+.mcp-ask-v2__pill-subject {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-family: var(--mcp-font-mono);
+    font-size: var(--mcp-text-ui-sm);
+    color: var(--mcp-text-mid);
+}
+.mcp-ask-v2__pill-ordinal { color: var(--mcp-faint); }
+.mcp-ask-v2__pill-note { color: var(--mcp-danger-fg); }
+.mcp-ask-v2__step--failed .mcp-ask-v2__pill,
+.mcp-ask-v2__step--stopped .mcp-ask-v2__pill { border-color: var(--mcp-danger-fg); }
+.mcp-ask-v2__step--planning-has-thought { flex-direction: column; align-items: stretch; gap: 6px; }
+.mcp-ask-v2__planning { display: block; min-width: 0; }
+/* A thought step is a plain caption on one line, flush with the pills; only the
+   hover and focus state say it opens. */
+.mcp-ask-v2__planning-summary {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    list-style: none;
+    font-size: var(--mcp-text-ui-sm);
+    line-height: 1.4;
+    color: var(--mcp-muted);
+}
+.mcp-ask-v2__planning-summary::marker { content: ""; }
+.mcp-ask-v2__planning-summary::-webkit-details-marker { display: none; }
+.mcp-ask-v2__planning-summary:hover,
+.mcp-ask-v2__planning-summary:focus-visible { color: var(--mcp-text-mid); text-decoration: underline; }
+.mcp-ask-v2__planning-body {
+    white-space: pre-wrap;
+    margin: 6px 0 0;
+    padding: 0 0 0 14px;
+    border: 0;
+    border-left: 2px solid var(--mcp-border);
+    background: transparent;
+    font-family: var(--mcp-font);
+    font-size: var(--mcp-text-mobile-title);
+    line-height: 1.65;
+    color: var(--mcp-text-soft);
+}
+.mcp-ask-v2__step--completed { color: var(--mcp-text-soft); }
+.mcp-ask-v2__step--failed { color: var(--mcp-danger-fg); }
+.mcp-ask-v2__step-elapsed {
+    font-size: var(--mcp-text-caption);
+    color: var(--mcp-faint);
+    font-variant-numeric: tabular-nums;
+}
+.mcp-ask-v2__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.1rem;
+    height: 1.1rem;
+}
+.mcp-ask-v2__icon--spin {
+    animation: mcp-ask-v2-spinner 0.8s linear infinite;
+}
+
+@keyframes mcp-ask-v2-item-enter {
+    from { opacity: 0; transform: translateY(-2px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.mcp-ask-v2__answer-text {
+    color: var(--mcp-text);
+    white-space: pre-wrap;
+}
+
+/* Result table: the product table, compact. Numbers align on tabular figures
+   and sit right; identifiers read in the mono face the app uses for ids. */
+.mcp-ask-v2__table-wrap {
+    border: 0;
+    border-radius: 0;
+    overflow-x: auto;
+}
+.mcp-ask-v2__table {
+    width: 100%;
+    min-width: 340px;
+    margin: 0;
+    border-collapse: collapse;
+    font-family: var(--mcp-font-table);
+    font-size: var(--mcp-text-table-compact-td);
+}
+.mcp-ask-v2__table thead tr { background: transparent; }
+.mcp-ask-v2__table th {
+    padding: 8px 10px;
+    text-align: left;
+    font-size: var(--mcp-text-table-compact-th);
+    font-weight: 600;
+    color: var(--mcp-text-soft);
+    border-bottom: 1px solid var(--mcp-border-strong);
+}
+.mcp-ask-v2__table td { padding: 8px 10px; border-bottom: 1px solid var(--mcp-border); }
+.mcp-ask-v2__table tbody tr:last-child td { border-bottom: 0; }
+.mcp-ask-v2__table tbody tr:nth-child(even) { background: var(--mcp-table-stripe); }
+.mcp-ask-v2__table .mcp-ask-v2__cell--number { text-align: right; font-variant-numeric: tabular-nums; }
+.mcp-ask-v2__table .mcp-ask-v2__cell--id { font-family: var(--mcp-font-mono); font-size: var(--mcp-text-chip); }
+.mcp-ask-v2__table .mcp-ask-v2__cell--up { color: var(--mcp-success-fg); }
+.mcp-ask-v2__table .mcp-ask-v2__cell--down { color: var(--mcp-danger-fg); }
+
+.mcp-ask-v2__record-link { color: var(--mcp-navy-700); text-decoration: none; }
+.mcp-ask-v2__record-link:hover { color: var(--mcp-navy-900); text-decoration: underline; text-underline-offset: 2px; }
+.mcp-ask-v2__record-link:focus-visible { outline: 2px solid var(--mcp-navy-500); outline-offset: 2px; }
+
+.mcp-ask-v2__row--enter {
+    animation: mcp-ask-v2-row-enter 0.15s ease-out;
+}
+
+@keyframes mcp-ask-v2-row-enter {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.mcp-ask-v2__skeleton-row .placeholder {
+    display: block;
+    min-height: 0.75rem;
+    background: var(--mcp-surface-2);
+    border-radius: var(--mcp-radius-sm);
+    animation: mcp-ask-v2-shimmer 1.8s linear infinite;
+}
+
+@keyframes mcp-ask-v2-shimmer {
+    0% { opacity: 0.5; }
+    50% { opacity: 1; }
+    100% { opacity: 0.5; }
+}
+
+.mcp-ask-v2__clarification-card {
+    background: var(--mcp-surface);
+    border-radius: var(--mcp-radius-lg);
+}
+
+.mcp-ask-v2__error-banner {
+    border-radius: var(--mcp-radius);
+}
+
+/* Interaction cards: one decision each. Built on the app card and the chip
+   row grid the panel already uses, so a card reads as part of the product. */
+.mcp-ask-v2__card { margin-top: 0.75rem; }
+.mcp-ask-v2__card .mcp-card__header { padding: 0.75rem 1rem; }
+.mcp-ask-v2__card .mcp-card__title { font-size: var(--mcp-text-ui); }
+.mcp-ask-v2__card .mcp-card__body { padding: 0.75rem 1rem; }
+.mcp-ask-v2__options { display: flex; flex-direction: column; gap: 0.5rem; margin: 0; padding: 0; border: 0; }
+.mcp-ask-v2__option {
+    display: grid;
+    grid-template-columns: 1.8rem minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.55rem;
+    width: 100%;
+    min-height: 2.65rem;
+    padding: 0.45rem 0.75rem 0.45rem 0.45rem;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--mcp-text-mid);
+    font: inherit;
+    font-size: var(--mcp-text-ui-sm);
+    text-align: left;
+    cursor: pointer;
+}
+.mcp-ask-v2__option:hover { background: var(--mcp-hover); }
+.mcp-ask-v2__option:focus-visible, .mcp-ask-v2__option:focus-within { outline: 2px solid var(--mcp-navy-500); outline-offset: 2px; }
+.mcp-ask-v2__option--radio { grid-template-columns: auto minmax(0, 1fr); }
+.mcp-ask-v2__option--radio input[type="radio"] { accent-color: var(--mcp-navy-700); }
+.mcp-ask-v2__option-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 1.25rem; height: 1.25rem;
+    background: transparent; color: var(--mcp-info-fg);
+}
+.mcp-ask-v2__option-arrow {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 1.1rem; height: 1.1rem;
+    color: var(--mcp-faint);
+}
+.mcp-ask-v2__card--follow-up { border-top: 1px solid var(--mcp-border); box-shadow: none; }
+.mcp-ask-v2__card--follow-up .mcp-card__body { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.75rem 1rem; }
+.mcp-ask-v2__unanswered { margin: 0; font-size: var(--mcp-text-ui-sm); color: var(--mcp-muted); }
+.mcp-ask-v2__free-text { margin-top: 0.25rem; }
+.mcp-ask-v2__card-footer { display: flex; justify-content: flex-end; padding: 0 1rem 0.75rem; }
+/* The answered card is a record, not a control: dimmed, one line, no inputs. */
+.mcp-ask-v2__card--answered { opacity: 0.72; }
+.mcp-ask-v2__answered { display: grid; grid-template-columns: 1.1rem minmax(0, 1fr); gap: 0.6rem; align-items: center; font-size: var(--mcp-text-ui); }
+.mcp-ask-v2__answered-check { color: var(--mcp-success-dot); }
+.mcp-ask-v2__pending-indicator { display: inline-flex; align-items: center; justify-content: center; margin-left: 0.5rem; color: var(--mcp-muted); }
+
+.mcp-ask-v2__result { display: flex; flex-direction: column; gap: 0.5rem; margin: 0 0 0.75rem; }
+.mcp-ask-v2__receipt { margin: 0; display: flex; flex-direction: column; gap: 0.15rem; font-size: var(--mcp-text-caption); color: var(--mcp-muted); }
+.mcp-ask-v2__receipt-title { font-size: var(--mcp-text-ui); font-weight: 600; color: var(--mcp-text); }
+.mcp-ask-v2__receipt-line { font-variant-numeric: tabular-nums; }
+.mcp-ask-v2__receipt-summary { color: var(--mcp-text-soft); }
+.mcp-ask-v2__aggregate { margin: 0; }
+.mcp-ask-v2__aggregate-value { font-size: var(--mcp-text-ui); font-weight: 600; color: var(--mcp-text); font-variant-numeric: tabular-nums; }
+
+/* Sources: each title opens a card with the document details on hover, focus or tap. */
+.mcp-ask-v2__sources { margin: 0.5rem 0 0; font-size: var(--mcp-text-ui-sm); color: var(--mcp-text-soft); }
+.mcp-ask-v2__sources-label { margin: 0 0 0.25rem; font-weight: 600; color: var(--mcp-muted); }
+/* The sources sit in a closed section by default. The summary matches the
+   referenced-records summary: no native marker, a caret that turns on open. */
+.mcp-ask-v2__sources-summary {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 1.5rem;
+    padding: 0.125rem 0;
+    cursor: pointer;
+    list-style: none;
+    font-weight: 600;
+    color: var(--mcp-muted);
+}
+.mcp-ask-v2__sources-summary::-webkit-details-marker { display: none; }
+.mcp-ask-v2__sources-summary::before {
+    content: '';
+    flex: 0 0 auto;
+    width: 0;
+    height: 0;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-left: 6px solid currentColor;
+    transition: transform 0.15s ease;
+}
+.mcp-ask-v2__sources--collapsible[open] > .mcp-ask-v2__sources-summary::before {
+    transform: rotate(90deg);
+}
+.mcp-ask-v2__sources-summary:focus-visible { outline: 2px solid var(--mcp-navy-500); outline-offset: 2px; }
+.mcp-ask-v2__sources-list { display: grid; gap: 0.25rem; margin: 0; padding: 0; list-style: none; }
+.mcp-ask-v2__source-item { position: relative; }
+.mcp-ask-v2__source-marker { margin-right: 0.35rem; font-family: var(--mcp-font-mono); color: var(--mcp-muted); }
+.mcp-ask-v2__source-title {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.5rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-weight: 600;
+    color: var(--mcp-navy-700);
+    text-align: left;
+    text-decoration: underline dotted;
+    text-underline-offset: 0.2em;
+    cursor: help;
+}
+.mcp-ask-v2__source-title:focus-visible { outline: 2px solid var(--mcp-navy-500); outline-offset: 2px; }
+.mcp-ask-v2__source-heading { color: var(--mcp-muted); }
+/* The card sits above its title, or below when the panel has no room above.
+   It touches its row, so the pointer reaches it without leaving the row.
+   Its width never passes the row, so it stays inside a phone screen. */
+.mcp-ask-v2__source-card {
+    position: absolute;
+    z-index: 1100;
+    left: 0;
+    bottom: 100%;
+    display: grid;
+    gap: 0.35rem;
+    width: min(22rem, 100%);
+    max-height: min(18rem, 60dvh);
+    overflow: auto;
+    padding: 0.75rem;
+    border: 1px solid var(--mcp-border);
+    border-radius: var(--mcp-radius-lg);
+    background: var(--mcp-surface);
+    box-shadow: var(--mcp-shadow-lg);
+    color: var(--mcp-text);
+    font-size: var(--mcp-text-ui);
+    line-height: 1.45;
+    text-align: left;
+}
+.mcp-ask-v2__source-card[hidden] { display: none; }
+.mcp-ask-v2__source-card--below { top: 100%; bottom: auto; }
+.mcp-ask-v2__source-card-heading { font-size: var(--mcp-text-ui-sm); color: var(--mcp-muted); }
+.mcp-ask-v2__source-card-passage { margin: 0; color: var(--mcp-text-soft); }
+
+@keyframes mcp-ask-v2-spinner {
+    to { transform: rotate(360deg); }
+}
+
+@media (max-width: 479.98px) {
+    .mcp-ask-v2__option { min-height: 44px; }
+    .mcp-ask-v2__source-title { min-height: 44px; }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .mcp-ask-v2__step,
+    .mcp-ask-v2__step--enter,
+    .mcp-ask-v2__work-caret,
+    .mcp-ask-v2__row--enter,
+    .mcp-ask-v2__skeleton-row .placeholder,
+    .mcp-ask-v2__activity-spinner,
+    .mcp-ask-v2__icon--spin {
+        animation: none;
+        transition: none;
+    }
+    .mcp-ask-v2__sources-summary::before { transition: none; }
+}

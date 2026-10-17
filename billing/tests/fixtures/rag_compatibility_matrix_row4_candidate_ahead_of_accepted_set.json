@@ -1,0 +1,31 @@
+{
+  "description": "Task 2C matrix row 4 — Billing has produced a NEW candidate (N+1) manifest hash that has never been recorded anywhere in RAG's accepted set; RAG is still at its current (N) release, accepting only [N, N-1]. This is a pre-release, producer-side check (the candidate has not gone live yet): the release is BLOCKED until the consumer (RAG) has deployed support for it. Mechanically the same 'candidate absent from accepted set' judgment as row 3, applied before publish rather than after. Expected verdict: FAIL.",
+  "row_4_clarification": "Producer-blocked narrative: this candidate hash has never been vendored or deployed to the consumer (RAG) — no accepted_manifest_hashes record anywhere includes it, unlike row 3's candidate, which was once live and simply fell out of an older RAG's window. The producer release is blocked until the consumer bundle is deployed and RAG's own accepted set is updated to include this hash; publishing before that would create exactly the row-3 mismatch this same accepted-set check guards against.",
+  "candidate_manifest_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "compatibility": {
+    "record_access_schema_versions": [2],
+    "record_context_schema_versions": [1],
+    "accepted_manifest_hashes": [
+      "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+      "sha256:9999999999999999999999999999999999999999999999999999999999999999"
+    ],
+    "bundle_set_id": "bset:ce1c996c71e316c633b457b984f9b56049ea01e20e7f6b46503ea6ea50a0abf2"
+  },
+  "deployment": {
+    "expected_image_digest": "sha256:image-digest-row4-n",
+    "revisions": [
+      {
+        "name": "rag--rev-row4-n",
+        "image_digest": "sha256:image-digest-row4-n",
+        "traffic_percent": 100,
+        "bundle_set_id": "bset:ce1c996c71e316c633b457b984f9b56049ea01e20e7f6b46503ea6ea50a0abf2"
+      }
+    ]
+  },
+  "capabilities_probe": {
+    "bundle_set_id": "bset:ce1c996c71e316c633b457b984f9b56049ea01e20e7f6b46503ea6ea50a0abf2"
+  },
+  "expected": {
+    "passed": false
+  }
+}

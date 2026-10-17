@@ -1,0 +1,31 @@
+{
+  "description": "Task 2C matrix row 3 — Billing has already released the current (N) manifest hash while the deployed RAG image is still at the previous (N-1) release; N-1's own accepted set (its current-then-previous window) does not include N, so the candidate hash is absent from RAG's accepted set. Expected verdict: FAIL — structured access would fail closed for record TOOLS built against this hash.",
+  "row_3_clarification": "Plan Revision 3, PR 2C row-3 footnote: this failure is scoped to record TOOLS (dispatch/rehydration) only. An explicit record_context is rendered from Billing-signed fields WITHOUT consulting the manifest hash, so a signed explicit context still renders even while tools deny. \"Never document fallback\" means the question is never silently answered from documents instead of the explicit selection.",
+  "candidate_manifest_hash": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+  "compatibility": {
+    "record_access_schema_versions": [2],
+    "record_context_schema_versions": [1],
+    "accepted_manifest_hashes": [
+      "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+      "sha256:7777777777777777777777777777777777777777777777777777777777777777"
+    ],
+    "bundle_set_id": "bset:ba9d53c6672abb71a64a75f4d4b09b9cb24ce9b882e5310c386c8cf2df1b917d"
+  },
+  "deployment": {
+    "expected_image_digest": "sha256:image-digest-row3-n-minus-1",
+    "revisions": [
+      {
+        "name": "rag--rev-row3-n-minus-1",
+        "image_digest": "sha256:image-digest-row3-n-minus-1",
+        "traffic_percent": 100,
+        "bundle_set_id": "bset:ba9d53c6672abb71a64a75f4d4b09b9cb24ce9b882e5310c386c8cf2df1b917d"
+      }
+    ]
+  },
+  "capabilities_probe": {
+    "bundle_set_id": "bset:ba9d53c6672abb71a64a75f4d4b09b9cb24ce9b882e5310c386c8cf2df1b917d"
+  },
+  "expected": {
+    "passed": false
+  }
+}

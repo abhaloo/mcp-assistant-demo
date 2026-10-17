@@ -1,0 +1,31 @@
+{
+  "description": "Task 2C matrix row 6 — RAG's deployment is being rolled back from N to N-1 (expected_image_digest targets the ROLLBACK image, mirroring how Task 2B's compatible-rollback fixture judges 'whichever image this release action targets' rather than hardcoding latest), but the rollback target's own accepted set does not include the LIVE Billing hash (N) still in production. Expected verdict: FAIL/BLOCKED.",
+  "row_6_clarification": "The rollback target image's accepted set excludes the live Billing hash, so the verdict demands structured access be disabled before traffic moves onto the rollback target — the rollback must not proceed (or record tools must be disabled first) until RAG's rollback target accepts the hash Billing is currently serving.",
+  "candidate_manifest_hash": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "compatibility": {
+    "record_access_schema_versions": [2],
+    "record_context_schema_versions": [1],
+    "accepted_manifest_hashes": [
+      "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    ],
+    "bundle_set_id": "bset:af4dd7361aeef315b201aced07a789211a8ca8d0eda31f933ba535d85ce60e23"
+  },
+  "deployment": {
+    "expected_image_digest": "sha256:image-digest-row6-n-minus-1",
+    "revisions": [
+      {
+        "name": "rag--rev-row6-n-minus-1",
+        "image_digest": "sha256:image-digest-row6-n-minus-1",
+        "traffic_percent": 100,
+        "bundle_set_id": "bset:af4dd7361aeef315b201aced07a789211a8ca8d0eda31f933ba535d85ce60e23"
+      }
+    ]
+  },
+  "capabilities_probe": {
+    "bundle_set_id": "bset:af4dd7361aeef315b201aced07a789211a8ca8d0eda31f933ba535d85ce60e23"
+  },
+  "expected": {
+    "passed": false
+  }
+}

@@ -1,0 +1,139 @@
+services:
+  mariadb:
+    image: mariadb:10.11
+    restart: unless-stopped
+    # mem_limit:  # Set after Task 11L measurement
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-change-me-root}
+      MARIADB_DATABASE: ${MARIADB_DATABASE:-mcp_demo}
+      MARIADB_USER: ${MARIADB_USER:-demo}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD:-change-me-demo}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -u$${MARIADB_USER:-demo} -p$${MARIADB_PASSWORD:-change-me-demo} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    # mem_limit:  # Set after Task 11L measurement
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-query_records}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # mem_limit:  # Set after Task 11L measurement
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  rag-migrate:
+    image: ghcr.io/abhaloo/mcp-assistant-demo-rag:demo
+    env_file:
+      - rag.env
+    environment:
+      QUERY_RECORD_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-change-me-postgres}@postgres:5432/${POSTGRES_DB:-query_records}
+    command: ["python", "scripts/deploy/migrate_query_records.py"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  rag-api:
+    image: ghcr.io/abhaloo/mcp-assistant-demo-rag:demo
+    restart: unless-stopped
+    # mem_limit:  # Set after Task 11L measurement
+    env_file:
+      - rag.env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      QUERY_RECORD_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-change-me-postgres}@postgres:5432/${POSTGRES_DB:-query_records}
+      MCP_RECORD_DATABASE_URL: mysql+pymysql://${MARIADB_USER:-demo}:${MARIADB_PASSWORD:-change-me-demo}@mariadb:3306/${MARIADB_DATABASE:-mcp_demo}
+      BUSINESS_QUERY_MODE: "enabled"
+      CONVERSATION_ENABLED: "true"
+      CONVERSATION_COORDINATOR_ENABLED: "true"
+    volumes:
+      - chroma_data:/app/data/chroma
+      - ./data/corpus:/app/data/corpus:ro
+    depends_on:
+      rag-migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      mariadb:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz')",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  app:
+    image: ghcr.io/abhaloo/mcp-assistant-demo-billing:demo
+    restart: unless-stopped
+    # mem_limit:  # Set after Task 11L measurement
+    ports:
+      - "80:80"
+      - "443:443"
+    env_file:
+      - billing.env
+    environment:
+      RAG_SERVICE_URL: http://rag-api:8000
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_DATABASE: ${MARIADB_DATABASE:-mcp_demo}
+      DB_USERNAME: ${MARIADB_USER:-demo}
+      DB_PASSWORD: ${MARIADB_PASSWORD:-change-me-demo}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    volumes:
+      - app_storage:/app/storage
+      - ./docker/Caddyfile.demo:/etc/caddy/Caddyfile:ro
+      - ./certs:/certs:ro
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rag-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1/up"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+volumes:
+  mariadb_data:
+  postgres_data:
+  redis_data:
+  chroma_data:
+  app_storage:

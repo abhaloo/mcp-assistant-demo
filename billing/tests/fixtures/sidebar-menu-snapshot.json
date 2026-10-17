@@ -1,0 +1,50 @@
+{
+    "view_product": [
+        ["dashboard", "Dashboard", "/"],
+        ["products", "Products", "/product"]
+    ],
+    "sales": [
+        ["dashboard", "Dashboard", "/"],
+        ["customers", "Customers", "/customers"],
+        ["suppliers", "Suppliers", "/suppliers"],
+        ["orders", "Orders", "/customer-orders"],
+        ["invoices", "Invoices", "/bills?type=Invoice"],
+        ["quotations", "Quotations", "/bills?type=Quotation"],
+        ["jobs", "Jobs", "/jobs"],
+        ["products", "Products", "/product"],
+        ["supplier-bills", "Supplier Bills", "/supplier-bill"]
+    ],
+    "admin": [
+        ["dashboard", "Dashboard", "/"],
+        ["customers", "Customers", "/customers"],
+        ["suppliers", "Suppliers", "/suppliers"],
+        ["orders", "Orders", "/customer-orders"],
+        ["invoices", "Invoices", "/bills?type=Invoice"],
+        ["quotations", "Quotations", "/bills?type=Quotation"],
+        ["jobs", "Jobs", "/jobs"],
+        ["products", "Products", "/product"],
+        ["supplier-bills", "Supplier Bills", "/supplier-bill"],
+        ["inventory", "Inventory", "/inventory"],
+        ["stock-checking", "Stock Checking", "/stock-checking"],
+        ["stock-posting", "Stock Posting", "/stock-gls"],
+        ["general-ledger", "General Ledger", "/gls"],
+        ["journal-entries", "Journal Entries", "/journals"],
+        ["accounts", "Accounts", "/accounts"],
+        ["account-statement", "Account Statement", "/report/account-statement"],
+        ["pl-statement", "P/L Statement", "/report/pl-statement"],
+        ["balance-sheet", "Balance Sheet", "/report/balance-sheet"],
+        ["trial-balance", "Trial Balance", "/report/trial-balance"],
+        ["outstanding-receivable", "Outstanding Receivable", "/report/debtors"],
+        ["outstanding-payable", "Outstanding Payable", "/report/creditors"],
+        ["invoices-report", "Invoices Report", "/report/bill-by-product"],
+        ["invoices-overdue", "Invoices Overdue", "/report/bill-overdue"],
+        ["payments-report", "Payments Report", "/report/payments"],
+        ["store-report", "Store Report", "/report/store"],
+        ["inventory-report", "Inventory Report", "/report/inventory"],
+        ["stock-movement", "Stock Movement", "/report/stock-movement"],
+        ["jobs-report", "Jobs Report", "/report/work-order"],
+        ["users", "Users", "/users"],
+        ["departments", "Departments", "/departments"],
+        ["admin-tools", "Admin Tools", "/admin/tools"]
+    ]
+}

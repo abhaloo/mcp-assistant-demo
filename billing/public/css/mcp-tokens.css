@@ -1,0 +1,135 @@
+﻿/*
+ * MCP Design Tokens — "DAYLIGHT" theme
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Drop-in replacement for the :root block in public/css/mcp-tokens.css.
+ * Same variable names as before — no markup or component-CSS changes needed.
+ *
+ * What changed vs. the old warm-beige palette:
+ *   - Page canvas moved to a cool light grey so white cards finally separate.
+ *   - Sidebar is now white; brand navy brightened to a true blue.
+ *   - Borders, table stripes, status tints and shadows all re-tuned COOL so
+ *     nothing reads warm/muddy against the new base.
+ *   - Shape, radius, elevation scale and viz tokens are unchanged.
+ *   - Type scale bumped for readability (16px base, tokenized sizes).
+ *
+ * Consumed by mcp-sidebar.css, mcp-system.css, and any future mcp-* component.
+ * NEVER hard-code colors/sizes/shadows in component CSS — add a token here.
+ *
+ * When the SCSS pipeline is restored (see docs/future-work/scss-pipeline-restoration.md),
+ * this file moves to resources/sass/_tokens.scss with the same :root block.
+ */
+
+:root {
+    /* ───── Brand palette ───── */
+    --mcp-navy-900: #15233F;
+    --mcp-navy-700: #1E47B0;   /* links / active nav / structure */
+    --mcp-navy-500: #3B6CE3;   /* brighter blue accent */
+    --mcp-red:      #E0413F;   /* 4.6:1 with #FFF text (WCAG AA) */
+    --mcp-red-deep: #C5302F;
+
+    /* ───── Surfaces ───── */
+    --mcp-bg:           #EEF1F5;   /* page background — cool light grey */
+    --mcp-sidebar-bg:   #FFFFFF;   /* white sidebar shell */
+    --mcp-surface:      #FFFFFF;
+    --mcp-surface-2:    #F1F4F8;   /* table headers, alt surfaces */
+    --mcp-hover:        #F3F6FA;
+    --mcp-border:       #DCE2EA;   /* cool visible edge */
+    --mcp-border-strong:#C4CCD8;
+    --mcp-tint:         #EEF2F7;
+    --mcp-tint-blue:    #E9EFFB;   /* active-nav tint */
+
+    /* ───── Ink ───── */
+    --mcp-text:      #14181F;
+    --mcp-text-soft: #333A45;
+    --mcp-text-mid:  #4E5765;
+    --mcp-muted:     #5C6573;   /* 5.6:1 — WCAG AA */
+    --mcp-text-mute: #5C6573;   /* alias for system naming */
+    --mcp-faint:     #717A88;   /* 4.3:1 */
+
+    /* ───── Status palette (cool-tuned tints) ───── */
+    --mcp-success-bg: #DBEEE2;  --mcp-success-fg: #14603A;  --mcp-success-dot: #2F9159;
+    --mcp-warning-bg: #FBEFD4;  --mcp-warning-fg: #8A5E12;  --mcp-warning-dot: #C68A1E;
+    --mcp-danger-bg:  #FBDED9;  --mcp-danger-fg:  #B0271F;  --mcp-danger-dot:  #E0413F;
+    --mcp-info-bg:    #E5EDFB;  --mcp-info-fg:    #1E47B0;  --mcp-info-dot:    #3B6CE3;
+    --mcp-neutral-bg: #EBEEF2;  --mcp-neutral-fg: #4E5765;  --mcp-neutral-dot: #8C939E;
+    --mcp-sky-bg:     #DCEEF6;  --mcp-sky-fg:     #176580;  --mcp-sky-dot:     #2E96BE;
+    --mcp-violet-bg:  #ECE8F8;  --mcp-violet-fg:  #5538A0;  --mcp-violet-dot:  #7C58CC;
+    --mcp-primary-bg: #E6EAFB;  --mcp-primary-fg: #2A3FA0;  --mcp-primary-dot: #4A5FD8;
+
+    /* High-priority row tint (Jobs / Quotations follow-ups) */
+    --mcp-priority-row:       #FCEAE9;
+    --mcp-priority-row-hover: #F8DBD8;
+
+    /* ───── Type ───── */
+    --mcp-font:         'Inter', system-ui, -apple-system, sans-serif;
+    --mcp-font-display: 'Inter', system-ui, -apple-system, sans-serif;
+    --mcp-font-table:   'Source Sans 3', var(--mcp-font);
+    --mcp-font-mono:    'JetBrains Mono', ui-monospace, monospace;
+
+    /* ───── Type scale (readability pass) ───── */
+    --mcp-text-base:               16px;
+    --mcp-leading-base:            1.6;
+
+    --mcp-text-display:            1.75rem;   /* 28px page titles */
+    --mcp-leading-display:         1.15;
+    --mcp-text-card-title:         1rem;      /* 16px */
+    --mcp-text-section:            1.125rem;  /* 18px */
+
+    --mcp-text-table:              1rem;      /* 16px */
+    --mcp-text-table-head:         1rem;
+    --mcp-text-table-compact-th:   0.9375rem; /* 15px */
+    --mcp-text-table-compact-td:   0.9375rem;
+
+    --mcp-text-ui:                 0.875rem;  /* 14px */
+    --mcp-text-ui-sm:              0.8125rem; /* 13px */
+    --mcp-text-caption:            0.75rem;   /* 12px */
+    --mcp-text-meta:               0.8125rem; /* 13px */
+
+    --mcp-text-deflist-label:      0.8125rem; /* 13px */
+    --mcp-text-deflist-value:      0.875rem;  /* 14px */
+    --mcp-text-mobile-title:       0.9375rem; /* 15px */
+    --mcp-text-mobile-meta:        0.8125rem; /* 13px */
+
+    --mcp-text-status:             0.8125rem; /* 13px */
+    --mcp-text-status-sm:          0.75rem;   /* 12px */
+    --mcp-text-chip:               0.875rem;  /* 14px — id links, compact table chrome */
+    --mcp-text-badge:              var(--mcp-text-table); /* 16px — bill/order chips, jobs count pills */
+    --mcp-text-badge-sub:          var(--mcp-text-ui-sm); /* 13px — bill type label inside badges */
+    --mcp-text-order-chip:         1.125rem;  /* 18px — order link chip in jobs table */
+
+    /* ───── Table ───── */
+    --mcp-table-stripe:       #F6F8FB;   /* cool zebra row */
+    --mcp-text-table-mute:    var(--mcp-text-soft);
+
+    /* ───── Shape (unchanged) ───── */
+    --mcp-radius:    8px;
+    --mcp-radius-sm: 5px;
+    --mcp-radius-lg: 12px;
+
+    /* ───── Elevation (cool-tuned shadows) ───── */
+    --mcp-shadow-sm:  0 1px 2px rgba(15,23,42,.06), 0 4px 12px -6px rgba(15,23,42,.13);
+    --mcp-shadow:     0 1px 2px rgba(15,23,42,.05), 0 10px 26px -12px rgba(15,23,42,.20);
+    --mcp-shadow-lg:  0 8px 24px rgba(21,35,63,.12);
+    --mcp-shadow-pop: 0 4px 12px rgba(21,35,63,.14);
+
+    /* ───── Chrome ───── */
+    --mcp-topbar-h: 56px;
+
+    /* ───── Global loading bar ───── */
+    --mcp-loading-bar-height: 3px;
+    --mcp-loading-bar-z-index: 2000;
+    --mcp-loading-bar-plate-cyan:    #0090D0;
+    --mcp-loading-bar-plate-magenta: #E6007E;
+    --mcp-loading-bar-plate-yellow:  #FFE000;
+    --mcp-loading-bar-plate-key:     #111111;
+
+    /* ───── Skeleton / motion */
+    --mcp-skeleton-base: #E4E9F0;
+    --mcp-skeleton-highlight: #FFFFFF;
+    --mcp-skeleton-mid: #F1F4F8;
+    --mcp-skeleton-duration: 1.4s;
+
+    /* ───── Dashboard viz (runtime overrides per element) ───── */
+    --mcp-segment-flex: 1;
+    --mcp-bar-width: 0%;
+}

@@ -1,0 +1,16 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+data/chroma/
+*.egg-info/
+dist/
+build/
+
+# Demo stack (local env files, dumps, TLS material)
+billing.env
+rag.env
+*.sql.gz
+certs/

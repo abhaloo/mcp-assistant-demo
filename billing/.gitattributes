@@ -1,0 +1,23 @@
+* text=auto
+
+*.sh   text eol=lf
+*.bash text eol=lf
+
+*.blade.php diff=html
+*.css diff=css
+*.html diff=html
+*.md diff=markdown
+*.php diff=php
+
+/database/ai-manifest/** text eol=lf
+/database/ai-projections/** text eol=lf
+/artifacts/visual-judge/2026-07-25-ask-ai-quality-audit/**/*.md text eol=lf
+/artifacts/visual-judge/2026-07-25-ask-ai-quality-audit/**/*.json text eol=lf
+/artifacts/visual-judge/2026-07-25-ask-ai-quality-audit/**/*.yml text eol=lf
+/artifacts/visual-judge/2026-07-25-ask-ai-quality-audit/**/MANIFEST.sha256* text eol=lf
+/artifacts/visual-judge/2026-07-25-ask-ai-quality-audit/**/*.png -text
+
+/.github export-ignore
+CHANGELOG.md export-ignore
+.styleci.yml export-ignore
+/tests/fixtures/ask_v2/fixtures.json text eol=lf

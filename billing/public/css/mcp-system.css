@@ -1,0 +1,3380 @@
+/*
+ * MCP Design System — page-level component styles
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Consumes design tokens from mcp-tokens.css. Loaded AFTER mcp-sidebar.css.
+ *
+ * Scoping strategy:
+ *   - Most component classes are uniquely named (.mcp-card, .mcp-status,
+ *     .mcp-bill, etc.) and live at root scope so they're available wherever
+ *     used.
+ *   - .mcp-icon-btn, .mcp-empty, .mcp-avatar are ALSO defined in mcp-sidebar.css
+ *     for sidebar-specific purposes; the page versions are nested under .mcp
+ *     so the sidebar keeps its own styles.
+ *   - .mcp-pagination* is intentionally root-scoped because the global
+ *     Livewire pagination override needs it on every paginated page,
+ *     not just inside .mcp wrappers.
+ *
+ * When the SCSS pipeline is restored, this file moves to
+ * resources/sass/components/_system.scss.
+ */
+
+/* ---- 1. Base (page wrapper) -------------------------------------------- */
+
+.mcp {
+    background-color: var(--mcp-bg);
+    background-image:
+        radial-gradient(ellipse at 18% 0%, rgba(255, 252, 245, .22) 0%, transparent 68%),
+        radial-gradient(ellipse at 82% 100%, rgba(15, 31, 77, .04) 0%, transparent 48%),
+        url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+    background-size: 100% 100%, 100% 100%, 180px 180px;
+    font-family: var(--mcp-font);
+    color: var(--mcp-text);
+    font-size: var(--mcp-text-base);
+    line-height: var(--mcp-leading-base);
+    min-height: 100%;
+}
+
+/* Embedded Livewire children (e.g. work-order on bill show) carry their own .mcp wrapper */
+.mcp .mcp {
+    background: transparent;
+    min-height: 0;
+}
+
+.mcp ::-webkit-scrollbar { width: 9px; height: 9px; }
+.mcp ::-webkit-scrollbar-thumb { background: #D8D6D2; border-radius: 5px; }
+.mcp ::-webkit-scrollbar-thumb:hover { background: #B8B6B2; }
+
+/* ---- 2. Page header ---------------------------------------------------- */
+
+.mcp-page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 20px;
+}
+.mcp-page-header__main { min-width: 0; }
+.mcp-page-header__eyebrow {
+    font-size: var(--mcp-text-caption);
+    font-weight: 700;
+    color: var(--mcp-text-mute);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin-bottom: 6px;
+}
+.mcp-page-header__title-row {
+    display: flex; align-items: center; gap: 12px; flex-wrap: nowrap;
+}
+
+/* Red accent mark (Option 2) */
+.mcp-page-header__mark {
+    flex: 0 0 auto;
+    align-self: center;
+    width: 5px;
+    height: 30px;               /* matches display title cap height at 1.15 line-height */
+    border-radius: 3px;
+    background: var(--mcp-red);
+}
+
+.mcp-page-header__title {
+    margin: 0;
+    font-family: var(--mcp-font-display);
+    font-size: var(--mcp-text-display);
+    font-weight: 700;
+    line-height: var(--mcp-leading-display);
+    letter-spacing: .01em;
+    color: var(--mcp-text);
+}
+
+/* Soft prefix for split-weight titles ("Manage Jobs") */
+.mcp-page-header__title-soft {
+    font-weight: 400;
+    color: var(--mcp-text-mid);
+}
+
+.mcp-page-header__subtitle {
+    margin: 4px 0 0;
+    font-size: var(--mcp-text-meta);
+    color: var(--mcp-text-mid);
+}
+.mcp-page-header__actions {
+    display: flex; gap: 8px; flex-shrink: 0;
+}
+
+/* ---- 3. Card ----------------------------------------------------------- */
+
+.mcp-card {
+    background: var(--mcp-surface);
+    border: 1px solid var(--mcp-border);
+    border-radius: var(--mcp-radius);
+    box-shadow: var(--mcp-shadow-sm);
+    overflow: hidden;
+}
+.mcp-card--feature { box-shadow: var(--mcp-shadow); }
+.mcp-card__header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--mcp-border);
+    background: var(--mcp-surface);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.mcp-card__title {
+    margin: 0;
+    font-size: var(--mcp-text-card-title);
+    font-weight: 700;
+    color: var(--mcp-text);
+    letter-spacing: -.01em;
+}
+.mcp-card__count {
+    font-size: var(--mcp-text-ui-sm);
+    color: var(--mcp-text-mute);
+    font-variant-numeric: tabular-nums;
+    margin-left: 8px;
+}
+.mcp-card__actions { display: flex; gap: 6px; flex-shrink: 0; }
+.mcp-card__body { padding: 18px; }
+.mcp-card__body--flush { padding: 0; }
+
+/* ---- 4. Buttons -------------------------------------------------------- */
+
+.mcp-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 8px 14px;
+    font-size: var(--mcp-text-ui);
+    font-weight: 600;
+    font-family: var(--mcp-font);
+    border-radius: var(--mcp-radius-sm);
+    border: 1px solid;
+    cursor: pointer;
+    white-space: nowrap;
+    letter-spacing: -.005em;
+    transition: background .12s ease, border-color .12s ease;
+    text-decoration: none;
+}
+.mcp-btn:disabled { opacity: .5; cursor: not-allowed; }
+.mcp-btn:focus-visible,
+.mcp-row--link:focus-visible,
+.mcp-id-link:focus-visible {
+    outline: 2px solid var(--mcp-navy-500);
+    outline-offset: 2px;
+}
+
+.mcp-btn--sm { padding: 6px 11px; font-size: var(--mcp-text-ui-sm); gap: 6px; }
+.mcp-btn--xs { padding: 4px 9px;  font-size: var(--mcp-text-meta); gap: 5px; }
+
+.mcp-btn--primary   { background: var(--mcp-navy-900); color: #fff; border-color: var(--mcp-navy-900); }
+.mcp-btn--primary:hover   { background: var(--mcp-navy-700); border-color: var(--mcp-navy-700); color: #fff; }
+
+.mcp-btn--secondary { background: var(--mcp-surface); color: var(--mcp-text); border-color: var(--mcp-border-strong); }
+.mcp-btn--secondary:hover { background: var(--mcp-surface-2); color: var(--mcp-text); }
+
+.mcp-btn--ghost { background: transparent; color: var(--mcp-text-mid); border-color: transparent; }
+.mcp-btn--ghost:hover { background: var(--mcp-surface-2); color: var(--mcp-text); }
+
+.mcp-btn--chip {
+    height: 28px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--mcp-surface-2, #F1F4F8);
+    color: var(--mcp-text);
+    font-size: 12.5px;
+    font-weight: 500;
+    gap: 6px;
+}
+.mcp-btn--chip:hover { background: var(--mcp-surface-2, #F1F4F8); color: var(--mcp-text); }
+.mcp-btn--chip i { color: #333A45; font-size: 13px; }
+.mcp-btn--chip .mcp-dropdown__caret { font-size: 11px; }
+
+.mcp-btn--success { background: var(--mcp-success-fg); color: #fff; border-color: var(--mcp-success-fg); }
+.mcp-btn--success:hover { background: #175933; border-color: #175933; color: #fff; }
+
+.mcp-btn--warning { background: var(--mcp-warning-fg); color: #fff; border-color: var(--mcp-warning-fg); }
+.mcp-btn--warning:hover { background: #6E4A0E; border-color: #6E4A0E; color: #fff; }
+
+.mcp-btn--danger  { background: var(--mcp-surface); color: var(--mcp-danger-fg); border-color: var(--mcp-danger-bg); }
+.mcp-btn--danger:hover { background: var(--mcp-danger-bg); color: var(--mcp-danger-fg); }
+
+/* ---- 5. Icon-only button (scoped under .mcp to avoid sidebar conflict) - */
+
+.mcp .mcp-icon-btn {
+    width: 30px; height: 30px; padding: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--mcp-border);
+    border-radius: var(--mcp-radius-sm);
+    background: var(--mcp-surface);
+    color: var(--mcp-text-mid);
+    font-size: var(--mcp-text-ui-sm); cursor: pointer;
+    transition: background .12s ease;
+    text-decoration: none;
+}
+.mcp .mcp-icon-btn:hover { background: var(--mcp-surface-2); color: var(--mcp-text-mid); }
+.mcp .mcp-icon-btn--primary { color: var(--mcp-navy-700); }
+.mcp .mcp-icon-btn--primary:hover { background: var(--mcp-info-bg); color: var(--mcp-navy-700); }
+.mcp .mcp-icon-btn--success { color: var(--mcp-success-fg); }
+.mcp .mcp-icon-btn--success:hover { background: var(--mcp-success-bg); color: var(--mcp-success-fg); }
+.mcp .mcp-icon-btn--warning { color: var(--mcp-warning-fg); }
+.mcp .mcp-icon-btn--warning:hover { background: var(--mcp-warning-bg); color: var(--mcp-warning-fg); }
+.mcp .mcp-icon-btn--danger  { color: var(--mcp-danger-fg); }
+.mcp .mcp-icon-btn--danger:hover  { background: var(--mcp-danger-bg); color: var(--mcp-danger-fg); }
+
+/* Optional inline label — appears only when the table card is wide enough
+   to host the full table without horizontal scroll. Container query on the
+   card (already established via :has(.mcp-table-wrap) below) avoids the
+   viewport-vs-card-width mismatch when the sidebar is expanded. */
+.mcp .mcp-icon-btn--with-label {
+    width: auto;
+    padding: 0 10px;
+    gap: 6px;
+}
+.mcp .mcp-icon-btn__label {
+    display: inline;
+    font-size: var(--mcp-text-meta);
+    font-weight: 600;
+    letter-spacing: .01em;
+    white-space: nowrap;
+}
+
+/* ---- 6. Status pills --------------------------------------------------- */
+
+.mcp-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    font-size: var(--mcp-text-status);
+    font-weight: 700;
+    letter-spacing: .01em;
+    border: 1px solid rgba(22,20,15,.10);
+    border-radius: 999px;
+    white-space: nowrap;
+}
+.mcp-status::before {
+    content: "";
+    width: 6px; height: 6px; border-radius: 50%;
+    flex-shrink: 0;
+}
+.mcp-status--no-dot::before { display: none; }
+.mcp-status--sm { padding: 2px 7px; font-size: var(--mcp-text-status-sm); gap: 4px; }
+.mcp-status--sm::before { width: 5px; height: 5px; }
+
+.mcp-status--success { background: var(--mcp-success-bg); color: var(--mcp-success-fg); }
+.mcp-status--success::before { background: var(--mcp-success-dot); }
+.mcp-status--warning { background: var(--mcp-warning-bg); color: var(--mcp-warning-fg); }
+.mcp-status--warning::before { background: var(--mcp-warning-dot); }
+.mcp-status--danger  { background: var(--mcp-danger-bg);  color: var(--mcp-danger-fg); }
+.mcp-status--danger::before  { background: var(--mcp-danger-dot); }
+.mcp-status--info    { background: var(--mcp-info-bg);    color: var(--mcp-info-fg); }
+.mcp-status--info::before    { background: var(--mcp-info-dot); }
+.mcp-status--neutral { background: var(--mcp-neutral-bg); color: var(--mcp-neutral-fg); }
+.mcp-status--neutral::before { background: var(--mcp-neutral-dot); }
+.mcp-status--sky     { background: var(--mcp-sky-bg);     color: var(--mcp-sky-fg); }
+.mcp-status--sky::before     { background: var(--mcp-sky-dot); }
+.mcp-status--violet  { background: var(--mcp-violet-bg);  color: var(--mcp-violet-fg); }
+.mcp-status--violet::before  { background: var(--mcp-violet-dot); }
+.mcp-status--primary { background: var(--mcp-primary-bg); color: var(--mcp-primary-fg); }
+.mcp-status--primary::before { background: var(--mcp-primary-dot); }
+
+/* ---- 7. Department badge ----------------------------------------------- */
+
+.mcp-dept {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: var(--mcp-text-ui-sm);
+    font-weight: 600;
+    letter-spacing: .01em;
+    line-height: 1.35;
+    background: var(--mcp-neutral-bg);
+    color: var(--mcp-neutral-fg);
+    white-space: nowrap;   /* size to the name; table cell grows + scrolls */
+}
+.mcp-dept--unassigned {
+    color: var(--mcp-text-mute);
+    background: var(--mcp-surface-2);
+    border: 1px solid var(--mcp-border);
+}
+
+/* ---- 8. Bill chip ------------------------------------------------------ */
+
+.mcp-bill {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 2px 6px;
+    padding: 3px 9px 3px 7px;
+    border-radius: 5px;
+    border: none;
+    font-size: var(--mcp-text-ui-sm);
+    font-weight: 600;
+    font-family: var(--mcp-font);
+    cursor: pointer;
+    text-decoration: none;
+    white-space: nowrap;   /* type + number stay on one line */
+}
+.mcp-bill::before {
+    content: "";
+    width: 5px; height: 5px; border-radius: 50%;
+}
+.mcp-bill__type {
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    font-size: var(--mcp-text-caption);
+}
+.mcp-bill__num { font-variant-numeric: tabular-nums; }
+
+.mcp-bill--invoice   { background: var(--mcp-success-bg); color: var(--mcp-success-fg); }
+.mcp-bill--invoice::before   { background: var(--mcp-success-dot); }
+.mcp-bill--quotation { background: var(--mcp-info-bg);    color: var(--mcp-info-fg); }
+.mcp-bill--quotation::before { background: var(--mcp-info-dot); }
+.mcp-bill--payable   { background: var(--mcp-warning-bg); color: var(--mcp-warning-fg); }
+.mcp-bill--payable::before   { background: var(--mcp-warning-dot); }
+/* Type-class fallback for "Payable Quotation" (kebab-cased from the type string) */
+.mcp-bill--payable-quotation { background: var(--mcp-warning-bg); color: var(--mcp-warning-fg); }
+.mcp-bill--payable-quotation::before { background: var(--mcp-warning-dot); }
+
+/* ---- 9. Search input + filter button ----------------------------------- */
+
+.mcp-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--mcp-surface);
+    border: 1px solid var(--mcp-border-strong);
+    border-radius: var(--mcp-radius-sm);
+    font-size: var(--mcp-text-ui);
+    color: var(--mcp-text);
+    min-width: 280px;
+}
+.mcp-search--lg { min-width: 320px; }
+.mcp-search__icon { color: var(--mcp-text-mute); font-size: var(--mcp-text-ui-sm); }
+.mcp-search__input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: var(--mcp-text-ui);
+    font-family: var(--mcp-font);
+    color: var(--mcp-text);
+}
+
+.mcp-filter-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 12px;
+    background: var(--mcp-surface);
+    border: 1px solid var(--mcp-border-strong);
+    border-radius: var(--mcp-radius-sm);
+    font-size: var(--mcp-text-ui-sm);
+    font-weight: 600;
+    color: var(--mcp-text);
+    font-family: var(--mcp-font);
+    cursor: pointer;
+}
+.mcp-filter-btn--active {
+    background: var(--mcp-info-bg);
+    border-color: var(--mcp-info-fg);
+    color: var(--mcp-info-fg);
+}
+.mcp-filter-btn__badge {
+    font-size: var(--mcp-text-status-sm);
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--mcp-navy-900);
+    color: #fff;
+    font-weight: 700;
+    letter-spacing: .02em;
+}
+.mcp-filter-btn--active .mcp-filter-btn__badge { background: var(--mcp-info-fg); }
+
+.mcp-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 9px 5px 11px;
+    background: var(--mcp-info-bg);
+    color: var(--mcp-info-fg);
+    border-radius: 999px;
+    font-size: var(--mcp-text-meta);
+    font-weight: 600;
+    white-space: nowrap;
+}
+.mcp-filter-chip__remove {
+    border: none; background: transparent; color: var(--mcp-info-fg);
+    cursor: pointer; padding: 0; margin-left: 2px; font-size: 10px;
+    width: 14px; height: 14px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+}
+
+/* ---- 10. Table --------------------------------------------------------- */
+
+.mcp-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mcp-font-table);
+    font-size: var(--mcp-text-table);
+    color: var(--mcp-text);
+}
+.mcp-table thead th {
+    text-align: left;
+    padding: 12px 16px;
+    font-size: var(--mcp-text-table);
+    font-weight: 600;
+    color: var(--mcp-text-mid, #4F4C44);
+    letter-spacing: .01em;
+    border-bottom: 1px solid var(--mcp-border);
+    background: var(--mcp-surface-2);
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+.mcp-table tbody td {
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--mcp-border);
+    vertical-align: middle;
+    font-size: var(--mcp-text-table);
+}
+.mcp-table tbody tr {
+    background: var(--mcp-surface);
+    transition: background .1s ease;
+}
+.mcp-table tbody tr:nth-child(even) td { background: var(--mcp-table-stripe); }
+.mcp-table tbody tr:hover td { background: var(--mcp-hover); }
+.mcp-table tbody tr.mcp-row--link:hover td { background: var(--mcp-tint-blue); }
+.mcp-table tbody tr.mcp-row--link:hover {
+    box-shadow: inset 3px 0 0 var(--mcp-navy-500);
+}
+
+.mcp-table tbody tr.mcp-row--priority td { background: var(--mcp-priority-row); }
+.mcp-table tbody tr.mcp-row--priority:hover td { background: var(--mcp-priority-row-hover); }
+/* Persistent left accent bar so high-priority rows read as distinct at a glance.
+   Uses inset box-shadow (not border) to avoid shifting cell content, mirroring
+   the .mcp-row--link:hover idiom above. */
+.mcp-table tbody tr.mcp-row--priority td:first-child { box-shadow: inset 3px 0 0 var(--mcp-danger-dot); }
+
+/* .mcp-table--form — editable line-items grid (bill editor). Additive modifier:
+   neutralise zebra striping + row-hover tint so a grid of inputs reads as a
+   clean form, not a data table. Base .mcp-table stripe/hover rules untouched;
+   placed after them so equal-specificity source order wins. */
+.mcp-table--form tbody tr:nth-child(even) td { background: var(--mcp-surface); }
+.mcp-table--form tbody tr:hover td { background: var(--mcp-surface); }
+
+.mcp-table .mcp-td--mute  { color: var(--mcp-text-table-mute); }
+.mcp-table .mcp-td--mono,
+.mcp-table .mcp-td--right { font-variant-numeric: tabular-nums; }
+.mcp-table .mcp-td--right { text-align: right; }
+.mcp-table .mcp-td--center{ text-align: center; }
+
+/* Totals row (bill-show items/payments) — legacy bg-gray-100 + bold chrome
+   re-expressed with tokens. Cells are <th> inside <tbody>, so padding/border
+   mirror .mcp-table tbody td. */
+.mcp-table tbody .mcp-table__totals th,
+.mcp-table tbody .mcp-table__totals td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--mcp-border);
+    background: var(--mcp-surface-2);
+    font-weight: 600;
+    font-size: var(--mcp-text-table);
+    text-align: left;
+    vertical-align: middle;
+}
+
+/* Hide secondary columns at tablet and below — paired with .mcp-td--secondary
+   on the matching <th> AND <td>. Uses a class instead of :nth-child so the
+   column count branching (@if($bill) … @endif) doesn't break the rule. */
+@media (max-width: 1023.98px) {
+    .mcp-td--secondary { display: none; }
+}
+
+.mcp-id-link {
+    font-family: var(--mcp-font-mono);
+    font-size: var(--mcp-text-chip);
+    color: var(--mcp-navy-900);   /* was navy-700 — reads as record ink, not a link */
+    text-decoration: none;
+    font-weight: 800;             /* was 700 — anchor weight */
+    font-variant-numeric: tabular-nums;
+}
+/* Beat Simple theme a:hover / a:visited green (#93c54b) */
+.mcp-id-link:hover,
+.mcp-id-link:focus-visible,
+.mcp-id-link:visited {
+    color: var(--mcp-red-deep); /* AA on white / --mcp-hover; beats Simple green */
+    text-decoration: none;
+}
+.mcp-row--priority .mcp-id-link,
+.mcp-row--priority .mcp-id-link:hover,
+.mcp-row--priority .mcp-id-link:focus-visible,
+.mcp-row--priority .mcp-id-link:visited {
+    color: var(--mcp-danger-fg);
+}
+
+.mcp-row-actions { display: flex; justify-content: flex-end; gap: 5px; }
+
+/* In-table / card chips — match table body readability (overrides size="sm") */
+.mcp-table .mcp-status,
+.mcp-table .mcp-status--sm,
+.mcp-mobile-card .mcp-status,
+.mcp-mobile-card .mcp-status--sm {
+    font-size: var(--mcp-text-chip);
+    padding: 3px 9px;
+    gap: 5px;
+}
+.mcp-table .mcp-status::before,
+.mcp-table .mcp-status--sm::before,
+.mcp-mobile-card .mcp-status::before,
+.mcp-mobile-card .mcp-status--sm::before {
+    width: 6px;
+    height: 6px;
+}
+
+.mcp-table .mcp-dept,
+.mcp-mobile-card .mcp-dept {
+    font-size: var(--mcp-text-chip);
+    padding: 4px 9px;
+}
+
+/* Bill + order chips at table-body scale (customer order pages; the jobs-table
+   bill chip is fully restyled in the "Jobs table (1d)" block lower in this file). */
+.mcp-page--orders .mcp-bill {
+    font-size: var(--mcp-text-badge);
+    padding: 5px 10px 5px 9px;
+    gap: 4px 7px;
+    line-height: 1.35;
+}
+.mcp-table--jobs .mcp-order-chip {
+    font-size: var(--mcp-text-order-chip);
+    padding: 6px 12px;
+    gap: 5px 8px;
+    line-height: 1.35;
+    font-weight: 700;
+}
+.mcp-page--orders .mcp-bill__type {
+    font-size: var(--mcp-text-badge-sub);
+}
+.mcp-order-chip i {
+    font-size: 0.72em;
+    opacity: 0.85;
+}
+
+/* Customer orders index: jobs count + bills column pills */
+.mcp-page--orders .mcp-table tbody td:nth-child(4) .mcp-status,
+.mcp-page--orders .mcp-table tbody td:nth-child(5) .mcp-status,
+.mcp-page--orders .mcp-mobile-card__meta > .mcp-status,
+.mcp-page--orders .mcp-mobile-card__meta > .mcp-bill {
+    font-size: var(--mcp-text-badge);
+    padding: 4px 10px;
+    gap: 6px;
+}
+.mcp-page--orders .mcp-mobile-card__meta > .mcp-status::before {
+    width: 6px;
+    height: 6px;
+}
+
+.mcp-table .mcp-order-chip,
+.mcp-mobile-card .mcp-order-chip {
+    font-size: var(--mcp-text-chip);
+    padding: 4px 9px;
+}
+
+.mcp-table .mcp-id-link,
+.mcp-mobile-card .mcp-id-link {
+    font-size: var(--mcp-text-chip);
+}
+
+/* ---- 11. Definition list ----------------------------------------------- */
+
+.mcp-deflist {
+    margin: 0;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px 16px;
+}
+.mcp-deflist dt {
+    font-size: var(--mcp-text-deflist-label);
+    font-weight: 600;
+    color: var(--mcp-text-mute);
+    letter-spacing: .02em;
+    padding-top: 2px;
+    white-space: nowrap;
+}
+.mcp-deflist dd {
+    margin: 0;
+    font-size: var(--mcp-text-deflist-value);
+    color: var(--mcp-text);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* ---- 12. Pagination (GLOBAL — works inside or outside .mcp wrapper) --- */
+
+.mcp-pagination {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap;
+    padding: 12px 18px;
+    border-top: 1px solid var(--mcp-border);
+    background: var(--mcp-surface);
+    font-size: var(--mcp-text-ui-sm); color: var(--mcp-text-mid);
+    font-family: var(--mcp-font);
+}
+.mcp-pagination__summary { font-variant-numeric: tabular-nums; }
+.mcp-pagination__pages { display: flex; gap: 4px; }
+.mcp-pagination__nav,
+.mcp-pagination__page {
+    min-width: 30px; height: 30px;
+    padding: 0 8px;
+    border: 1px solid var(--mcp-border);
+    background: var(--mcp-surface);
+    color: var(--mcp-text);
+    border-radius: var(--mcp-radius-sm);
+    font-size: var(--mcp-text-ui-sm); font-weight: 600;
+    cursor: pointer;
+    font-family: var(--mcp-font);
+    font-variant-numeric: tabular-nums;
+    display: inline-flex; align-items: center; justify-content: center;
+}
+button.mcp-pagination__nav,
+button.mcp-pagination__page {
+    appearance: none;
+    -webkit-appearance: none;
+    line-height: 1;
+}
+.mcp-pagination__nav:hover:not(:disabled),
+.mcp-pagination__page:hover:not(:disabled) {
+    background: var(--mcp-surface-2);
+}
+.mcp-pagination__nav:disabled,
+.mcp-pagination__page:disabled:not(.mcp-pagination__page--active) {
+    opacity: .4;
+    cursor: not-allowed;
+}
+.mcp-pagination__nav[aria-disabled="true"] {
+    opacity: .4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+.mcp-pagination__page--active {
+    background: var(--mcp-navy-900);
+    border-color: var(--mcp-navy-900);
+    color: #fff;
+    cursor: default;
+    opacity: 1;
+}
+.mcp-pagination__ellipsis {
+    padding: 0 6px; color: var(--mcp-text-mute);
+    display: inline-flex; align-items: center;
+}
+
+/* Per-page selector — sits below the pagination row inside the table card.
+   A separate row instead of inside the pagination nav so we don't have to
+   modify the global bootstrap.blade.php layout. URL-only persistence
+   (no localStorage); the ?per query string handles page reload. */
+.mcp-perpage {
+    display: flex; align-items: center; justify-content: flex-end;
+    gap: 8px;
+    padding: 8px 18px 12px;
+    background: var(--mcp-surface);
+    font-size: var(--mcp-text-ui-sm); color: var(--mcp-text-mid);
+    border-top: 1px solid var(--mcp-border);
+}
+.mcp-perpage__label { font-weight: 500; }
+.mcp-perpage__select {
+    padding: 4px 8px;
+    border: 1px solid var(--mcp-border-strong);
+    border-radius: var(--mcp-radius-sm);
+    background: var(--mcp-surface);
+    color: var(--mcp-text);
+    font-size: var(--mcp-text-ui-sm);
+    font-weight: 600;
+    font-family: var(--mcp-font);
+    cursor: pointer;
+}
+.mcp-perpage--mobile {
+    margin-top: 0;
+    border-top: none;
+    border-radius: var(--mcp-radius-md);
+    border: 1px solid var(--mcp-border);
+}
+
+/* ---- 13. Empty state (scoped under .mcp to avoid sidebar conflict) ---- */
+
+.mcp .mcp-empty {
+    padding: 48px 24px;
+    text-align: center;
+    color: var(--mcp-text-mid);
+}
+.mcp .mcp-empty__icon {
+    width: 48px; height: 48px;
+    margin: 0 auto 12px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--mcp-surface-2);
+    border-radius: 50%;
+    color: var(--mcp-text-mute);
+    font-size: 18px;
+}
+.mcp .mcp-empty__title {
+    font-size: var(--mcp-text-card-title);
+    font-weight: 600;
+    color: var(--mcp-text);
+    margin-bottom: 4px;
+}
+.mcp .mcp-empty__hint { font-size: var(--mcp-text-meta); }
+.mcp .mcp-empty__action { margin-top: 14px; }
+
+/* ---- 13b. Testing-environment banner ----------------------------------
+ * High-visibility orange bar shown on non-production environments
+ * (markup in layouts/app.blade.php). Lives here, not app.scss, because the
+ * layout only loads the directly-linked mcp-*.css files. No --mcp token is
+ * orange; #fff on #c2410c is ~5.16:1 (WCAG AA).
+ */
+.env-banner {
+    background-color: #c2410c;
+    color: #ffffff;
+    border-bottom: 1px solid #9a3412;
+}
+
+/* ---- 14. Topbar -------------------------------------------------------
+ * 52px sticky chrome that pins to the top of the document scroll model.
+ * Sticky (not fixed) so the env-banner above it scrolls away naturally
+ * on long pages without leaving a gap. If a CoreUI ancestor's overflow
+ * defeats sticky in some context, fall back to position:fixed and add
+ * padding-top:52px on .wrapper — see Phase C verification.
+ */
+.mcp-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 1020;          /* above page content, below modal backdrop (1050) */
+    height: var(--mcp-topbar-h, 56px);
+    background: var(--mcp-surface);
+    border-bottom: 1px solid var(--mcp-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    gap: 16px;
+    flex-wrap: nowrap;
+    min-width: 0;
+}
+.mcp-topbar__spacer { flex: 1 1 auto; min-width: 8px; }
+
+/* Group on the right (notification bell + future help/icon buttons).
+   Group on the left holds the mobile hamburger; on desktop it's empty
+   and gets collapsed via the gap. */
+.mcp-topbar__group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+/* Topbar icon button (32×32 per spec §05).
+   The notification bell will adopt this in a future phase (SPEC.md Phase 5);
+   for now this is also used by the mobile hamburger. */
+.mcp-topbar__icon-btn {
+    width: 32px; height: 32px;
+    padding: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid transparent;
+    border-radius: var(--mcp-radius-sm);
+    background: transparent;
+    color: var(--mcp-text-mid);
+    font-size: var(--mcp-text-mobile-title);
+    cursor: pointer;
+    text-decoration: none;
+    position: relative;
+    transition: background .12s ease, color .12s ease;
+}
+.mcp-topbar__icon-btn:hover {
+    background: var(--mcp-surface-2);
+    color: var(--mcp-text);
+}
+.mcp-topbar__icon-btn:focus-visible {
+    outline: 2px solid var(--mcp-navy-500);
+    outline-offset: 2px;
+}
+
+/* Hamburger — only shown on mobile per spec §18. Keeps .header-toggler
+   as a non-style CSS class so mcp-sidebar.js's existing click handler
+   (line 50: document.querySelector('.header-toggler')) keeps working
+   without a JS edit. */
+/* Sidebar toggle — visible on every viewport (was mobile-only).
+   On desktop the click collapses/expands the sidebar; on mobile it opens
+   the sheet. mcp-sidebar.js binds the click via .header-toggler. */
+.mcp-topbar__hamburger { display: inline-flex; }
+
+.mcp-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--mcp-text-ui-sm);
+    color: var(--mcp-text-mid);
+}
+.mcp-breadcrumb__link {
+    color: var(--mcp-text-mid);
+    text-decoration: none;
+    font-weight: 500;
+}
+.mcp-breadcrumb__link:hover { color: var(--mcp-navy-700); }
+.mcp-breadcrumb__current {
+    color: var(--mcp-text);
+    font-weight: 600;
+}
+.mcp-breadcrumb__sep { font-size: 8px; color: var(--mcp-text-mute); }
+
+/* Icon size scale — tiny chevrons, priority markers (replaces inline font-size) */
+.mcp-icon--xxs { font-size: 9px; }
+.mcp-icon--xs  { font-size: 10px; }
+
+/* ---- 15. Activity timeline -------------------------------------------- */
+
+.mcp-activity-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--mcp-border);
+}
+.mcp-activity-item:last-child { border-bottom: none; }
+.mcp-activity-item__icon {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--mcp-surface-2);
+    color: var(--mcp-text-mid);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--mcp-text-caption);
+    flex-shrink: 0;
+}
+.mcp-activity-item__body { flex: 1; min-width: 0; }
+.mcp-activity-item__desc { font-size: var(--mcp-text-ui-sm); color: var(--mcp-text); }
+.mcp-activity-item__meta {
+    font-size: var(--mcp-text-meta);
+    color: var(--mcp-text-mute);
+    margin-top: 2px;
+}
+
+/* ---- 16. Tab bar ------------------------------------------------------- */
+
+.mcp-tabs {
+    display: flex;
+    gap: 0;
+    padding: 0 6px;
+    border-bottom: 1px solid var(--mcp-border);
+    background: var(--mcp-surface);
+}
+.mcp-tabs__tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 14px 16px;
+    border: none;
+    background: transparent;
+    font-size: var(--mcp-text-ui-sm);
+    font-weight: 600;
+    font-family: var(--mcp-font);
+    color: var(--mcp-text-mid);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color .15s ease;
+}
+.mcp-tabs__tab:hover { color: var(--mcp-text); }
+.mcp-tabs__tab.is-active {
+    color: var(--mcp-navy-900);
+    border-bottom-color: var(--mcp-navy-900);
+}
+.mcp-tabs__count {
+    font-size: var(--mcp-text-status-sm);
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: var(--mcp-surface-2);
+    color: var(--mcp-text-mute);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+.mcp-tabs__tab.is-active .mcp-tabs__count {
+    background: var(--mcp-navy-900);
+    color: #fff;
+}
+
+/* ---- 17. Summary stat tiles ------------------------------------------- */
+
+.mcp-stat {
+    padding: 16px 18px;
+    background: var(--mcp-surface);
+    border: 1px solid var(--mcp-border);
+    border-radius: var(--mcp-radius-sm);
+    box-shadow: var(--mcp-shadow-sm);
+    transition: box-shadow .15s ease, transform .15s ease;
+}
+.mcp-stat:hover {
+    box-shadow: var(--mcp-shadow);
+    transform: translateY(-1px);
+}
+.mcp-stat__label {
+    font-size: var(--mcp-text-caption);
+    font-weight: 700;
+    color: var(--mcp-text-mute);
+    letter-spacing: .02em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+.mcp-stat__value {
+    font-family: var(--mcp-font-display);
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: .02em;
+    line-height: 1.05;
+    color: var(--mcp-text);
+    font-variant-numeric: tabular-nums;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.mcp-stat__value--text { font-variant-numeric: normal; }
+
+.mcp-stat--accent-info    { border-left: 3px solid var(--mcp-info-dot); }
+.mcp-stat--accent-violet  { border-left: 3px solid var(--mcp-violet-dot); }
+.mcp-stat--accent-warning { border-left: 3px solid var(--mcp-warning-dot); }
+.mcp-stat--accent-info .mcp-stat__label i    { color: var(--mcp-info-dot); }
+.mcp-stat--accent-violet .mcp-stat__label i  { color: var(--mcp-violet-dot); }
+.mcp-stat--accent-warning .mcp-stat__label i { color: var(--mcp-warning-dot); }
+
+/* ---- 18. Avatar (scoped under .mcp to avoid sidebar conflict) --------- */
+
+.mcp .mcp-avatar {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--mcp-info-bg);
+    color: var(--mcp-info-fg);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--mcp-text-status-sm);
+    font-weight: 700;
+    letter-spacing: .02em;
+    flex-shrink: 0;
+}
+
+/* ---- 19. Order chip --------------------------------------------------- */
+
+.mcp-order-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: var(--mcp-sky-bg);   /* was info-bg — teal, distinct from record ink */
+    color: var(--mcp-sky-fg);        /* was info-fg */
+    font-size: var(--mcp-text-ui-sm);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+/* Empty identifier cell — subtle grey pill instead of a bare em-dash,
+   so the Order/Bill columns keep a consistent shape down the column. */
+.mcp-id-none {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 9px;
+    border-radius: var(--mcp-radius-sm);
+    background: var(--mcp-surface-2);
+    color: var(--mcp-text-mute);
+    border: 1px solid var(--mcp-border);
+    font-size: var(--mcp-text-ui-sm);
+    font-weight: 600;
+}
+
+/* ---- 20. Density toggle ----------------------------------------------- */
+
+.mcp-density {
+    display: inline-flex;
+    border: 1px solid var(--mcp-border-strong);
+    border-radius: var(--mcp-radius-sm);
+    overflow: hidden;
+    background: var(--mcp-surface);
+    font-size: var(--mcp-text-ui-sm);
+    font-weight: 600;
+}
+.mcp-density button {
+    padding: 7px 12px;
+    border: none;
+    background: transparent;
+    color: var(--mcp-text-mid);
+    cursor: pointer;
+    font-family: var(--mcp-font);
+    font-size: var(--mcp-text-ui-sm);
+}
+.mcp-density button.is-active {
+    background: var(--mcp-navy-900);
+    color: #fff;
+}
+
+/* ---- 21. Layout helpers (replace inline styles in Blade snippets) ----- */
+
+.mcp-toolbar {
+    display: flex; gap: 10px; align-items: center;
+    flex-wrap: wrap; margin-bottom: 16px;
+}
+.mcp-stack { display: flex; flex-direction: column; gap: 4px; }
+.mcp-row-flex { display: flex; align-items: center; gap: 9px; }
+.mcp-row-flex--sm { gap: 6px; }
+
+/* Inline text link — .mcp-id-link chrome for plain inline links (deflist
+   values, card body links). */
+.mcp-link {
+    color: var(--mcp-navy-700);
+    text-decoration: none;
+}
+.mcp-link:hover,
+.mcp-link:focus-visible {
+    color: var(--mcp-red-deep); /* AA on white / --mcp-hover; beats Simple green */
+    text-decoration: none;
+}
+
+/* <hr> replacement inside cards/sections */
+.mcp-divider {
+    height: 0;
+    border: 0;
+    border-top: 1px solid var(--mcp-border);
+    margin: 16px 0;
+}
+.mcp-table-wrap { overflow-x: auto; }
+
+/* Dual scrollbar — a synced horizontal scrollbar above the table that mirrors
+   the native bottom one (driven by mcp-table-scroll.js). Opt in via the
+   [data-dual-scroll] wrapper markup. */
+.mcp-table-scroll-top {
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+.mcp-table-scroll-top__rail { height: 1px; }
+/* Min-width modifiers — keep desktop tables from compressing on narrow viewports;
+   the wrap above provides a horizontal scroll fallback. */
+.mcp-table--minw-1414 { min-width: 1414px; table-layout: fixed; }
+.mcp-table--minw-1100 { min-width: 1100px; }
+
+/* Jobs table: fills its card (width:100% from base .mcp-table) but sizes each
+   column to its single-line content via table-layout:auto — so Description grows
+   to the longest description and badges/chips never overflow their cell. The
+   leftover width on wide monitors is absorbed by the Actions column (below), whose
+   buttons are right-aligned — never dumped into Description (which would reopen the
+   Description↔Status gap). Both densities share this; Compact differs only by
+   padding, hidden date columns, hidden button labels, and the 360px description cap. */
+.mcp-table--jobs { table-layout: auto; }
+/* Actions is the slack-absorbing column: width:100% makes it soak up the leftover
+   table width so rows span the full card (no dead whitespace) while data columns
+   stay content-tight; .mcp-row-actions right-aligns the buttons to the table edge.
+   Its min size is set by the buttons themselves, so it never squeezes them. */
+.mcp-th--actions-responsive { width: 100%; }
+
+/* ── Jobs table (1d): single-line Bill/Dept chips → locked row height ────────
+   The table sizes each column to its content (table-layout:auto above) and fills
+   its card via the greedy Actions column. Keeping the Bill and Dept chips (and the
+   date columns below) single-line fixes every cell to one line, so row height stays
+   constant at any viewport width. The Bill chip is also re-typeset to match the
+   Order chip, with its uppercase type eyebrow swapped for a receipt icon tinted by
+   the per-type text colour. (Job-ink and Order-sky deltas were already applied
+   globally — see .mcp-id-link / .mcp-order-chip.) */
+
+/* Bill chip → single typed chip, sized to match the Order chip; never wraps */
+.mcp-table--jobs .mcp-bill {
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    font-size: var(--mcp-text-chip);      /* 14px — matches the order chip's rendered size */
+    padding: 4px 9px;
+    gap: 4px 6px;
+    font-weight: 700;
+    font-family: var(--mcp-font-table);
+    line-height: 1.35;
+}
+/* Visually hide the type eyebrow but keep it in the accessibility tree — screen
+   readers still announce Invoice/Quotation/Payable (display:none would drop it
+   entirely). The receipt icon + chip colour carry the type visually. */
+.mcp-table--jobs .mcp-bill__type {
+    position: absolute;
+    width: 1px; height: 1px;
+    margin: -1px; padding: 0; border: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+}
+.mcp-table--jobs .mcp-bill::before {                  /* per-type dot → receipt icon, tinted via currentColor */
+    content: "\f543";                     /* fa-receipt (FA6 solid, loaded via cdnjs) */
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    width: auto; height: auto; border-radius: 0;
+    background: transparent;
+    color: currentColor;                  /* inherits per-type fg: invoice green / quotation blue / payable amber */
+    font-size: 0.72em;
+    opacity: 0.85;
+}
+
+/* Department chip never wraps → row height stays locked on long names */
+.mcp-table--jobs .mcp-dept { white-space: nowrap; overflow-wrap: normal; }
+
+/* Date columns never wrap. Nowrapping Bill+Dept alone did NOT fully lock row
+   height: the Created/Updated cells are ~97px (content-box ~65px) which is right
+   at a date's one-line width, so "22 Jun, 26"-width values wrapped to 2 lines and
+   grew those rows to 78px while shorter-rendering "08 Jul, 26" rows stayed 57px.
+   Locking the dates too makes row height genuinely constant (verified 57px, no
+   clipping, across 1500–2560px). Dates are display:none in Compact, so no effect there. */
+.mcp-table--jobs .col-created,
+.mcp-table--jobs .col-updated { white-space: nowrap; }
+
+/* Sticky first column — keeps the row identifier visible while the user scrolls
+   horizontally to reach Actions. Industry-standard pattern for wide data tables
+   (NN/G mobile-tables, CSS-Tricks sticky-first-column). Applied to the jobs
+   table where 9 columns require horizontal scroll on viewports <1440px. */
+.mcp-table--sticky-first thead th:first-child,
+.mcp-table--sticky-first tbody td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+}
+.mcp-table--sticky-first thead th:first-child { background: var(--mcp-surface-2); z-index: 2; }
+.mcp-table--sticky-first tbody td:first-child { background: var(--mcp-surface); }
+.mcp-table--sticky-first tbody tr:hover td:first-child { background: var(--mcp-hover); }
+.mcp-table--sticky-first tbody tr.mcp-row--priority td:first-child { background: var(--mcp-priority-row); }
+.mcp-table--sticky-first tbody tr.mcp-row--priority:hover td:first-child { background: var(--mcp-priority-row-hover); }
+
+/* Sticky last column — keeps Actions visible while user scrolls horizontally
+   to reach descriptive cells. Mirrors --sticky-first; uses negative shadow
+   for visual separation when content scrolls underneath. */
+.mcp-table--sticky-last thead th:last-child,
+.mcp-table--sticky-last tbody td:last-child {
+    position: sticky;
+    right: 0;
+    z-index: 1;
+}
+.mcp-table--sticky-last thead th:last-child { background: var(--mcp-surface-2); z-index: 2; }
+.mcp-table--sticky-last tbody td:last-child { background: var(--mcp-surface); }
+.mcp-table--sticky-last tbody tr:hover td:last-child { background: var(--mcp-hover); }
+.mcp-table--sticky-last tbody tr.mcp-row--priority td:last-child { background: var(--mcp-priority-row); }
+.mcp-table--sticky-last tbody tr.mcp-row--priority:hover td:last-child { background: var(--mcp-priority-row-hover); }
+
+/* Left-edge shadow on the sticky-last cells to indicate clipped content
+   underneath while horizontal scroll is in progress. */
+.mcp-table--sticky-last thead th:last-child { box-shadow: -1px 0 0 var(--mcp-border); }
+.mcp-table--sticky-last tbody td:last-child { box-shadow: -1px 0 0 var(--mcp-border); }
+
+/* Scroll affordance — right-edge fade hints at hidden content when the wrap is
+   narrower than the table's min-width. Container query on the card scopes the
+   hint to widths where scroll is actually possible (not on wide monitors).
+   container-type goes on the card (the wrap can't query its own size).
+   Scoped via :has() so only cards containing a scrolling table become
+   containment contexts — avoids breaking position:fixed descendants on
+   future cards that hold popovers, dropdowns, etc. */
+.mcp-card:has(.mcp-table-wrap) { container-type: inline-size; }
+
+@container (max-width: 1099px) {
+    .mcp-table-wrap {
+        -webkit-mask-image: linear-gradient(to right, black calc(100% - 28px), transparent);
+                mask-image: linear-gradient(to right, black calc(100% - 28px), transparent);
+    }
+}
+
+/* ---- Density: compact override (default = expanded baseline) ----------
+   All compact rules are screen-only so print mode renders the table at
+   full expanded fidelity (date columns visible, full labels, full padding)
+   without per-rule print overrides. */
+@media screen {
+    .mcp-table--compact thead th { padding: 9px 11px; font-size: var(--mcp-text-table-compact-th); }
+    .mcp-table--compact tbody td { padding: 10px 12px; font-size: var(--mcp-text-table-compact-td); }
+
+    .mcp-table--compact .mcp-truncate { max-width: 360px; }
+
+    .mcp-table--compact .mcp-icon-btn--with-label .mcp-icon-btn__label { display: none; }
+    .mcp-table--compact .mcp-icon-btn--with-label { width: 30px; padding: 0; }
+
+    .mcp-table--compact .col-created,
+    .mcp-table--compact .col-updated {
+        display: none;
+        width: 0;
+        padding: 0;
+        border: 0;
+    }
+}
+
+/* Filter dropdown menu inside <x-mcp.filter-btn>. Bootstrap's .dropdown-menu
+   handles positioning; this just nudges the width and inner spacing. */
+.mcp-filter-menu { min-width: 280px; }
+.mcp-truncate {
+    overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap; max-width: 100%;
+    display: block;
+}
+/* T-024: in Expanded density the description is uncapped so it sizes to the longest
+   single-line description (the table's table-layout:auto lets each column size to
+   its content). Compact keeps the single-line ellipsis + 360px cap defined above. */
+.mcp-table--jobs:not(.mcp-table--compact) .mcp-truncate {
+    overflow: visible;
+    max-width: none;
+}
+.mcp-bills-list { display: flex; gap: 5px; flex-wrap: wrap; }
+.mcp-bills-more {
+    font-size: var(--mcp-text-chip); font-weight: 600; color: var(--mcp-text-mute);
+    padding: 4px 8px; background: var(--mcp-surface-2); border-radius: 4px;
+}
+.mcp-cell-strong { font-weight: 600; }
+
+@media (prefers-contrast: more) {
+    .mcp-table .mcp-td--mute { color: var(--mcp-text); }
+}
+.mcp-em-dash { font-size: var(--mcp-text-meta); color: var(--mcp-text-mute); }
+
+/* ---- 22. Mobile card (replaces dual-layout cards under .mcp) --------- */
+
+.mcp-mobile-card {
+    background: var(--mcp-surface);
+    border: 1px solid var(--mcp-border);
+    border-radius: var(--mcp-radius);
+    box-shadow: var(--mcp-shadow-sm);
+    padding: 14px;
+    margin-bottom: 10px;
+}
+.mcp-mobile-card--priority {
+    border-left: 3px solid var(--mcp-danger-fg);
+}
+.mcp-mobile-card__head {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 8px; margin-bottom: 8px;
+}
+.mcp-mobile-card__title {
+    font-size: var(--mcp-text-mobile-title); font-weight: 600; color: var(--mcp-text);
+    margin-bottom: 4px;
+}
+.mcp-mobile-card__meta {
+    display: flex; flex-wrap: wrap; gap: 12px;
+    font-size: var(--mcp-text-mobile-meta); color: var(--mcp-text-mute);
+    margin-bottom: 10px;
+}
+.mcp-mobile-card__meta a {
+    color: var(--mcp-text-mid); text-decoration: none; font-weight: 500;
+}
+.mcp-mobile-card__amounts {
+    display: flex; justify-content: space-between;
+    padding: 10px 0; border-top: 1px solid var(--mcp-border);
+    font-size: var(--mcp-text-deflist-value);
+}
+.mcp-mobile-card__actions {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    padding-top: 10px; border-top: 1px solid var(--mcp-border);
+}
+.mcp-mobile-card__actions > * { flex: 1 1 auto; min-width: 0; }
+
+/* ---- 22b. Skeleton loaders (lazy placeholders) -------------------------
+ * Scoped under .mcp — never use Bootstrap's .placeholder class.
+ * Primitives mirror .mcp-search-skeleton__* shimmer; composites mirror real
+ * component geometry so hydration does not shift layout.
+ */
+
+.mcp .mcp-skeleton {
+    display: block;
+    max-width: 100%;
+    position: relative;
+    overflow: hidden;
+    background-color: var(--mcp-skeleton-base);
+    background-image: linear-gradient(
+        105deg,
+        var(--mcp-skeleton-base) 0%,
+        var(--mcp-skeleton-base) 38%,
+        var(--mcp-skeleton-mid) 46%,
+        var(--mcp-skeleton-highlight) 50%,
+        var(--mcp-skeleton-mid) 54%,
+        var(--mcp-skeleton-base) 62%,
+        var(--mcp-skeleton-base) 100%
+    );
+    background-size: 220% 100%;
+    background-repeat: no-repeat;
+    animation: mcp-skeleton-shimmer var(--mcp-skeleton-duration) linear infinite;
+}
+
+@keyframes mcp-skeleton-shimmer {
+    0% { background-position: 120% 0; }
+    100% { background-position: -120% 0; }
+}
+
+.mcp .mcp-skeleton--line {
+    height: 10px;
+    border-radius: 999px;
+    width: 100%;
+}
+
+.mcp .mcp-skeleton--title {
+    height: 28px;
+    border-radius: var(--mcp-radius-sm);
+    width: 55%;
+}
+
+.mcp .mcp-skeleton--badge {
+    height: 24px;
+    width: 72px;
+    border-radius: 999px;
+}
+
+.mcp .mcp-skeleton--btn {
+    height: 36px;
+    width: 108px;
+    border-radius: var(--mcp-radius-sm);
+}
+
+.mcp .mcp-skeleton--circle {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.mcp .mcp-skeleton--block {
+    height: 72px;
+    width: 100%;
+    border-radius: var(--mcp-radius-sm);
+}
+
+.mcp .mcp-skeleton--w25 { width: 25%; }
+.mcp .mcp-skeleton--w50 { width: 50%; }
+.mcp .mcp-skeleton--w75 { width: 75%; }
+
+.mcp .mcp-skeleton-table {
+    width: 100%;
+    border: 1px solid var(--mcp-border);
+    border-radius: var(--mcp-radius);
+    overflow: hidden;
+    background: var(--mcp-surface);
+}
+
+.mcp .mcp-skeleton-table__head {
+    background: var(--mcp-surface-2);
+    border-bottom: 1px solid var(--mcp-border);
+}
+
+.mcp .mcp-skeleton-table__row {
+    display: grid;
+    grid-template-columns: repeat(var(--mcp-skeleton-cols, 4), minmax(0, 1fr));
+    gap: 12px;
+    align-items: center;
+}
+
+.mcp .mcp-skeleton-table__head .mcp-skeleton-table__row {
+    padding: 12px 16px;
+}
+
+.mcp .mcp-skeleton-table__body .mcp-skeleton-table__row {
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--mcp-border);
+    background: var(--mcp-surface);
+}
+
+.mcp .mcp-skeleton-table__body .mcp-skeleton-table__row:nth-child(even) {
+    background: var(--mcp-table-stripe);
+}
+
+.mcp .mcp-skeleton-table__body .mcp-skeleton-table__row:last-child {
+    border-bottom: none;
+}
+
+.mcp .mcp-skeleton-table__cell .mcp-skeleton--line {
+    height: 12px;
+}
+
+.mcp .mcp-skeleton-table__cell--head .mcp-skeleton--line {
+    height: 14px;
+}
+
+.mcp .mcp-skeleton-mobile-card {
+    background: var(--mcp-surface);
+    border: 1px solid var(--mcp-border);
+    border-radius: var(--mcp-radius);
+    box-shadow: var(--mcp-shadow-sm);
+    padding: 14px;
+    margin-bottom: 10px;
+}
+
+.mcp .mcp-skeleton-mobile-card__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.mcp .mcp-skeleton-mobile-card__title {
+    margin-bottom: 4px;
+}
+
+.mcp .mcp-skeleton-mobile-card__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.mcp .mcp-skeleton-mobile-card__amounts {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-top: 1px solid var(--mcp-border);
+}
+
+.mcp .mcp-skeleton-mobile-card__actions {
+    display: flex;
+    gap: 6px;
+    padding-top: 10px;
+    border-top: 1px solid var(--mcp-border);
+}
+
+.mcp .mcp-skeleton-kpi {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 17px 18px;
+    background: var(--mcp-surface);
+    border: 1px solid var(--mcp-border);
+    border-radius: var(--mcp-radius);
+    box-shadow: var(--mcp-shadow);
+}
+
+.mcp .mcp-skeleton-kpi__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.mcp .mcp-skeleton-kpi__value {
+    height: 30px;
+    width: 42%;
+}
+
+.mcp .mcp-skeleton-kpi__spark {
+    height: 32px;
+    width: 100%;
+    border-radius: var(--mcp-radius-sm);
+}
+
+.mcp .mcp-skeleton-kpi__foot {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.mcp .mcp-skeleton-deflist {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px 16px;
+    align-items: center;
+}
+
+.mcp .mcp-skeleton-deflist__label {
+    height: 14px;
+    width: 88px;
+}
+
+.mcp .mcp-skeleton-deflist__value {
+    height: 16px;
+    width: 100%;
+}
+
+.mcp .mcp-skeleton-card {
+    background: var(--mcp-surface);
+    border: 1px solid var(--mcp-border);
+    border-radius: var(--mcp-radius);
+    box-shadow: var(--mcp-shadow-sm);
+    overflow: hidden;
+}
+
+.mcp .mcp-skeleton-card__header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--mcp-border);
+    background: var(--mcp-surface);
+}
+
+.mcp .mcp-skeleton-card__body {
+    padding: 18px;
+}
+
+.mcp .mcp-skeleton-card__body--flush {
+    padding: 0;
+}
+
+.mcp .mcp-skeleton-refreshing {
+    opacity: .55;
+    pointer-events: none;
+}
+
+/* Inert chrome in lazy placeholders — looks live, ignores clicks until hydrate */
+.mcp .mcp-placeholder-inert {
+    pointer-events: none;
+}
+
+.mcp .mcp-placeholder-inert .mcp-search__input {
+    background: var(--mcp-surface);
+    color: var(--mcp-text);
+    opacity: 1;
+    cursor: default;
+}
+
+.mcp .mcp-skeleton-data-row td {
+    vertical-align: middle;
+}
+
+/* ---- 23. Page container (layout-level wrapper) ------------------------
+ * Applied to the layout's <main class="mcp-page"> element. Owns:
+ *   - page background (--mcp-bg)
+ *   - responsive horizontal/vertical padding tiers (spec §07)
+ *   - custom 9px scrollbar (matches the per-page .mcp wrapper, lifted
+ *     to layout level so non-.mcp pages get the same scrollbar chrome)
+ *
+ * Does NOT own height or overflow — document scroll is the model
+ * (see commit cb9fc19). The topbar (§24) sticks via position:sticky.
+ */
+.mcp-page {
+    background: var(--mcp-bg);
+    min-height: 100%;
+    padding: 16px;
+}
+@media (min-width: 1024px) {
+    .mcp-page { padding: 20px 24px; }
+}
+@media (min-width: 1280px) {
+    .mcp-page { padding: 24px 28px; }
+}
+
+/* Custom scrollbar — lifted from .mcp { } so layout-level pages get it
+   even before their per-page .mcp wrapper is applied. Webkit only;
+   Firefox uses scrollbar-width / scrollbar-color (set on <html> globally
+   in a future cleanup, out of scope here). */
+.mcp-page ::-webkit-scrollbar { width: 9px; height: 9px; }
+.mcp-page ::-webkit-scrollbar-thumb { background: #D8D6D2; border-radius: 5px; }
+.mcp-page ::-webkit-scrollbar-thumb:hover { background: #B8B6B2; }
+
+/* ---- 26. Notification bell + dropdown re-skin (Phase 5 Unit 5.1) ------
+ * Bell trigger sits in the topbar (no .mcp ancestor), so .mcp-bell is
+ * authored unscoped. The dropdown menu is a CoreUI .dropdown-menu — we
+ * keep that class for open/close behavior and add `.mcp .mcp-notif-card`
+ * so children that are scoped under .mcp (icon-btn §5, empty §13) resolve.
+ */
+
+.mcp-bell {
+    position: relative;
+    width: 32px; height: 32px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid transparent;
+    border-radius: var(--mcp-radius-sm);
+    background: transparent;
+    color: var(--mcp-text-mid);
+    font-size: var(--mcp-text-mobile-title);
+    cursor: pointer;
+    text-decoration: none;
+    transition: background .12s ease, color .12s ease;
+}
+.mcp-bell:hover,
+.mcp-bell:focus,
+.mcp-bell.show {
+    background: var(--mcp-surface-2);
+    color: var(--mcp-text);
+    text-decoration: none;
+}
+.mcp-bell:focus-visible {
+    outline: 2px solid var(--mcp-navy-500);
+    outline-offset: 2px;
+}
+
+/* Count badge — floats above the icon's top-right corner. */
+.mcp-bell__count {
+    position: absolute;
+    top: -2px; right: -4px;
+    min-width: 16px; height: 16px;
+    padding: 0 4px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--mcp-danger-fg);
+    color: #fff;
+    font-size: 10px; font-weight: 700; line-height: 1;
+    border-radius: 999px;
+    border: 1.5px solid var(--mcp-surface);
+}
+
+/* Inner span that carries the legacy `.notification-bell-active` hook
+   (Dusk selectors pin it). No visual treatment — the count badge owns
+   the unread affordance — but the wrapper must have nonzero size for
+   `assertVisible('.notification-bell-active')`. */
+.mcp-bell__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+/* Static CoreUI dropdown: anchor the panel under the bell in the topbar cluster
+   so Livewire content updates do not re-flip Popper placement. */
+.mcp-topbar__group .nav-item.dropdown {
+    position: relative;
+}
+.mcp-topbar__group .nav-item.dropdown > .mcp-notif-card {
+    top: calc(100% + 4px);
+    right: 0;
+    left: auto;
+    margin: 0;
+}
+
+/* Dropdown card chrome — overrides Bootstrap/CoreUI .dropdown-menu defaults.
+   Root-scoped because the class is unique; the `mcp` class on the same
+   element exists so children scoped under .mcp (icon-btn §5, empty §13)
+   resolve via the descendant combinator. */
+.mcp-notif-card {
+    width: 340px;
+    padding: 0;
+    margin: 0;
+    border: 1px solid var(--mcp-border);
+    border-radius: var(--mcp-radius);
+    background: var(--mcp-surface);
+    box-shadow: var(--mcp-shadow-pop);
+    overflow: hidden;
+    font-size: var(--mcp-text-ui-sm);
+    color: var(--mcp-text);
+}
+
+.mcp .mcp-notif-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px;
+    background: var(--mcp-surface-2);
+    border-bottom: 1px solid var(--mcp-border);
+}
+.mcp .mcp-notif-header__title {
+    font-size: var(--mcp-text-meta); font-weight: 700; letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--mcp-text-mid);
+}
+.mcp .mcp-notif-header__actions {
+    display: flex; align-items: center; gap: 6px;
+}
+
+.mcp .mcp-notif-list {
+    max-height: 360px;
+    overflow-y: auto;
+}
+
+.mcp .mcp-notif-item {
+    position: relative;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--mcp-border);
+    background: var(--mcp-surface);
+    transition: background .12s ease;
+}
+.mcp .mcp-notif-item:last-child { border-bottom: 0; }
+.mcp .mcp-notif-item:hover { background: var(--mcp-surface-2); }
+
+.mcp .mcp-notif-item.is-unread {
+    background: var(--mcp-info-bg);
+    box-shadow: inset 3px 0 0 var(--mcp-navy-500);
+}
+.mcp .mcp-notif-item.is-unread:hover {
+    background: #DBE5F5;
+}
+
+.mcp .mcp-notif-item__link {
+    display: block;
+    padding-right: 22px;          /* clearance for the dismiss button */
+    text-decoration: none;
+    color: inherit;
+}
+.mcp .mcp-notif-item__link:hover,
+.mcp .mcp-notif-item__link:focus {
+    text-decoration: none;
+    color: inherit;
+}
+
+.mcp .mcp-notif-item__row1 {
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+}
+.mcp .mcp-notif-item__message {
+    font-size: var(--mcp-text-ui-sm);
+    color: var(--mcp-text-soft);
+    line-height: 1.4;
+}
+.mcp .mcp-notif-item__meta {
+    margin-top: 4px;
+    font-size: var(--mcp-text-caption);
+    color: var(--mcp-text-mute);
+}
+
+.mcp .mcp-notif-item__dismiss {
+    position: absolute;
+    top: 8px; right: 10px;
+    width: 22px; height: 22px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--mcp-text-mute);
+    font-size: var(--mcp-text-caption);
+    line-height: 1;
+    cursor: pointer;
+    border-radius: var(--mcp-radius-sm);
+    transition: background .12s ease, color .12s ease;
+    z-index: 2;
+}
+.mcp .mcp-notif-item__dismiss:hover {
+    background: var(--mcp-danger-bg);
+    color: var(--mcp-danger-fg);
+}
+
+/* Push-notification opt-in row at the foot of the dropdown. */
+.mcp .mcp-notif-footer {
+    padding: 10px 14px;
+    border-top: 1px solid var(--mcp-border);
+    background: var(--mcp-surface-2);
+    text-align: center;
+}
+.mcp .mcp-notif-footer__hint {
+    display: block;
+    font-size: var(--mcp-text-meta);
+    color: var(--mcp-text-mute);
+    margin-bottom: 6px;
+}
+
+/* Notification kind / status badge — moved out of the component's @push
+   styles so the Blade file holds no inline CSS. The bg/fg colors come
+   from inline `style=""` attributes set by BadgeHelper::palette() at
+   render time; this rule owns shape only. */
+.notif-badge {
+    display: inline-block;
+    font-size: var(--mcp-text-status-sm);
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    line-height: 1.4;
+    letter-spacing: .01em;
+    white-space: nowrap;
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   §27 — Topbar (Phase 6): search shell, divider, user chip + dropdown.
+   Token-driven only. Results panel, keyboard nav, and loading states
+   are owned by GlobalSearchComponent + mcp-global-search.js.
+   ───────────────────────────────────────────────────────────────────── */
+
+/* §27.1 — Global search input shell ─────────────────────────────────── */
+
+.mcp-topbar__search {
+    position: relative;
+    flex: 1 1 180px;
+    width: min(480px, 100%);
+    max-width: 480px;
+    min-width: 0;
+}
+
+.mcp-topbar__search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--mcp-text-mute);
+    font-size: var(--mcp-text-ui-sm);
+    pointer-events: none;
+}
+
+.mcp-topbar__search-input {
+    width: 100%;
+    height: 36px;
+    padding: 0 56px 0 36px;
+    background: var(--mcp-surface-2);
+    border: 1px solid var(--mcp-border);
+    border-radius: 7px;
+    font-size: var(--mcp-text-ui-sm);
+    color: var(--mcp-text);
+    outline: none;
+    transition: border-color .12s ease, background .12s ease, box-shadow .12s ease;
+}
+
+.mcp-topbar__search-input::placeholder {
+    color: var(--mcp-text-mute);
+}
+
+.mcp-topbar__search-input:focus {
+    background: var(--mcp-surface);
+    border-color: var(--mcp-navy-500);
+    box-shadow: 0 0 0 3px rgba(52, 88, 184, 0.15);
+}
+
+/* Hide the browser-native ::-webkit-search-cancel-button so our custom
+   .mcp-topbar__search-clear is the only clear affordance. */
+.mcp-topbar__search-input::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+/* Custom clear button — sits in the right edge of the input (where the
+   ⌘K hint badge used to live). Visible only when the input has content,
+   driven by :placeholder-shown sibling selector — no JS state needed. */
+.mcp-topbar__search-clear {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--mcp-text-mute);
+    font-size: var(--mcp-text-caption);
+    cursor: pointer;
+    transition: background .12s ease, color .12s ease;
+}
+
+.mcp-topbar__search-clear:hover {
+    background: var(--mcp-surface-2);
+    color: var(--mcp-text);
+}
+
+.mcp-topbar__search-clear:focus-visible {
+    outline: 2px solid var(--mcp-navy-500);
+    outline-offset: 1px;
+}
+
+/* Hide the clear button while the placeholder is visible (input empty). */
+.mcp-topbar__search-input:placeholder-shown ~ .mcp-topbar__search-clear {
+    display: none;
+}
+
+/* Desktop shortcut hint — visible only when the input is empty. */
+.mcp-topbar__search-kbd {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    height: 20px;
+    padding: 0 6px;
+    border: 1px solid var(--mcp-border);
+    border-radius: var(--mcp-radius-sm);
+    background: var(--mcp-surface);
+    color: var(--mcp-text-mute);
+    font-family: var(--mcp-font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: .02em;
+    pointer-events: none;
+    box-shadow: var(--mcp-shadow-sm);
+}
+
+.mcp-topbar__search-input:placeholder-shown ~ .mcp-topbar__search-kbd {
+    display: inline-flex;
+}
+
+.mcp-topbar__search-input:not(:placeholder-shown) ~ .mcp-topbar__search-kbd {
+    display: none;
+}
+
+/* Mobile-only icon trigger — hidden by default on desktop. */
+.mcp-topbar__search-trigger {
+    display: none;
+}
+
+/* Notification bell sits inside <li class="nav-item dropdown"> from the
+   livewire partial. The <li> is in a <div>, not a <ul>, so the browser
+   renders a default marker on the left — suppress it. */
+.mcp-topbar__group > li {
+    list-style: none;
+}
+
+/* §27.x — Global search results panel ───────────────────────────────── */
+
+.mcp-search-panel {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 1025;
+    max-height: min(420px, calc(100vh - 120px));
+    overflow-y: auto;
+    background: var(--mcp-surface);
+    border: 1px solid var(--mcp-border);
+    border-radius: var(--mcp-radius);
+    box-shadow: var(--mcp-shadow-pop);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-6px) scale(0.99);
+    transform-origin: top center;
+    pointer-events: none;
+    transition:
+        opacity .16s ease,
+        transform .16s ease,
+        visibility .16s ease;
+}
+
+.mcp-topbar__search.is-panel-open .mcp-search-panel {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+
+.mcp-search-panel__preflight {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    font-size: var(--mcp-text-ui-sm);
+    color: var(--mcp-text-mid);
+}
+
+.mcp-search-panel__preflight-icon {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--mcp-radius-sm);
+    background: var(--mcp-surface-2);
+    color: var(--mcp-text-mute);
+    font-size: var(--mcp-text-ui-sm);
+}
+
+.mcp-search-panel__loading {
+    padding: 8px 0;
+}
+
+.mcp-search-skeleton__row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 14px;
+}
+
+.mcp-search-skeleton__icon {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--mcp-radius-sm);
+    background: linear-gradient(
+        90deg,
+        var(--mcp-surface-2) 0%,
+        var(--mcp-hover) 50%,
+        var(--mcp-surface-2) 100%
+    );
+    background-size: 200% 100%;
+    animation: mcp-search-shimmer 1.2s ease-in-out infinite;
+}
+
+.mcp-search-skeleton__lines {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 4px;
+}
+
+.mcp-search-skeleton__line {
+    display: block;
+    height: 10px;
+    border-radius: 999px;
+    background: linear-gradient(
+        90deg,
+        var(--mcp-surface-2) 0%,
+        var(--mcp-hover) 50%,
+        var(--mcp-surface-2) 100%
+    );
+    background-size: 200% 100%;
+    animation: mcp-search-shimmer 1.2s ease-in-out infinite;
+}
+
+.mcp-search-skeleton__line--title { width: 72%; }
+.mcp-search-skeleton__line--subtitle { width: 48%; animation-delay: .15s; }
+.mcp-search-skeleton__icon { animation-delay: .08s; }
+
+@keyframes mcp-search-shimmer {
+    0% { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
+}
+
+.mcp-search-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1017;
+    border: none;
+    padding: 0;
+    background: rgba(26, 26, 24, 0.28);
+    cursor: default;
+}
+
+.mcp-search-panel__list {
+    list-style: none;
+    margin: 0;
+    padding: 6px 0;
+}
+
+.mcp-search-panel__group {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.mcp-search-panel__group + .mcp-search-panel__group {
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px solid var(--mcp-border);
+}
+
+.mcp-search-panel__group-label {
+    padding: 6px 14px 4px;
+    font-size: var(--mcp-text-status-sm);
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--mcp-text-mid);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mcp-search-panel__group-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 16px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--mcp-surface-2);
+    color: var(--mcp-text-mute);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+.mcp-search-panel__list--animated .mcp-search-result {
+    animation: mcp-search-result-in .18s ease both;
+}
+
+.mcp-search-panel__list--animated .mcp-search-panel__group:nth-child(1) .mcp-search-result { animation-delay: .02s; }
+.mcp-search-panel__list--animated .mcp-search-panel__group:nth-child(2) .mcp-search-result { animation-delay: .05s; }
+.mcp-search-panel__list--animated .mcp-search-panel__group:nth-child(3) .mcp-search-result { animation-delay: .08s; }
+
+@keyframes mcp-search-result-in {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.mcp-search-panel__group > ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.mcp-search-result {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 14px;
+    cursor: pointer;
+    color: var(--mcp-text);
+    text-decoration: none;
+    transition: background .12s ease;
+}
+
+.mcp-search-result:hover,
+.mcp-search-result.is-active {
+    background: var(--mcp-hover);
+    color: var(--mcp-text);
+    text-decoration: none;
+}
+
+.mcp-search-result.is-active {
+    background: var(--mcp-tint-blue);
+}
+
+.mcp-search-result__icon {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--mcp-radius-sm);
+    background: var(--mcp-surface-2);
+    color: var(--mcp-text-mid);
+    font-size: var(--mcp-text-ui-sm);
+}
+
+.mcp-search-result.is-active .mcp-search-result__icon {
+    background: var(--mcp-surface);
+    color: var(--mcp-navy-500);
+}
+
+.mcp-search-result__icon--info { background: var(--mcp-info-bg); color: var(--mcp-info-fg); }
+.mcp-search-result__icon--violet { background: var(--mcp-violet-bg); color: var(--mcp-violet-fg); }
+.mcp-search-result__icon--sky { background: var(--mcp-sky-bg); color: var(--mcp-sky-fg); }
+.mcp-search-result__icon--danger { background: var(--mcp-danger-bg); color: var(--mcp-danger-fg); }
+.mcp-search-result__icon--warning { background: var(--mcp-warning-bg); color: var(--mcp-warning-fg); }
+.mcp-search-result__icon--primary { background: var(--mcp-primary-bg); color: var(--mcp-primary-fg); }
+.mcp-search-result__icon--success { background: var(--mcp-success-bg); color: var(--mcp-success-fg); }
+.mcp-search-result__icon--neutral { background: var(--mcp-neutral-bg); color: var(--mcp-neutral-fg); }
+
+.mcp-search-result.is-active .mcp-search-result__icon--info { color: var(--mcp-info-fg); }
+.mcp-search-result.is-active .mcp-search-result__icon--violet { color: var(--mcp-violet-fg); }
+.mcp-search-result.is-active .mcp-search-result__icon--sky { color: var(--mcp-sky-fg); }
+.mcp-search-result.is-active .mcp-search-result__icon--danger { color: var(--mcp-danger-fg); }
+.mcp-search-result.is-active .mcp-search-result__icon--warning { color: var(--mcp-warning-fg); }
+.mcp-search-result.is-active .mcp-search-result__icon--primary { color: var(--mcp-primary-fg); }
+.mcp-search-result.is-active .mcp-search-result__icon--success { color: var(--mcp-success-fg); }
+.mcp-search-result.is-active .mcp-search-result__icon--neutral { color: var(--mcp-neutral-fg); }
+
+.mcp-search-result__body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.mcp-search-result__title {
+    font-size: var(--mcp-text-ui-sm);
+    font-weight: 500;
+    line-height: 1.35;
+    color: var(--mcp-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mcp-search-result__subtitle {
+    font-size: var(--mcp-text-meta);
+    line-height: 1.35;
+    color: var(--mcp-text-mid);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mcp-search-result__mark {
+    padding: 0;
+    border-radius: 2px;
+    background: var(--mcp-warning-bg);
+    color: inherit;
+    font-weight: 700;
+}
+
+.mcp-search-panel__empty {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 14px;
+    font-size: var(--mcp-text-ui-sm);
+    color: var(--mcp-text-mid);
+}
+
+.mcp-search-panel__empty .fa {
+    font-size: var(--mcp-text-ui-sm);
+    color: var(--mcp-text-mute);
+}
+
+/* §27.1b — Ask AI row + answer card ─────────────────────────────────── */
+
+.mcp-search-panel__ask-wrap {
+    list-style: none;
+    margin: 0;
+    padding: 6px;
+    border-top: 1px solid var(--mcp-border);
+}
+
+.mcp-search-ask {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 12px;
+    border: none;
+    border-radius: var(--mcp-radius-md);
+    background: var(--mcp-tint-blue);
+    color: var(--mcp-info-fg);
+    font-family: var(--mcp-font);
+    font-size: var(--mcp-text-ui-sm);
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: background .12s ease;
+}
+
+.mcp-search-ask:hover,
+.mcp-search-ask.is-active {
+    background: var(--mcp-info-bg);
+}
+
+.mcp-search-ask.is-active {
+    box-shadow: inset 2px 0 0 var(--mcp-navy-500);
+}
+
+.mcp-search-ask--disabled {
+    opacity: .72;
+    cursor: not-allowed;
+}
+
+.mcp-search-ask__hint {
+    margin-left: auto;
+    font-size: var(--mcp-text-caption);
+    font-weight: 700;
+    color: var(--mcp-info-fg);
+    background: transparent;
+    border: 1px solid var(--mcp-info-fg);
+    border-radius: 4px;
+    padding: 1px 5px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mcp-search-panel,
+    .mcp-search-panel__list--animated .mcp-search-result,
+    .mcp-search-skeleton__icon,
+    .mcp-search-skeleton__line,
+    .mcp .mcp-skeleton {
+        animation: none;
+        transition: none;
+    }
+
+    .mcp-topbar__search.is-panel-open .mcp-search-panel {
+        transform: none;
+    }
+}
+
+/* §27.2 — Divider ───────────────────────────────────────────────────── */
+
+.mcp-topbar__divider {
+    width: 1px;
+    height: 26px;
+    background: var(--mcp-border);
+    margin: 0 4px;
+}
+
+/* §27.3 — User chip ─────────────────────────────────────────────────── */
+
+.mcp-topbar__user {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 4px 10px 4px 4px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background .12s ease, border-color .12s ease;
+    color: inherit;
+    font-family: inherit;
+    max-width: min(220px, 36vw);
+    min-width: 0;
+}
+
+.mcp-topbar__user:hover {
+    background: var(--mcp-surface-2);
+    border-color: var(--mcp-border);
+}
+
+.mcp-topbar__user:focus-visible {
+    outline: 2px solid var(--mcp-navy-500);
+    outline-offset: 2px;
+}
+
+.mcp-topbar__user .avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--mcp-navy-900);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--mcp-text-meta);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    flex-shrink: 0;
+}
+
+.mcp-topbar__user .meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    line-height: 1.15;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.mcp-topbar__user .name {
+    font-size: var(--mcp-text-ui-sm);
+    font-weight: 600;
+    color: var(--mcp-text);
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mcp-topbar__user .role {
+    font-size: var(--mcp-text-status-sm);
+    color: var(--mcp-text-mute);
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mcp-topbar__user .caret {
+    font-size: 9px;
+    color: var(--mcp-text-mute);
+    margin-left: 2px;
+    flex-shrink: 0;
+}
+
+/* §27.4 — User dropdown card ────────────────────────────────────────── */
+
+.mcp-topbar__user-menu {
+    width: 280px;
+    padding: 0;
+    margin: 0;
+    border: 1px solid var(--mcp-border);
+    border-radius: var(--mcp-radius);
+    background: var(--mcp-surface);
+    box-shadow: var(--mcp-shadow-pop);
+    overflow: hidden;
+    font-size: var(--mcp-text-ui-sm);
+    color: var(--mcp-text);
+}
+
+.mcp-topbar__user-menu .ud-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--mcp-border);
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    background: var(--mcp-surface-2);
+}
+
+.mcp-topbar__user-menu .ud-header .avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--mcp-navy-900);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--mcp-text-mobile-title);
+    font-weight: 700;
+}
+
+.mcp-topbar__user-menu .ud-header__name {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--mcp-text);
+}
+
+.mcp-topbar__user-menu .ud-header__email {
+    font-size: var(--mcp-text-meta);
+    color: var(--mcp-text-mute);
+    margin-top: 1px;
+    word-break: break-all;
+}
+
+.mcp-topbar__user-menu .ud-section {
+    padding: 6px 0;
+    border-bottom: 1px solid var(--mcp-border);
+}
+
+.mcp-topbar__user-menu .ud-section:last-of-type {
+    border-bottom: none;
+}
+
+.mcp-topbar__user-menu .ud-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    color: var(--mcp-text);
+    text-decoration: none;
+    font-size: var(--mcp-text-ui-sm);
+    cursor: pointer;
+    transition: background .08s ease;
+}
+
+.mcp-topbar__user-menu .ud-row:hover {
+    background: var(--mcp-surface-2);
+}
+
+.mcp-topbar__user-menu .ud-row .ic {
+    width: 16px;
+    color: var(--mcp-text-mute);
+    font-size: var(--mcp-text-ui-sm);
+}
+
+.mcp-topbar__user-menu .ud-row.danger {
+    color: var(--mcp-danger-fg);
+}
+
+.mcp-topbar__user-menu .ud-row.danger .ic {
+    color: var(--mcp-danger-fg);
+}
+
+/* §27.6 — Responsive collapse ───────────────────────────────────────── */
+
+@media (max-width: 1199.98px) {
+    .mcp-topbar {
+        padding: 0 12px;
+        gap: 10px;
+    }
+
+    .mcp-topbar__search {
+        width: min(280px, 100%);
+        max-width: 280px;
+        flex: 1 1 140px;
+    }
+
+    .mcp-topbar__user {
+        max-width: min(160px, 28vw);
+    }
+
+    /* Drop the role line — keep just the name. */
+    .mcp-topbar__user .role {
+        display: none;
+    }
+}
+
+/* When Ask AI push panel is open, content width shrinks — collapse chrome early. */
+body.mcp-ask-ai-open .mcp-topbar__ask-ai {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    justify-content: center;
+    gap: 0;
+    flex-shrink: 0;
+}
+
+body.mcp-ask-ai-open .mcp-topbar__ask-ai-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+body.mcp-ask-ai-open .mcp-topbar__search {
+    width: auto;
+    max-width: min(320px, 100%);
+    flex: 1 1 180px;
+    min-width: 140px;
+}
+
+/* Same specificity race as ≤1199 — hide Ctrl+K chip whenever the pane is narrow. */
+body.mcp-ask-ai-open .mcp-topbar__search-input:placeholder-shown ~ .mcp-topbar__search-kbd,
+body.mcp-ask-ai-open .mcp-topbar__search-input:not(:placeholder-shown) ~ .mcp-topbar__search-kbd,
+body.mcp-ask-ai-sheet-open .mcp-topbar__search-input:placeholder-shown ~ .mcp-topbar__search-kbd,
+body.mcp-ask-ai-sheet-open .mcp-topbar__search-input:not(:placeholder-shown) ~ .mcp-topbar__search-kbd {
+    display: none;
+}
+
+body.mcp-ask-ai-open .mcp-topbar__search-input,
+body.mcp-ask-ai-sheet-open .mcp-topbar__search-input {
+    padding-right: 36px;
+}
+
+body.mcp-ask-ai-open .mcp-topbar__user .meta {
+    display: none;
+}
+
+body.mcp-ask-ai-open .mcp-topbar__group [aria-label="Help"],
+body.mcp-ask-ai-open .mcp-topbar__divider {
+    display: none;
+}
+
+@media (max-width: 1023.98px) {
+    .mcp-topbar__search {
+        width: min(240px, 100%);
+        max-width: 240px;
+    }
+}
+
+@media (max-width: 767.98px) {
+    /* Help icon hidden on phones — bell + user chip take priority. */
+    .mcp-topbar__group [aria-label="Help"] {
+        display: none;
+    }
+
+    /* User chip — drop meta column, show avatar + caret only. */
+    .mcp-topbar__user .meta {
+        display: none;
+    }
+
+    /* Hide the input by default, swap to icon-button trigger. */
+    .mcp-topbar__search {
+        width: auto;
+    }
+    .mcp-topbar__search-input,
+    .mcp-topbar__search-icon,
+    .mcp-topbar__search-clear,
+    .mcp-topbar__search-kbd {
+        display: none;
+    }
+    /* The :placeholder-shown sibling rule (0,3,0) outranks the kbd hide above —
+       re-hide the Ctrl+K hint at matching specificity so it never leaks onto
+       phones (no physical keyboard to invoke it; the icon trigger is the affordance). */
+    .mcp-topbar__search-input:placeholder-shown ~ .mcp-topbar__search-kbd,
+    .mcp-topbar__search-input:not(:placeholder-shown) ~ .mcp-topbar__search-kbd {
+        display: none;
+    }
+    .mcp-topbar__search-trigger {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        border: 1px solid transparent;
+        border-radius: var(--mcp-radius-sm);
+        background: transparent;
+        color: var(--mcp-text-mid);
+        font-size: var(--mcp-text-mobile-title);
+        cursor: pointer;
+        transition: background .12s ease, color .12s ease;
+    }
+    .mcp-topbar__search-trigger:hover {
+        background: var(--mcp-surface-2);
+        color: var(--mcp-text);
+    }
+    .mcp-topbar__search-trigger:focus-visible {
+        outline: 2px solid var(--mcp-navy-500);
+        outline-offset: 2px;
+    }
+
+    /* Trigger icon swap: search when collapsed, × when overlay is open.
+       Provides a visual cue that re-tapping the trigger dismisses it. */
+    .mcp-topbar__search-trigger-icon--close { display: none; }
+    .mcp-topbar__search.is-open .mcp-topbar__search-trigger-icon--open { display: none; }
+    .mcp-topbar__search.is-open .mcp-topbar__search-trigger-icon--close { display: inline-block; }
+
+    /* When trigger is clicked, .is-open promotes the input + icon + clear
+       button into a single fixed-position row beneath the topbar. Each
+       element is sized independently so the icon stays a 36px column on
+       the left, the clear button stays a 24px circle on the right, and
+       the input stretches to fill the viewport between them. JS handler
+       in topbar.blade.php toggles .is-open and aria-expanded. */
+    .mcp-topbar__search.is-open .mcp-topbar__search-input {
+        display: block;
+        position: fixed;
+        top: 56px;          /* directly under the 56px-tall topbar */
+        left: 0;
+        right: 0;
+        width: 100%;
+        height: 44px;
+        padding: 0 44px 0 36px;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        border-top: 1px solid var(--mcp-border);
+        z-index: 1019;
+    }
+    .mcp-topbar__search.is-open .mcp-topbar__search-icon {
+        display: flex;
+        align-items: center;
+        position: fixed;
+        top: 56px;
+        left: 12px;
+        width: auto;
+        height: 44px;
+        transform: none;     /* override desktop translateY(-50%) */
+        font-size: var(--mcp-text-mobile-title);
+        z-index: 1020;
+        pointer-events: none;
+    }
+    /* Show the clear button when the open input has content. Specificity
+       (5) beats the empty-state hide rule (3) so this wins even though
+       the placeholder-shown rule appears earlier in source. */
+    .mcp-topbar__search.is-open .mcp-topbar__search-input:not(:placeholder-shown) ~ .mcp-topbar__search-clear {
+        display: inline-flex;
+        position: fixed;
+        top: 66px;          /* (56 topbar) + (44 row - 24 button) / 2 */
+        right: 8px;
+        transform: none;    /* override desktop translateY(-50%) */
+        z-index: 1020;
+    }
+
+    /* Results panel — full-width sheet beneath the fixed input row. */
+    .mcp-topbar__search.is-open.is-panel-open .mcp-search-panel {
+        position: fixed;
+        top: 100px;         /* 56px topbar + 44px input row */
+        left: 0;
+        right: 0;
+        width: 100%;
+        max-height: 70vh;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        z-index: 1018;
+        opacity: 1;
+        visibility: visible;
+        transform: none;
+        pointer-events: auto;
+    }
+
+    .mcp-topbar__search.is-open.is-panel-open .mcp-search-backdrop {
+        display: block;
+    }
+}
+
+/* ---- 23. Density toggle (segmented control) -------------------------- */
+
+.mcp-density-toggle {
+    display: inline-flex;
+    border: 1px solid var(--mcp-border-strong);
+    border-radius: var(--mcp-radius-sm);
+    overflow: hidden;
+    background: var(--mcp-surface);
+    font-size: var(--mcp-text-ui-sm);
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.mcp-density-toggle__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border: none;
+    background: transparent;
+    color: var(--mcp-text-mid);
+    font-family: inherit;
+    font-size: var(--mcp-text-ui-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .12s ease, color .12s ease;
+}
+
+.mcp-density-toggle__btn:hover:not(.is-active) {
+    background: var(--mcp-surface-2);
+    color: var(--mcp-text);
+}
+
+.mcp-density-toggle__btn.is-active {
+    background: var(--mcp-navy-900);
+    color: #fff;
+    cursor: default;
+}
+
+.mcp-density-toggle__btn:focus-visible {
+    outline: 2px solid var(--mcp-navy-500);
+    outline-offset: 2px;
+    z-index: 1;
+}
+
+.mcp-density-toggle__btn i { font-size: var(--mcp-text-caption); }
+
+@media (max-width: 767.98px) {
+    .mcp-toolbar .mcp-density-toggle {
+        flex: 1 1 100%;
+        width: 100%;
+        margin-left: 0 !important;
+        margin-top: 2px;
+    }
+
+    .mcp-density-toggle__btn {
+        flex: 1 1 50%;
+        justify-content: center;
+        padding: 10px 8px;
+        min-height: 40px;
+    }
+
+    .mcp-density-toggle__label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+    }
+
+    .mcp-density-toggle__btn i {
+        font-size: 1rem;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 991.98px) {
+    .mcp-density-toggle__btn {
+        padding: 7px 10px;
+    }
+
+    .mcp-density-toggle__label {
+        font-size: var(--mcp-text-xs, 0.75rem);
+    }
+}
+
+@media print {
+    .mcp-density-toggle { display: none; }
+}
+
+/* ---- Dashboard page load (staggered reveal) ----------------------------- */
+@keyframes mcp-dashboard-rise {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.mcp-dashboard .mcp-page-header { animation: mcp-dashboard-rise .45s ease both; }
+.mcp-dashboard .row.g-3.mb-4 > :nth-child(1) .mcp-kpi { animation: mcp-dashboard-rise .45s ease .06s both; }
+.mcp-dashboard .row.g-3.mb-4 > :nth-child(2) .mcp-kpi { animation: mcp-dashboard-rise .45s ease .12s both; }
+.mcp-dashboard .row.g-3.mb-4 > :nth-child(3) .mcp-kpi { animation: mcp-dashboard-rise .45s ease .18s both; }
+.mcp-dashboard .row.g-3.mb-4 > :nth-child(4) .mcp-kpi { animation: mcp-dashboard-rise .45s ease .24s both; }
+
+/* ---- Welcome fallback quick links --------------------------------------- */
+.mcp-welcome {
+    max-width: 920px;
+}
+
+.mcp-welcome__hint {
+    margin: 0 0 18px;
+    font-size: var(--mcp-text-mobile-title);
+    color: var(--mcp-text-mid);
+}
+
+/* Prefer CSS grid over Bootstrap cols so tiles stay even when Ask AI
+   narrows the content pane (or on mid-width viewports). Cap at 4 cols
+   to match the former col-xl-3 layout. */
+.mcp-welcome .row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin: 0;
+}
+
+.mcp-welcome .row > [class*="col-"] {
+    width: auto;
+    max-width: none;
+    padding: 0;
+    flex: none;
+}
+
+.mcp-welcome-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 48px;
+    height: 100%;
+    padding: 12px 14px;
+    background: var(--mcp-surface);
+    border: 1px solid var(--mcp-border);
+    border-radius: var(--mcp-radius);
+    box-shadow: var(--mcp-shadow-sm);
+    text-decoration: none;
+    color: var(--mcp-text);
+    font-weight: 600;
+    font-size: var(--mcp-text-ui-sm);
+    transition: box-shadow .15s ease, transform .15s ease, border-color .15s ease;
+    min-width: 0;
+}
+
+.mcp-welcome-link:hover {
+    border-color: var(--mcp-border-strong);
+    box-shadow: var(--mcp-shadow);
+    transform: translateY(-1px);
+    color: var(--mcp-text);
+}
+
+.mcp-welcome-link i {
+    width: 18px;
+    flex-shrink: 0;
+    text-align: center;
+    color: var(--mcp-navy-700);
+}
+
+.mcp-welcome-link span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media (max-width: 1199.98px) {
+    .mcp-welcome .row {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 767.98px) {
+    .mcp-welcome .row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 575.98px) {
+    .mcp-welcome .row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* When Ask AI push panel narrows the pane, prefer 3–4 even tiles (not a skinny 5-col row). */
+body.mcp-ask-ai-open .mcp-welcome .row {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+.mcp-card--hero-attention {
+    box-shadow: var(--mcp-shadow);
+    border-left-width: 4px;
+}
+
+.mcp-card__footer {
+    padding: 12px 18px;
+    border-top: 1px solid var(--mcp-border);
+    background: var(--mcp-surface);
+    text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mcp-dashboard .mcp-page-header,
+    .mcp-dashboard .mcp-kpi {
+        animation: none;
+    }
+    .mcp-stat,
+    .mcp-kpi,
+    .mcp-welcome-link {
+        transition: none;
+    }
+    .mcp-stat:hover,
+    .mcp-kpi--link:hover,
+    .mcp-welcome-link:hover {
+        transform: none;
+    }
+    .mcp-stale-pulse-dot,
+    .mcp-card--pulse {
+        animation: none;
+    }
+}
+
+/* ---- Stat tile meta line (dashboard) ----------------------------------- */
+.mcp-stat__meta {
+    margin-top: 6px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    font-size: var(--mcp-text-ui-sm); color: var(--mcp-text-mute);
+}
+.mcp-stat__delta { font-weight: 600; white-space: nowrap; }
+.mcp-stat__delta--up   { color: var(--mcp-success-fg); }
+.mcp-stat__delta--down { color: var(--mcp-danger-fg); }
+
+/* ---- Dashboard: clickable rows, compact mobile list rows ---------------- */
+.mcp-row--link { cursor: pointer; }
+tr.mcp-row--link { position: relative; }
+.mcp-row__stretch {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+}
+.mcp-row__stretch:focus-visible {
+    outline: 2px solid var(--mcp-navy-500);
+    outline-offset: -2px;
+}
+tr.mcp-row--link:hover td { background: var(--mcp-tint-blue); }
+tr.mcp-row--link:hover {
+    box-shadow: inset 3px 0 0 var(--mcp-navy-500);
+}
+
+.mcp-list-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; padding: 9px 14px;
+    border-bottom: 1px solid var(--mcp-border);
+    text-decoration: none; color: var(--mcp-text);
+}
+.mcp-list-row:last-child { border-bottom: 0; }
+.mcp-list-row:hover { background: var(--mcp-hover); }
+.mcp-list-row:focus-visible {
+    outline: 2px solid var(--mcp-navy-500);
+    outline-offset: -2px;
+    background: var(--mcp-hover);
+}
+.mcp-list-row__main  { flex: 1; min-width: 0; }
+.mcp-list-row__title { font-size: var(--mcp-text-mobile-title); font-weight: 600; color: var(--mcp-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mcp-list-row__sub   { font-size: var(--mcp-text-ui-sm); color: var(--mcp-text-mute); margin-top: 2px; }
+.mcp-list-row__end   { flex-shrink: 0; text-align: right; }
+
+/* ---- Dashboard: card accent + pulse variants ---------------------------- */
+.mcp-card--accent-warning { border-left: 3px solid var(--mcp-warning-dot); }
+.mcp-card--accent-success { border-left: 3px solid var(--mcp-success-dot); }
+.mcp-card--accent-neutral { border-left: 3px solid var(--mcp-neutral-dot); }
+.mcp-card--pulse {
+    border: 2px solid var(--mcp-warning-dot);
+    animation: mcp-pulse-border 2s infinite;
+}
+@keyframes mcp-pulse-border {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(198, 138, 30, .45); }
+    50%      { box-shadow: 0 0 0 8px rgba(198, 138, 30, 0); }
+}
+
+/* ---- Dashboard: production-attention urgency chrome --------------------- */
+.mcp-stale-critical { background: var(--mcp-danger-bg); }
+.mcp-stale-elevated { background: var(--mcp-warning-bg); }
+.mcp-stale-warn     { background: var(--mcp-tint); }
+
+.mcp-stale-time-critical { color: var(--mcp-danger-fg);  font-weight: 700; }
+.mcp-stale-time-elevated { color: var(--mcp-warning-fg); font-weight: 600; }
+.mcp-stale-time-warn     { color: var(--mcp-warning-fg); font-weight: 500; }
+.mcp-stale-time-normal   { color: var(--mcp-text-mid); }
+
+.mcp-stale-dot {
+    display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+}
+.mcp-stale-dot-elevated { background: var(--mcp-warning-dot); }
+.mcp-stale-dot-warn     { background: var(--mcp-warning-dot); opacity: .7; }
+.mcp-stale-pulse-dot {
+    display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--mcp-danger-dot);
+    animation: mcp-stale-pulse 2s ease-in-out infinite;
+}
+@keyframes mcp-stale-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: .4; transform: scale(1.6); }
+}
+
+.mcp-abandoned-row { opacity: .7; }
+.mcp-abandoned-row:hover { opacity: 1; background: var(--mcp-hover); }
+.mcp-abandoned-chevron { transition: transform .3s; }
+[aria-expanded="true"] .mcp-abandoned-chevron { transform: rotate(180deg); }
+
+/* ---- Dashboard KPI tiles + sparklines ----------------------------------- */
+.mcp-kpi {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 17px 18px;
+    background: var(--mcp-surface);
+    border: 1px solid var(--mcp-border);
+    border-radius: var(--mcp-radius);
+    box-shadow: var(--mcp-shadow);
+    transition: box-shadow .15s ease, transform .15s ease;
+    text-decoration: none;
+    color: inherit;
+    position: relative;
+}
+.mcp-kpi--link:hover {
+    box-shadow: var(--mcp-shadow-lg);
+    transform: translateY(-2px);
+}
+.mcp-kpi--link { cursor: pointer; }
+.mcp-kpi__stretch {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border-radius: inherit;
+}
+.mcp-kpi__stretch:focus-visible {
+    outline: 2px solid var(--mcp-navy-500);
+    outline-offset: 2px;
+}
+.mcp-kpi--link .mcp-kpi__top,
+.mcp-kpi--link .mcp-kpi__value,
+.mcp-kpi--link .mcp-kpi__foot {
+    pointer-events: none;
+}
+.mcp-kpi--interactive .mcp-kpi__spark-wrap {
+    position: relative;
+    z-index: 2;
+    pointer-events: auto;
+}
+.mcp-kpi__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.mcp-kpi__label {
+    font: 600 var(--mcp-text-ui-sm)/1.4 var(--mcp-font);
+    letter-spacing: .02em;
+    color: var(--mcp-muted);
+}
+.mcp-kpi__ic {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--mcp-radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--mcp-text-mobile-title);
+    background: var(--mcp-tint-blue);
+    color: var(--mcp-navy-700);
+}
+.mcp-kpi__value {
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: -.03em;
+    line-height: 1;
+    color: var(--mcp-navy-900);
+    font-variant-numeric: tabular-nums;
+}
+.mcp-kpi__value .cur {
+    font-size: var(--mcp-text-base);
+    font-weight: 600;
+    color: var(--mcp-muted);
+    margin-right: 3px;
+}
+.mcp-kpi__spark-wrap {
+    position: relative;
+    width: 100%;
+}
+.mcp-kpi__spark {
+    display: block;
+    height: 32px;
+    width: 100%;
+}
+.mcp-kpi__dot {
+    fill: var(--mcp-navy-500);
+    stroke: none;
+    pointer-events: none;
+    transition: opacity .12s ease;
+}
+.mcp-kpi__dot--last {
+    fill: var(--mcp-navy-700);
+    opacity: 1;
+}
+.mcp-kpi__hit {
+    fill: transparent;
+    stroke: none;
+    cursor: crosshair;
+}
+.mcp-kpi__tip {
+    position: absolute;
+    transform: translate(-50%, calc(-100% - 6px));
+    padding: 4px 8px;
+    border-radius: var(--mcp-radius-sm);
+    background: var(--mcp-navy-900);
+    color: #fff;
+    font: 600 12.5px/1.3 var(--mcp-font);
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .12s ease;
+    z-index: 3;
+}
+.mcp-kpi__tip.is-visible {
+    opacity: 1;
+}
+.mcp-kpi__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.mcp-kpi__hint {
+    font-size: var(--mcp-text-ui-sm);
+    color: var(--mcp-muted);
+}
+
+/* ---- Delta chip --------------------------------------------------------- */
+.mcp-delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font: 600 12.5px/1 var(--mcp-font);
+    padding: 4px 8px;
+    border-radius: 999px;
+}
+.mcp-delta__arrow {
+    font-size: 1em;
+    line-height: 1;
+}
+.mcp-delta--up   { background: var(--mcp-success-bg); color: var(--mcp-success-fg); }
+.mcp-delta--down { background: var(--mcp-danger-bg);  color: var(--mcp-danger-fg); }
+.mcp-delta--flat { background: var(--mcp-neutral-bg); color: var(--mcp-neutral-fg); }
+
+/* ---- Attention strip ---------------------------------------------------- */
+.mcp-attn-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+.mcp-attn-card {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    padding: 14px;
+    border-radius: var(--mcp-radius-sm);
+    border: 1px solid var(--mcp-border);
+    background: var(--mcp-surface-2);
+    position: relative;
+    text-decoration: none;
+    color: inherit;
+}
+.mcp-attn-card:hover { background: var(--mcp-hover); }
+.mcp-attn-card:focus-visible {
+    outline: 2px solid var(--mcp-navy-500);
+    outline-offset: 2px;
+}
+.mcp-attn-card::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 10px;
+    bottom: 10px;
+    width: 3px;
+    border-radius: 3px;
+}
+.mcp-attn-card--crit::before { background: var(--mcp-danger-dot); }
+.mcp-attn-card--warn::before { background: var(--mcp-warning-dot); }
+.mcp-attn-card--info::before { background: var(--mcp-navy-500); }
+.mcp-attn-card__ic {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--mcp-radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--mcp-text-mobile-title);
+    background: var(--mcp-tint);
+    color: var(--mcp-navy-700);
+    flex-shrink: 0;
+}
+.mcp-attn-card__n {
+    font-size: 21px;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+.mcp-attn-card__l {
+    font-size: var(--mcp-text-ui-sm);
+    color: var(--mcp-text-mid);
+    margin-top: 3px;
+    font-weight: 500;
+}
+
+/* ---- Production pipeline ------------------------------------------------ */
+.mcp-pipe {
+    display: flex;
+    gap: 4px;
+    margin: 6px 0 14px;
+}
+.mcp-pipe__seg {
+    flex: var(--mcp-segment-flex, 1);
+    height: 38px;
+    border-radius: var(--mcp-radius-sm);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    color: var(--mcp-surface);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    min-width: 30px;
+    transition: opacity .15s ease, transform .15s ease;
+}
+.mcp-pipe__seg:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+}
+.mcp-pipe__seg:focus-visible {
+    outline: 2px solid var(--mcp-navy-500);
+    outline-offset: 2px;
+}
+.mcp-pipe__seg--terminal {
+    opacity: .45;
+}
+.mcp-pipe__seg--terminal:hover {
+    opacity: .65;
+}
+.mcp-pipe__seg-count {
+    font: 700 14px/1 var(--mcp-font);
+}
+.mcp-pipe__seg-label {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    opacity: .9;
+    line-height: 1;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0 4px;
+}
+.mcp-pipe__seg--success { background: var(--mcp-success-dot); }
+.mcp-pipe__seg--danger  { background: var(--mcp-danger-dot); }
+.mcp-pipe__seg--warning { background: var(--mcp-warning-dot); }
+.mcp-pipe__seg--info    { background: var(--mcp-info-dot); }
+.mcp-pipe__seg--sky     { background: var(--mcp-sky-dot); }
+.mcp-pipe__seg--violet  { background: var(--mcp-violet-dot); }
+.mcp-pipe__seg--primary { background: var(--mcp-primary-dot); }
+.mcp-pipe__seg--neutral { background: var(--mcp-neutral-dot); }
+
+.mcp-pipe-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+}
+.mcp-pipe-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--mcp-text-ui-sm);
+    color: var(--mcp-text-mid);
+}
+.mcp-pipe-legend i {
+    width: 9px;
+    height: 9px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+.mcp-pipe-legend i.mcp-pipe__seg--success { background: var(--mcp-success-dot); }
+.mcp-pipe-legend i.mcp-pipe__seg--danger  { background: var(--mcp-danger-dot); }
+.mcp-pipe-legend i.mcp-pipe__seg--warning { background: var(--mcp-warning-dot); }
+.mcp-pipe-legend i.mcp-pipe__seg--info    { background: var(--mcp-info-dot); }
+.mcp-pipe-legend i.mcp-pipe__seg--sky     { background: var(--mcp-sky-dot); }
+.mcp-pipe-legend i.mcp-pipe__seg--violet  { background: var(--mcp-violet-dot); }
+.mcp-pipe-legend i.mcp-pipe__seg--primary { background: var(--mcp-primary-dot); }
+.mcp-pipe-legend i.mcp-pipe__seg--neutral { background: var(--mcp-neutral-dot); }
+.mcp-pipe-legend__item--terminal {
+    opacity: .55;
+}
+
+/* ---- Department bar rows ------------------------------------------------ */
+.mcp-bar-row {
+    display: grid;
+    grid-template-columns: 96px 1fr 34px;
+    align-items: center;
+    gap: 12px;
+    padding: 7px 0;
+    color: inherit;
+}
+.mcp-bar-row:hover .lbl { color: var(--mcp-navy-700); }
+.mcp-bar-row:focus-visible {
+    outline: 2px solid var(--mcp-navy-500);
+    outline-offset: 2px;
+    border-radius: var(--mcp-radius-sm);
+}
+.mcp-bar-row .lbl {
+    font-size: var(--mcp-text-ui-sm);
+    font-weight: 600;
+    color: var(--mcp-text-soft);
+}
+.mcp-bar-track {
+    height: 9px;
+    border-radius: 999px;
+    background: var(--mcp-surface-2);
+    overflow: hidden;
+}
+.mcp-bar-fill {
+    width: var(--mcp-bar-width, 0%);
+    height: 100%;
+    border-radius: 999px;
+    background: var(--mcp-navy-500);
+}
+.mcp-bar-row .v {
+    font: 600 12.5px/1 var(--mcp-font-mono);
+    text-align: right;
+    color: var(--mcp-text-mid);
+}
+
+/* ---- Period switcher (revenue scope) ------------------------------------ */
+.mcp-period {
+    display: inline-flex;
+    gap: 4px;
+    background: var(--mcp-surface-2);
+    border: 1px solid var(--mcp-border);
+    border-radius: var(--mcp-radius-sm);
+    padding: 3px;
+}
+.mcp-period a {
+    padding: 6px 12px;
+    font-size: var(--mcp-text-ui-sm);
+    font-weight: 600;
+    color: var(--mcp-text-mid);
+    text-decoration: none;
+    border-radius: 4px;
+}
+.mcp-period a.is-active {
+    background: var(--mcp-surface);
+    color: var(--mcp-navy-700);
+    box-shadow: var(--mcp-shadow-sm);
+}
+.mcp-period a:hover:not(.is-active) { background: var(--mcp-hover); }
+.mcp-period a:focus-visible {
+    outline: 2px solid var(--mcp-navy-500);
+    outline-offset: 2px;
+}
+
+@media (max-width: 1080px) {
+    .mcp-attn-grid { grid-template-columns: 1fr; }
+}
+
+/* Bill editor save row: full-width primary save on phones, inline + right-aligned on desktop.
+   (purged Bootstrap build omits .d-grid / .justify-content-md-end) */
+.mcp-save-row { display: grid; }
+@media (min-width: 768px) {
+    .mcp-save-row { display: flex; justify-content: flex-end; }
+}
+
+/* Footer: blend into the page — CoreUI's grey band (#ebedef) + hard border
+   (#d8dbe0) clashes with the --mcp-bg page, leaving a seam before the footer. */
+.footer {
+    background: transparent;
+    border-top: 1px solid var(--mcp-border);
+    color: var(--mcp-text-mute);
+}
+
+/* ---- Ask AI / system tooltips (CSS-only) ------------------------------ */
+[data-mcp-tip] { position: relative; }
+
+[data-mcp-tip]:hover::after,
+[data-mcp-tip]:focus-visible::after {
+    content: attr(data-mcp-tip);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--mcp-radius-sm, 4px);
+    background: var(--mcp-navy-900);
+    color: var(--mcp-surface);
+    font-size: var(--mcp-text-xs, 0.75rem);
+    font-style: normal;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 20;
+}
+
+[data-mcp-tip][data-mcp-tip-pos="bottom"]:hover::after,
+[data-mcp-tip][data-mcp-tip-pos="bottom"]:focus-visible::after {
+    bottom: auto;
+    top: calc(100% + 6px);
+}

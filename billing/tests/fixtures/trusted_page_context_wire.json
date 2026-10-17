@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "kind": "list",
+  "resource_type": "work_order",
+  "profile": "jobs.index.v1",
+  "title": "Jobs on this page",
+  "records": [
+    {
+      "id": "42",
+      "label": "#W-100 — Alpha job",
+      "fields": {
+        "work_number": "W-100",
+        "title": "Alpha job",
+        "customer": "Acme Corp",
+        "bill_number": null,
+        "status": "IN PROGRESS",
+        "department": "Printing",
+        "priority": "normal",
+        "is_high_priority": "false",
+        "section": null,
+        "delivery": null,
+        "actual_delivery": null,
+        "created_at": "2026-01-01T00:00:00+00:00",
+        "updated_at": "2026-01-02T00:00:00+00:00"
+      },
+      "link_key": "work_orders",
+      "truncated_fields": []
+    }
+  ]
+}

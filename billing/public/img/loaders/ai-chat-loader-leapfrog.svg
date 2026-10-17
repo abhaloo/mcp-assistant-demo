@@ -1,0 +1,73 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="Bloomfield assistant is typing">
+  <title>Bloomfield assistant is typing</title>
+  <!--
+    Stage: leapfrog flourish (play once, ~2.2s, starts and ends on the resting
+    dots). Left blue vaults over red (red ducks and sinks under it); right
+    blue lifts off, red scoots back to center, first blue is bumped to the
+    right slot. Inject between typing loops on long waits, then swap back to
+    ai-chat-loader-typing.svg.
+  -->
+  <g>
+    <g transform="translate(42,60)">
+      <animateMotion begin="0.38s" dur="0.38s" fill="freeze"
+        path="M0,0 Q9,-26 18,0" calcMode="spline"
+        keyTimes="0;1" keyPoints="0;1" keySplines="0.32 0.72 0.68 0.28"/>
+      <animateMotion begin="1.54s" dur="0.4s" fill="freeze"
+        path="M18,0 C24,1.5 30,1.5 36,0" calcMode="spline"
+        keyTimes="0;1" keyPoints="0;1" keySplines="0.5 0 0.3 1"/>
+      <circle r="5" fill="#2e3192">
+        <animateTransform attributeName="transform" type="rotate" additive="sum" fill="freeze"
+          begin="0.15s" dur="0.9s" calcMode="spline"
+          values="0;0;-60;0;0;0;0" keyTimes="0;0.16;0.3;0.55;0.68;0.84;1" keySplines="0.4 0 0.6 1;0.3 0 0.55 1;0.33 0 0.67 1;0.3 0 0.7 1;0.35 0 0.65 1;0.3 0 0.7 1"/>
+        <animateTransform attributeName="transform" type="scale" additive="sum" fill="freeze"
+          begin="0.15s" dur="0.9s" calcMode="spline"
+          values="1 1;1.16 0.78;1.14 0.87;1 1;1.16 0.82;0.95 1.06;1 1" keyTimes="0;0.16;0.3;0.55;0.68;0.84;1" keySplines="0.4 0 0.6 1;0.3 0 0.55 1;0.33 0 0.67 1;0.3 0 0.7 1;0.35 0 0.65 1;0.3 0 0.7 1"/>
+        <animateTransform attributeName="transform" type="rotate" additive="sum" fill="freeze"
+          begin="0.15s" dur="0.9s" calcMode="spline"
+          values="0;0;60;0;0;0;0" keyTimes="0;0.16;0.3;0.55;0.68;0.84;1" keySplines="0.4 0 0.6 1;0.3 0 0.55 1;0.33 0 0.67 1;0.3 0 0.7 1;0.35 0 0.65 1;0.3 0 0.7 1"/>
+        <animateTransform attributeName="transform" type="scale" fill="freeze"
+          begin="1.58s" dur="0.28s" calcMode="spline"
+          values="1 1;1.08 0.94;1 1" keyTimes="0;0.5;1"
+          keySplines="0.4 0 0.6 1;0.4 0 0.6 1"/>
+      </circle>
+    </g>
+    <g transform="translate(60,60)">
+      <animateTransform attributeName="transform" type="translate" fill="freeze"
+        begin="0.4s" dur="0.4s" calcMode="spline"
+        values="60 60;42 60" keyTimes="0;1" keySplines="0.5 0 0.3 1"/>
+      <animateTransform attributeName="transform" type="translate" fill="freeze"
+        begin="1.42s" dur="0.42s" calcMode="spline"
+        values="42 60;60 60" keyTimes="0;1" keySplines="0.5 0 0.3 1"/>
+      <circle r="5" fill="#ed1c24">
+        <animateTransform attributeName="transform" type="translate" additive="sum" fill="freeze"
+          begin="0.46s" dur="0.26s" calcMode="spline"
+          values="0 0;0 1.6;0 0" keyTimes="0;0.45;1"
+          keySplines="0.4 0 0.6 1;0.4 0 0.6 1"/>
+        <animateTransform attributeName="transform" type="scale" additive="sum" fill="freeze"
+          begin="0.46s" dur="0.26s" calcMode="spline"
+          values="1 1;0.88 0.8;1 1" keyTimes="0;0.45;1"
+          keySplines="0.4 0 0.6 1;0.4 0 0.6 1"/>
+        <animateTransform attributeName="transform" type="scale" fill="freeze"
+          begin="1.74s" dur="0.2s" calcMode="spline"
+          values="1 1;1.08 0.92;1 1" keyTimes="0;0.5;1"
+          keySplines="0.4 0 0.6 1;0.4 0 0.6 1"/>
+      </circle>
+    </g>
+    <g transform="translate(78,60)">
+      <animateMotion begin="1.4s" dur="0.5s" fill="freeze"
+        path="M0,0 Q-18,-32 -36,0" calcMode="spline"
+        keyTimes="0;1" keyPoints="0;1" keySplines="0.32 0.72 0.68 0.28"/>
+      <circle r="5" fill="#2e3192">
+        <animateTransform attributeName="transform" type="rotate" additive="sum" fill="freeze"
+          begin="1.2s" dur="1s" calcMode="spline"
+          values="0;0;55;0;0;0;0" keyTimes="0;0.15;0.28;0.55;0.7;0.85;1" keySplines="0.4 0 0.6 1;0.3 0 0.55 1;0.33 0 0.67 1;0.3 0 0.7 1;0.35 0 0.65 1;0.3 0 0.7 1"/>
+        <animateTransform attributeName="transform" type="scale" additive="sum" fill="freeze"
+          begin="1.2s" dur="1s" calcMode="spline"
+          values="1 1;1.18 0.76;1.16 0.87;1 1;1.2 0.8;0.94 1.08;1 1" keyTimes="0;0.15;0.28;0.55;0.7;0.85;1" keySplines="0.4 0 0.6 1;0.3 0 0.55 1;0.33 0 0.67 1;0.3 0 0.7 1;0.35 0 0.65 1;0.3 0 0.7 1"/>
+        <animateTransform attributeName="transform" type="rotate" additive="sum" fill="freeze"
+          begin="1.2s" dur="1s" calcMode="spline"
+          values="0;0;-55;0;0;0;0" keyTimes="0;0.15;0.28;0.55;0.7;0.85;1" keySplines="0.4 0 0.6 1;0.3 0 0.55 1;0.33 0 0.67 1;0.3 0 0.7 1;0.35 0 0.65 1;0.3 0 0.7 1"/>
+      </circle>
+    </g>
+  </g>
+</svg>

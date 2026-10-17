@@ -1,0 +1,19 @@
+{
+    frankenphp
+    order php_server before file_server
+}
+
+:80 {
+    @not_up not path /up
+    redir @not_up https://{$DEMO_HOSTNAME}{uri} permanent
+
+    root * /app/public
+    php_server
+}
+
+{$DEMO_HOSTNAME}:443 {
+    tls /certs/origin.pem /certs/origin.key
+    root * /app/public
+    encode zstd br gzip
+    php_server
+}

@@ -1,0 +1,30 @@
+{
+  "description": "Task 2B — verifying an intentional ROLLBACK to the N-1 image, which still accepts the current candidate Billing hash (the N/N-1 accepted-set window is exactly what makes this rollback safe). expected_image_digest is deliberately the rollback target, not the newest build — the gate must judge whichever image THIS release action targets, not hardcode 'latest'. Expected verdict: PASS.",
+  "candidate_manifest_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+  "compatibility": {
+    "record_access_schema_versions": [2],
+    "record_context_schema_versions": [1],
+    "accepted_manifest_hashes": [
+      "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    ],
+    "bundle_set_id": "bset:809ba2168f53d723fe54dfe8e51ab3b8cd0b00e01c3bba6ceb96f3f30736e89c"
+  },
+  "deployment": {
+    "expected_image_digest": "sha256:image-digest-n-minus-1",
+    "revisions": [
+      {
+        "name": "rag--rev-n-minus-1",
+        "image_digest": "sha256:image-digest-n-minus-1",
+        "traffic_percent": 100,
+        "bundle_set_id": "bset:809ba2168f53d723fe54dfe8e51ab3b8cd0b00e01c3bba6ceb96f3f30736e89c"
+      }
+    ]
+  },
+  "capabilities_probe": {
+    "bundle_set_id": "bset:809ba2168f53d723fe54dfe8e51ab3b8cd0b00e01c3bba6ceb96f3f30736e89c"
+  },
+  "expected": {
+    "passed": true
+  }
+}

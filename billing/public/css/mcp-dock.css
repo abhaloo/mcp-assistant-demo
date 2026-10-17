@@ -1,0 +1,144 @@
+/*
+ * MCP Dock shell — right-rail panel chrome (tokens only).
+ */
+
+.mcp-dock-backdrop {
+    position: fixed;
+    inset: 0;
+    background: color-mix(in srgb, var(--mcp-navy-900) 40%, transparent);
+    z-index: 1040;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+.mcp-dock-backdrop.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.mcp-dock {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: var(--mcp-dock-width, 420px);
+    max-width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    background: var(--mcp-surface);
+    border-left: 1px solid var(--mcp-border);
+    box-shadow: var(--mcp-shadow-lg, -4px 0 24px rgba(20, 24, 31, 0.12));
+    z-index: 1050;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+}
+
+.mcp-dock.is-open {
+    transform: translateX(0);
+}
+
+.mcp-dock__resize {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    cursor: col-resize;
+    touch-action: none;
+}
+
+.mcp-dock__resize:hover {
+    background: var(--mcp-tint-blue);
+}
+
+.mcp-dock__header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--mcp-border);
+    flex-shrink: 0;
+}
+
+.mcp-dock__title {
+    font-size: var(--mcp-text-card-title);
+    font-weight: 600;
+    color: var(--mcp-text);
+    margin: 0;
+    flex: 1;
+}
+
+.mcp-dock__badge {
+    font-size: var(--mcp-text-xs, 0.75rem);
+    color: var(--mcp-muted);
+    background: var(--mcp-neutral-bg);
+    padding: 0.125rem 0.5rem;
+    border-radius: var(--mcp-radius-sm, 4px);
+}
+
+.mcp-dock__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.mcp-dock__icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border: none;
+    background: transparent;
+    color: var(--mcp-muted);
+    border-radius: var(--mcp-radius-sm, 4px);
+    cursor: pointer;
+}
+
+.mcp-dock__icon-btn:hover {
+    background: var(--mcp-hover);
+    color: var(--mcp-text);
+}
+
+.mcp-dock__icon-btn:focus-visible {
+    outline: 2px solid var(--mcp-navy-500);
+    outline-offset: 2px;
+}
+
+.mcp-dock__body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.mcp-dock__footer {
+    flex-shrink: 0;
+    padding: 0.5rem 1rem;
+    border-top: 1px solid var(--mcp-border);
+    font-size: var(--mcp-text-xs, 0.75rem);
+    color: var(--mcp-muted);
+}
+
+body.mcp-dock-open {
+    overflow: hidden;
+}
+
+@media (max-width: 767.98px) {
+    .mcp-dock {
+        width: 100vw;
+    }
+
+    .mcp-dock__resize {
+        display: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mcp-dock,
+    .mcp-dock-backdrop {
+        transition: none;
+    }
+}
