@@ -1,0 +1,30 @@
+{
+  "description": "Task 2C matrix row 2 — Billing is still running the PREVIOUS (N-1) manifest hash while RAG is already at its current (N) release; RAG's accepted set covers both the current and previous hash (current-then-previous window), so the previous bundle remains enabled. Expected verdict: PASS.",
+  "candidate_manifest_hash": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+  "compatibility": {
+    "record_access_schema_versions": [2],
+    "record_context_schema_versions": [1],
+    "accepted_manifest_hashes": [
+      "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+    ],
+    "bundle_set_id": "bset:c1f08856b4fe5cf5b20db37112bac0a5362f14d6e34981ad5ca99ff3404d7248"
+  },
+  "deployment": {
+    "expected_image_digest": "sha256:image-digest-row2-n",
+    "revisions": [
+      {
+        "name": "rag--rev-row2-n",
+        "image_digest": "sha256:image-digest-row2-n",
+        "traffic_percent": 100,
+        "bundle_set_id": "bset:c1f08856b4fe5cf5b20db37112bac0a5362f14d6e34981ad5ca99ff3404d7248"
+      }
+    ]
+  },
+  "capabilities_probe": {
+    "bundle_set_id": "bset:c1f08856b4fe5cf5b20db37112bac0a5362f14d6e34981ad5ca99ff3404d7248"
+  },
+  "expected": {
+    "passed": true
+  }
+}

@@ -1,0 +1,64 @@
+/node_modules
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+/storage/coverage
+/vendor
+.env
+.env.backup
+.env.docker
+.env.dusk.*
+.phpunit.result.cache
+/database/testing.sqlite
+/database/testing.sqlite_test_*
+Homestead.json
+Homestead.yaml
+auth.json
+npm-debug.log
+yarn-error.log
+debug-*.log
+/.idea
+/.vscode
+/.cursor
+/.agent
+repo_map.md
+# AI Agents â€” skills/agents/commands are repo infrastructure and stay tracked;
+# local state (worktrees, settings.local.json) stays out.
+.claude/*
+!.claude/settings.json
+!.claude/skills/
+!.claude/agents/
+!.claude/commands/
+/docs
+/.tmp
+composer.phar
+composer-setup.php
+
+# Scripts
+/reset-database.ps1
+/start-dev.ps1
+/reset-database.bat
+.aider*
+/graphify-out
+/.story
+package-lock.json
+/.firecrawl
+/.worktrees
+
+# Local worktree and verification scratch (never project source).
+/.git-brokenpointer.bak
+/tmp_payload.json
+/tmp_validate_strip.php
+/tmp_verify_hmac.php
+
+# Playwright
+/playwright/visual
+playwright/.auth/*.json
+playwright-report/
+test-results/
+.vite/
+
+# Ask concurrency live smoke (cookies/session capture — never commit)
+artifacts/ask-concurrency-e2e/live-smoke/
+

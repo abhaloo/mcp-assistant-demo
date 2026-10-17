@@ -1,0 +1,30 @@
+{
+  "description": "Task 2C matrix row 5 — Billing's own deployment was rolled back from N to N-1, so the candidate hash being verified is now the previous hash; RAG's deployment is unchanged at N and its accepted set still covers both N and N-1, so the previous bundle remains enabled. Shares its fixture SHAPE with row 2 (candidate equals RAG's second accepted hash) but uses distinct hash values and a distinct test name per task-2C-brief.md — row 2 is 'Billing has not yet upgraded', row 5 is 'Billing was upgraded and then deliberately rolled back'. Expected verdict: PASS.",
+  "candidate_manifest_hash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "compatibility": {
+    "record_access_schema_versions": [2],
+    "record_context_schema_versions": [1],
+    "accepted_manifest_hashes": [
+      "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    ],
+    "bundle_set_id": "bset:45255b78a7bdb04270c4f3287c316aae0a73fe4ce62fd711b75667082f7a9f7f"
+  },
+  "deployment": {
+    "expected_image_digest": "sha256:image-digest-row5-n",
+    "revisions": [
+      {
+        "name": "rag--rev-row5-n",
+        "image_digest": "sha256:image-digest-row5-n",
+        "traffic_percent": 100,
+        "bundle_set_id": "bset:45255b78a7bdb04270c4f3287c316aae0a73fe4ce62fd711b75667082f7a9f7f"
+      }
+    ]
+  },
+  "capabilities_probe": {
+    "bundle_set_id": "bset:45255b78a7bdb04270c4f3287c316aae0a73fe4ce62fd711b75667082f7a9f7f"
+  },
+  "expected": {
+    "passed": true
+  }
+}

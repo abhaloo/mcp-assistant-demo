@@ -1,0 +1,2 @@
+# The Ask tool layer checks this file against a recorded SHA-256; line-ending conversion would break the match.
+config/document-tool-profile.json -text

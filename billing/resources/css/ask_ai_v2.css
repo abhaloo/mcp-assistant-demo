@@ -1,0 +1,94 @@
+/*
+ * MCP Ask AI v2 — Thought Stream styles.
+ */
+
+.mcp-ask-v2__thought-card {
+    margin: 0 0 0.75rem;
+    font-size: var(--mcp-text-ui-sm);
+    color: var(--mcp-text-soft);
+    border: 1px solid var(--mcp-border);
+    border-radius: var(--mcp-radius);
+    background: var(--mcp-surface);
+    overflow: hidden;
+}
+
+.mcp-ask-v2__thought-card[open] {
+    margin-bottom: 1rem;
+}
+
+.mcp-ask-v2__thought-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+    list-style: none;
+    font-weight: 500;
+    color: var(--mcp-text-soft);
+    background: var(--mcp-surface-2);
+    user-select: none;
+}
+
+.mcp-ask-v2__thought-summary::-webkit-details-marker {
+    display: none;
+}
+
+.mcp-ask-v2__thought-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.mcp-ask-v2__thought-spinner {
+    display: inline-block;
+    width: 0.875rem;
+    height: 0.875rem;
+    border: 2px solid var(--mcp-border);
+    border-top-color: var(--mcp-navy-700);
+    border-radius: 50%;
+    animation: mcp-ask-v2-spinner 0.8s linear infinite;
+}
+
+.mcp-ask-v2__thought-label {
+    min-width: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+.mcp-ask-v2__thought-chevron {
+    display: inline-block;
+    width: 0.4rem;
+    height: 0.4rem;
+    border-right: 2px solid var(--mcp-faint);
+    border-bottom: 2px solid var(--mcp-faint);
+    transform: rotate(-45deg);
+    transition: transform 0.15s ease;
+}
+
+.mcp-ask-v2__thought-card[open] > .mcp-ask-v2__thought-summary .mcp-ask-v2__thought-chevron {
+    transform: rotate(45deg);
+}
+
+.mcp-ask-v2__thought-content {
+    max-height: 220px;
+    overflow-y: auto;
+    padding: 0.75rem;
+    font-family: var(--mcp-font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace);
+    font-size: var(--mcp-text-caption, 0.8rem);
+    line-height: 1.5;
+    color: var(--mcp-muted);
+    white-space: pre-wrap;
+    border-top: 1px solid var(--mcp-border);
+    background: var(--mcp-surface);
+}
+
+@keyframes mcp-ask-v2-spinner {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mcp-ask-v2__thought-spinner,
+    .mcp-ask-v2__thought-chevron {
+        animation: none;
+        transition: none;
+    }
+}

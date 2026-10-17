@@ -1,0 +1,208 @@
+/**
+ * Global Loading Spinner Styles
+ * Modular loading indicators for Livewire components
+ */
+
+/* ==========================================================================
+   Full-Page Loading Overlay
+   ========================================================================== */
+
+.loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+    transition: opacity 0.2s ease;
+}
+
+.loading-overlay[hidden] {
+    display: none;
+}
+
+.loading-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 2rem;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.loading-text {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: #475569;
+    letter-spacing: 0.025em;
+}
+
+/* ==========================================================================
+   Spinner Animation - Dual Ring Style
+   ========================================================================== */
+
+.spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid #e2e8f0;
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: spinner-rotate 0.8s linear infinite;
+}
+
+.spinner-sm {
+    width: 20px;
+    height: 20px;
+    border-width: 2px;
+}
+
+.spinner-lg {
+    width: 64px;
+    height: 64px;
+    border-width: 5px;
+}
+
+/* Color variants */
+.spinner-primary {
+    border-top-color: #3b82f6;
+}
+
+.spinner-success {
+    border-top-color: #22c55e;
+}
+
+.spinner-warning {
+    border-top-color: #f59e0b;
+}
+
+.spinner-danger {
+    border-top-color: #ef4444;
+}
+
+.spinner-white {
+    border-color: rgba(255, 255, 255, 0.3);
+    border-top-color: #ffffff;
+}
+
+@keyframes spinner-rotate {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ==========================================================================
+   Inline Loading States (for buttons and small areas)
+   ========================================================================== */
+
+.loading-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Button loading state */
+.btn[disabled] .spinner-sm,
+.btn.loading .spinner-sm {
+    display: inline-block;
+}
+
+/* ==========================================================================
+   Table/Card Loading State
+   ========================================================================== */
+
+.loading-table-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    border-radius: inherit;
+}
+
+/* Container needs relative positioning */
+.loading-container {
+    position: relative;
+}
+
+/* ==========================================================================
+   Global Top Loading Bar (navigation + Livewire activity)
+   ========================================================================== */
+
+.mcp-loading-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: calc(var(--mcp-loading-bar-height, 3px) * 4);
+    z-index: var(--mcp-loading-bar-z-index, 2000);
+    pointer-events: none;
+    background: transparent;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.mcp-loading-bar.is-active {
+    opacity: 1;
+}
+
+/* Four process-ink plates (C, M, Y, K) stacked top to bottom. Each plate runs
+   the same slide pass 0.06 s after the plate above it, like colour bars on a
+   press sheet. */
+.mcp-loading-bar__plate {
+    display: block;
+    height: var(--mcp-loading-bar-height, 3px);
+    width: 40%;
+    border-radius: 0 var(--mcp-loading-bar-height, 3px) var(--mcp-loading-bar-height, 3px) 0;
+    box-shadow: var(--mcp-shadow-pop);
+    transform: translateX(-100%);
+    animation: mcp-loading-bar-slide 1.1s ease-in-out infinite;
+    animation-delay: var(--mcp-loading-bar-plate-delay, 0s);
+}
+
+.mcp-loading-bar__plate--c {
+    background: var(--mcp-loading-bar-plate-cyan, #0090D0);
+}
+
+.mcp-loading-bar__plate--m {
+    background: var(--mcp-loading-bar-plate-magenta, #E6007E);
+    --mcp-loading-bar-plate-delay: 0.06s;
+}
+
+.mcp-loading-bar__plate--y {
+    background: var(--mcp-loading-bar-plate-yellow, #FFE000);
+    --mcp-loading-bar-plate-delay: 0.12s;
+}
+
+.mcp-loading-bar__plate--k {
+    background: var(--mcp-loading-bar-plate-key, #111111);
+    --mcp-loading-bar-plate-delay: 0.18s;
+}
+
+@keyframes mcp-loading-bar-slide {
+    0%   { transform: translateX(-100%); width: 40%; }
+    50%  { transform: translateX(60%);  width: 55%; }
+    100% { transform: translateX(160%); width: 40%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mcp-loading-bar__plate {
+        transform: none;
+        width: 100%;
+        animation: mcp-loading-bar-pulse 1.4s ease-in-out infinite;
+    }
+
+    @keyframes mcp-loading-bar-pulse {
+        0%, 100% { opacity: 0.4; }
+        50%      { opacity: 1; }
+    }
+}
+

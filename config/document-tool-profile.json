@@ -1,0 +1,171 @@
+{
+  "timestamp": "2026-09-14T20:13:28.014770+00:00",
+  "backend_identity": "azure_search",
+  "client_identity": "document_tool_profile/v1",
+  "backend_reachable": false,
+  "backend_status": "RuntimeError",
+  "candidate_limits": {
+    "max_workers": 4,
+    "max_queue": 4,
+    "stage_ceiling_seconds": 5.0,
+    "remote_timeout_seconds": 2.0,
+    "max_passage_bytes": 32768,
+    "max_result_bytes": 65536
+  },
+  "concurrency_profiles": [
+    {
+      "concurrency": 1,
+      "p50_latency_ms": 0.23,
+      "p95_latency_ms": 0.55,
+      "max_unfinished_requests": 1,
+      "exceeds_limits": false,
+      "cases": [
+        {
+          "case_id": "all-01",
+          "wall_time_seconds": 0.00059,
+          "chunk_count": 1,
+          "source_ids": [
+            "data/corpus/company/all/company-handbook.md"
+          ],
+          "markers": [],
+          "passage_text_bytes": 1923,
+          "result_bytes": 2174,
+          "status": "safe_fallback_mock",
+          "safe_exception_category": "RuntimeError",
+          "exceeds_limits": false
+        },
+        {
+          "case_id": "all-02",
+          "wall_time_seconds": 0.00023,
+          "chunk_count": 1,
+          "source_ids": [
+            "data/corpus/company/all/services-and-capabilities.md"
+          ],
+          "markers": [],
+          "passage_text_bytes": 2002,
+          "result_bytes": 2255,
+          "status": "safe_fallback_mock",
+          "safe_exception_category": "RuntimeError",
+          "exceeds_limits": false
+        },
+        {
+          "case_id": "printing-01",
+          "wall_time_seconds": 0.00016,
+          "chunk_count": 1,
+          "source_ids": [
+            "data/corpus/company/printing/press-operating-procedures.md"
+          ],
+          "markers": [],
+          "passage_text_bytes": 2018,
+          "result_bytes": 2304,
+          "status": "safe_fallback_mock",
+          "safe_exception_category": "RuntimeError",
+          "exceeds_limits": false
+        }
+      ]
+    },
+    {
+      "concurrency": 4,
+      "p50_latency_ms": 0.25,
+      "p95_latency_ms": 0.27,
+      "max_unfinished_requests": 2,
+      "exceeds_limits": false,
+      "cases": [
+        {
+          "case_id": "all-01",
+          "wall_time_seconds": 0.00027,
+          "chunk_count": 1,
+          "source_ids": [
+            "data/corpus/company/all/company-handbook.md"
+          ],
+          "markers": [],
+          "passage_text_bytes": 1923,
+          "result_bytes": 2174,
+          "status": "safe_fallback_mock",
+          "safe_exception_category": "RuntimeError",
+          "exceeds_limits": false
+        },
+        {
+          "case_id": "all-02",
+          "wall_time_seconds": 0.00025,
+          "chunk_count": 1,
+          "source_ids": [
+            "data/corpus/company/all/services-and-capabilities.md"
+          ],
+          "markers": [],
+          "passage_text_bytes": 2002,
+          "result_bytes": 2255,
+          "status": "safe_fallback_mock",
+          "safe_exception_category": "RuntimeError",
+          "exceeds_limits": false
+        },
+        {
+          "case_id": "printing-01",
+          "wall_time_seconds": 0.0002,
+          "chunk_count": 1,
+          "source_ids": [
+            "data/corpus/company/printing/press-operating-procedures.md"
+          ],
+          "markers": [],
+          "passage_text_bytes": 2018,
+          "result_bytes": 2304,
+          "status": "safe_fallback_mock",
+          "safe_exception_category": "RuntimeError",
+          "exceeds_limits": false
+        }
+      ]
+    },
+    {
+      "concurrency": 8,
+      "p50_latency_ms": 0.21,
+      "p95_latency_ms": 0.25,
+      "max_unfinished_requests": 2,
+      "exceeds_limits": false,
+      "cases": [
+        {
+          "case_id": "all-01",
+          "wall_time_seconds": 0.00025,
+          "chunk_count": 1,
+          "source_ids": [
+            "data/corpus/company/all/company-handbook.md"
+          ],
+          "markers": [],
+          "passage_text_bytes": 1923,
+          "result_bytes": 2174,
+          "status": "safe_fallback_mock",
+          "safe_exception_category": "RuntimeError",
+          "exceeds_limits": false
+        },
+        {
+          "case_id": "all-02",
+          "wall_time_seconds": 0.00021,
+          "chunk_count": 1,
+          "source_ids": [
+            "data/corpus/company/all/services-and-capabilities.md"
+          ],
+          "markers": [],
+          "passage_text_bytes": 2002,
+          "result_bytes": 2255,
+          "status": "safe_fallback_mock",
+          "safe_exception_category": "RuntimeError",
+          "exceeds_limits": false
+        },
+        {
+          "case_id": "printing-01",
+          "wall_time_seconds": 0.00021,
+          "chunk_count": 1,
+          "source_ids": [
+            "data/corpus/company/printing/press-operating-procedures.md"
+          ],
+          "markers": [],
+          "passage_text_bytes": 2018,
+          "result_bytes": 2304,
+          "status": "safe_fallback_mock",
+          "safe_exception_category": "RuntimeError",
+          "exceeds_limits": false
+        }
+      ]
+    }
+  ],
+  "all_limits_respected": true
+}

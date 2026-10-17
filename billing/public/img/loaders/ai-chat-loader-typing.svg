@@ -1,0 +1,74 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="Bloomfield assistant is typing">
+  <title>Bloomfield assistant is typing</title>
+  <!--
+    Stage: typing (seamless 2.4s loop). Two staggered bounce waves per period,
+    the second quicker and lower. Loop boundary = dots at rest, so you can
+    swap to ai-chat-loader-leapfrog.svg or ai-chat-loader-outro.svg at any
+    period boundary (or mid-beat after ~2.1s).
+  -->
+  <rect width="0" height="0" fill="none">
+    <animate id="mcpAiLdrTypingClock" attributeName="width" values="0;0" dur="2.4s" begin="0s;mcpAiLdrTypingClock.end"/>
+  </rect>
+  <g>
+    <g transform="translate(42,60)">
+      <animateTransform attributeName="transform" type="translate" additive="sum" fill="freeze"
+        begin="mcpAiLdrTypingClock.begin+0.1s" dur="0.44s" calcMode="spline"
+        values="0 0;0 -6;0 0" keyTimes="0;0.45;1"
+        keySplines="0.25 0.6 0.45 1;0.55 0 0.75 0.45"/>
+      <animateTransform attributeName="transform" type="translate" additive="sum" fill="freeze"
+        begin="mcpAiLdrTypingClock.begin+1.3s" dur="0.36s" calcMode="spline"
+        values="0 0;0 -4.2;0 0" keyTimes="0;0.45;1"
+        keySplines="0.25 0.6 0.45 1;0.55 0 0.75 0.45"/>
+      <circle r="5" fill="#2e3192">
+        <animateTransform attributeName="transform" type="scale" fill="freeze"
+          begin="mcpAiLdrTypingClock.begin+0.48s" dur="0.18s" calcMode="spline"
+          values="1 1;1.12 0.88;1 1" keyTimes="0;0.5;1"
+          keySplines="0.4 0 0.6 1;0.4 0 0.6 1"/>
+        <animateTransform attributeName="transform" type="scale" fill="freeze"
+          begin="mcpAiLdrTypingClock.begin+1.6s" dur="0.16s" calcMode="spline"
+          values="1 1;1.09 0.92;1 1" keyTimes="0;0.5;1"
+          keySplines="0.4 0 0.6 1;0.4 0 0.6 1"/>
+      </circle>
+    </g>
+    <g transform="translate(60,60)">
+      <animateTransform attributeName="transform" type="translate" additive="sum" fill="freeze"
+        begin="mcpAiLdrTypingClock.begin+0.28s" dur="0.44s" calcMode="spline"
+        values="0 0;0 -6;0 0" keyTimes="0;0.45;1"
+        keySplines="0.25 0.6 0.45 1;0.55 0 0.75 0.45"/>
+      <animateTransform attributeName="transform" type="translate" additive="sum" fill="freeze"
+        begin="mcpAiLdrTypingClock.begin+1.48s" dur="0.36s" calcMode="spline"
+        values="0 0;0 -4.2;0 0" keyTimes="0;0.45;1"
+        keySplines="0.25 0.6 0.45 1;0.55 0 0.75 0.45"/>
+      <circle r="5" fill="#ed1c24">
+        <animateTransform attributeName="transform" type="scale" fill="freeze"
+          begin="mcpAiLdrTypingClock.begin+0.66s" dur="0.18s" calcMode="spline"
+          values="1 1;1.12 0.88;1 1" keyTimes="0;0.5;1"
+          keySplines="0.4 0 0.6 1;0.4 0 0.6 1"/>
+        <animateTransform attributeName="transform" type="scale" fill="freeze"
+          begin="mcpAiLdrTypingClock.begin+1.78s" dur="0.16s" calcMode="spline"
+          values="1 1;1.09 0.92;1 1" keyTimes="0;0.5;1"
+          keySplines="0.4 0 0.6 1;0.4 0 0.6 1"/>
+      </circle>
+    </g>
+    <g transform="translate(78,60)">
+      <animateTransform attributeName="transform" type="translate" additive="sum" fill="freeze"
+        begin="mcpAiLdrTypingClock.begin+0.46s" dur="0.44s" calcMode="spline"
+        values="0 0;0 -6;0 0" keyTimes="0;0.45;1"
+        keySplines="0.25 0.6 0.45 1;0.55 0 0.75 0.45"/>
+      <animateTransform attributeName="transform" type="translate" additive="sum" fill="freeze"
+        begin="mcpAiLdrTypingClock.begin+1.66s" dur="0.36s" calcMode="spline"
+        values="0 0;0 -4.2;0 0" keyTimes="0;0.45;1"
+        keySplines="0.25 0.6 0.45 1;0.55 0 0.75 0.45"/>
+      <circle r="5" fill="#2e3192">
+        <animateTransform attributeName="transform" type="scale" fill="freeze"
+          begin="mcpAiLdrTypingClock.begin+0.84s" dur="0.18s" calcMode="spline"
+          values="1 1;1.12 0.88;1 1" keyTimes="0;0.5;1"
+          keySplines="0.4 0 0.6 1;0.4 0 0.6 1"/>
+        <animateTransform attributeName="transform" type="scale" fill="freeze"
+          begin="mcpAiLdrTypingClock.begin+1.96s" dur="0.16s" calcMode="spline"
+          values="1 1;1.09 0.92;1 1" keyTimes="0;0.5;1"
+          keySplines="0.4 0 0.6 1;0.4 0 0.6 1"/>
+      </circle>
+    </g>
+  </g>
+</svg>

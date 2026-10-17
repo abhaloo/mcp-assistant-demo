@@ -1,0 +1,30 @@
+{
+  "description": "Task 2B — deployment metadata is otherwise clean (single revision, 100% traffic, correct image digest) but the deployed /capabilities probe reports a DIFFERENT bundle_set_id than the compatibility document's own accepted_manifest_hashes recompute to — the application-level probe catching what container-state-only rollback checks would miss. Expected verdict: FAIL.",
+  "candidate_manifest_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+  "compatibility": {
+    "record_access_schema_versions": [2],
+    "record_context_schema_versions": [1],
+    "accepted_manifest_hashes": [
+      "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    ],
+    "bundle_set_id": "bset:809ba2168f53d723fe54dfe8e51ab3b8cd0b00e01c3bba6ceb96f3f30736e89c"
+  },
+  "deployment": {
+    "expected_image_digest": "sha256:image-digest-n",
+    "revisions": [
+      {
+        "name": "rag--rev-n",
+        "image_digest": "sha256:image-digest-n",
+        "traffic_percent": 100,
+        "bundle_set_id": "bset:809ba2168f53d723fe54dfe8e51ab3b8cd0b00e01c3bba6ceb96f3f30736e89c"
+      }
+    ]
+  },
+  "capabilities_probe": {
+    "bundle_set_id": "bset:3eb25288b5de0a1198de83827ee672d6bad674ef89d15adaedd9bc9f279f17ac"
+  },
+  "expected": {
+    "passed": false
+  }
+}

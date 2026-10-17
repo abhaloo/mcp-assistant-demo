@@ -1,0 +1,204 @@
+metrics:
+  - id: fully_paid
+    aliases:
+      - fully paid
+      - paid in full
+      - invoices fully paid
+    definition: >
+      Invoices whose remainder (invoice value minus payments recorded against the
+      bill) is within one cent of zero. This state excludes overpaid invoices where
+      payments exceed value.
+    caveats: >
+      Overpaid and partially paid are separate payment states — do not lump them
+      into fully paid. Use the value-minus-payments remainder, not a status column.
+    column_hints:
+      - bills.type = Invoice
+      - bill_items per-line value
+      - journals.debit on CASH, BANK, PAYABLE, OPERATING_EXPENSE via bill_id
+
+  - id: overpaid
+    aliases:
+      - overpaid
+      - over paid
+      - payments exceed invoice value
+    definition: >
+      Invoices where total payments exceed invoice value, leaving a negative
+      remainder beyond the one-cent tolerance used for fully paid.
+    caveats: >
+      Distinct from fully paid (remainder near zero) and partially paid (positive
+      remainder). Never classify overpaid invoices as fully paid.
+    column_hints:
+      - bills.type = Invoice
+      - bill_items per-line value
+      - journals.debit on CASH, BANK, PAYABLE, OPERATING_EXPENSE via bill_id
+
+  - id: partially_paid
+    aliases:
+      - partially paid
+      - partial payment
+      - partly paid invoices
+    definition: >
+      Invoices with a positive remainder after subtracting payments from invoice
+      value — some payment has been recorded but the bill is not fully settled.
+    caveats: >
+      Requires computing invoice value minus payments per bill. Not the same as
+      outstanding (which keeps all unpaid remainders) unless the question filters
+      to partial-only rows.
+    column_hints:
+      - bills.type = Invoice
+      - bill_items per-line value
+      - journals.debit on CASH, BANK, PAYABLE, OPERATING_EXPENSE via bill_id
+
+  - id: revenue_invoiced
+    aliases:
+      - invoiced value
+      - invoiced sales
+      - invoice total
+      - invoice totals
+      - invoiced revenue
+    definition: >
+      Sum of invoice line amounts on bills whose type is Invoice. Each line
+      contributes price times quantity minus discount, scaled by tax on that line.
+      Date filters use bill creation time unless the question names another bill
+      date.
+    caveats: >
+      Not the same as ledger or accounting revenue — never substitute journal
+      totals for invoiced sales. Bare "revenue" without invoiced vs ledger cues may
+      need clarification.
+    column_hints:
+      - bills.type = Invoice
+      - bills.created_at
+      - bill_items.price, quantity, discount, tax
+
+  - id: revenue_ledger
+    aliases:
+      - ledger revenue
+      - accounting revenue
+      - journal revenue
+    definition: >
+      Sum of journal credits minus debits on accounts classified as operating or
+      non-operating revenue. Time filters use journal post date, not bill dates.
+    caveats: >
+      Never sum bills or bill_items for ledger revenue. Distinct from invoiced
+      sales; ambiguous bare "revenue" may need clarification.
+    column_hints:
+      - journals.post_date
+      - journals.credit, journals.debit
+      - accounts.account_type OPERATING_REVENUE or NON_OPERATING_REVENUE
+
+  - id: overdue
+    aliases:
+      - overdue
+      - overdue invoices
+      - past due
+    definition: >
+      Unpaid invoices whose due date is before the comparison date or aging
+      threshold. Aging breakdowns bucket unpaid remainders by how far past due
+      they are.
+    caveats: >
+      Use the bill due_date column — it is populated for invoices. Overdue implies
+      unpaid remainder greater than zero, not invoice value alone.
+    column_hints:
+      - bills.due_date
+      - bills.type = Invoice
+      - invoice value minus payments remainder
+
+  - id: outstanding
+    aliases:
+      - outstanding
+      - amount owed
+      - unpaid
+      - owed
+      - receivable
+      - accounts receivable
+    definition: >
+      Per invoice, invoice value minus payments recorded on cash, bank, payable, or
+      operating-expense accounts linked to the bill. Keep rows whose remainder is
+      greater than zero.
+    caveats: >
+      Not invoice value alone and not a status column — compute value, subtract
+      payments, then filter. Do every step; do not simplify to bill totals only.
+    column_hints:
+      - bills.type = Invoice
+      - bill_items per-line value
+      - journals.debit via journals.bill_id
+      - accounts.account_type CASH, BANK, PAYABLE, OPERATING_EXPENSE
+
+  - id: standing_balance
+    aliases:
+      - standing balance
+      - who owes the most
+      - customer outstanding balance
+      - total receivable balance
+    definition: >
+      A snapshot of all currently unpaid invoice remainders aggregated for a
+      customer or portfolio. Reflects what is still owed now, not invoices created
+      in a named period unless the question explicitly filters by creation date.
+    caveats: >
+      A time phrase like "this month" does not restrict invoices by creation date
+      when the question asks who owes the most — report the standing balance
+      across all unpaid invoices.
+    column_hints:
+      - bills.type = Invoice
+      - customers.name
+      - invoice value minus payments remainder
+
+  - id: open_orders
+    aliases:
+      - open orders
+      - open customer orders
+      - pending orders
+      - customer orders open
+    definition: >
+      Customer orders that are neither finished nor cancelled. Filter the stored
+      status column by excluding FINISHED and CANCELLED.
+    caveats: >
+      The application labels these orders differently for display depending on
+      whether any job exists yet, but those labels are derived and are never stored
+      in any column - filtering on them returns nothing. Customer orders live in
+      customer_orders, not work_orders.
+    column_hints:
+      - customer_orders.status NOT IN ('FINISHED', 'CANCELLED')
+      - customer_orders.order_number
+      - customer_orders.created_at
+
+  - id: unbilled_jobs
+    aliases:
+      - finished but not invoiced
+      - finished unbilled
+      - unbilled jobs
+      - jobs not invoiced yet
+      - finished jobs without invoice
+    definition: >
+      Work orders whose status is FINISHED and that have no linked bill — the
+      job is complete but not yet invoiced.
+    caveats: >
+      No linked bill means an empty bill identifier on the work order. Do not
+      invent delivery-date or delayed-delivery logic for unbilled questions —
+      those tracking columns are empty in this database.
+    column_hints:
+      - work_orders.status FINISHED
+      - work_orders.bill_id empty
+      - work_orders.work_number
+
+  - id: ar_aging
+    aliases:
+      - accounts receivable aging
+      - receivable aging
+      - aging by bucket
+      - aging buckets
+      - aging schedule
+      - ar aging
+      - a/r aging
+    definition: >
+      Unpaid invoice remainders grouped by how far past their due date they are,
+      in the buckets current/not due, 1-30, 31-60, 61-90, and 91+ days. Each bucket
+      reports a count of invoices and the outstanding value in that band.
+    caveats: >
+      Bands are measured from the invoice due date against today, not from the
+      invoice date. Only remainders greater than zero belong in a band; settled and
+      overpaid invoices are excluded.
+    column_hints:
+      - bills.due_date
+      - bills.type = Invoice
+      - invoice value minus payments remainder

@@ -1,0 +1,62 @@
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews -Indexes
+    </IfModule>
+
+    RewriteEngine On
+
+    # Handle Authorization Header
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Redirect Trailing Slashes If Not A Folder...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [L,R=301]
+
+    # Send Requests To Front Controller...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+# ----------------------------------------------------------------------
+# Static asset caching (performance: avoid re-downloading on repeat visits)
+# Static /css and /js are NOT content-hashed, so they get a modest 1-week TTL
+# (a deploy is never masked by a stale cache for more than a week). Fonts and
+# the content-hashed Vite /build assets are cached aggressively below.
+# ----------------------------------------------------------------------
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresDefault                              "access plus 0 seconds"
+
+    ExpiresByType text/css                      "access plus 1 week"
+    ExpiresByType application/javascript        "access plus 1 week"
+    ExpiresByType text/javascript               "access plus 1 week"
+
+    ExpiresByType image/x-icon                  "access plus 1 month"
+    ExpiresByType image/gif                     "access plus 1 month"
+    ExpiresByType image/png                     "access plus 1 month"
+    ExpiresByType image/jpeg                    "access plus 1 month"
+    ExpiresByType image/webp                    "access plus 1 month"
+    ExpiresByType image/svg+xml                 "access plus 1 month"
+
+    ExpiresByType font/ttf                      "access plus 1 year"
+    ExpiresByType font/otf                      "access plus 1 year"
+    ExpiresByType font/woff                     "access plus 1 year"
+    ExpiresByType font/woff2                    "access plus 1 year"
+    ExpiresByType application/vnd.ms-fontobject "access plus 1 year"
+</IfModule>
+
+<IfModule mod_headers.c>
+    # Mark cacheable static assets as public.
+    <FilesMatch "\.(css|js|woff2?|ttf|otf|eot|svg|png|jpe?g|gif|webp|ico)$">
+        Header set Cache-Control "public"
+    </FilesMatch>
+
+    # Content-hashed Vite build assets (e.g. app.571d459e.js) never change for a
+    # given URL, so they can be cached immutably for a year.
+    <FilesMatch "\.[0-9a-f]{8,}\.(css|js|woff2?|ttf)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+</IfModule>

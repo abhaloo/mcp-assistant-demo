@@ -1,0 +1,27 @@
+// Fonts
+@import url('https://fonts.bunny.net/css?family=Nunito');
+
+// Variables
+@import 'variables';
+
+// Bootstrap
+@import 'bootstrap/scss/bootstrap';
+
+// Custom component styles
+.wo-link {
+    color: #475569;
+    text-decoration: none;
+    &:hover {
+        text-decoration: underline;
+    }
+}
+
+.env-banner {
+    background-color: #fed7aa;
+    color: #7c2d12;
+    border-bottom: 1px solid #fdba74;
+}
+
+body.env-staging .wrapper {
+    background-color: var(--mcp-bg) !important;
+}
